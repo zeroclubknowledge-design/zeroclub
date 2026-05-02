@@ -35,10 +35,13 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (isLoading) return;
-    const inAuthGroup = segments[0] === "(auth)";
+    const isOnAuthScreen =
+      segments[0] === "login" ||
+      segments[0] === "register" ||
+      segments[0] === "(auth)";
     const inTabs = segments[0] === "(tabs)";
 
-    if (!token && !inAuthGroup) {
+    if (!token && !isOnAuthScreen) {
       router.replace("/login");
     } else if (token && !inTabs) {
       router.replace("/(tabs)/");
