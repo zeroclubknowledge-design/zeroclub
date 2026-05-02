@@ -127,10 +127,16 @@ export function PostCard({
         )}
       </View>
 
-      {/* Body */}
-      <Text style={[styles.body, { color: colors.foreground }]}>{body}</Text>
+      {/* Body — capped at 2 lines */}
+      <Text
+        style={[styles.body, { color: colors.foreground }]}
+        numberOfLines={2}
+        ellipsizeMode="tail"
+      >
+        {body}
+      </Text>
 
-      {/* Image */}
+      {/* Image — compact height */}
       {imageUrl ? (
         <Image source={{ uri: imageUrl }} style={styles.postImage} resizeMode="cover" />
       ) : null}
@@ -251,8 +257,8 @@ const styles = StyleSheet.create({
   },
   postImage: {
     width: "100%",
-    height: 200,
-    marginBottom: 10,
+    height: 160,
+    marginBottom: 8,
   },
   metaRow: {
     flexDirection: "row",
