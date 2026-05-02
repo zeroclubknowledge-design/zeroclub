@@ -58,6 +58,10 @@ export interface Profile {
   referralCode?: string | null;
   level: number;
   xpBalance: number;
+  fundsBalance: number;
+  followerCount: number;
+  followingCount: number;
+  isFollowing?: boolean | null;
   createdAt: string;
 }
 
@@ -71,6 +75,7 @@ export interface UpdateProfileRequest {
   bio?: string;
   avatarUrl?: string;
   track?: string;
+  school?: string;
 }
 
 export interface Post {
@@ -229,10 +234,12 @@ export interface SendMessageRequest {
 export interface Wallet {
   userId: string;
   xpBalance: number;
+  fundsBalance: number;
   level: number;
   xpToNextLevel: number;
   xpForCurrentLevel: number;
   totalXpForNextLevel: number;
+  minWithdrawalXp: number;
 }
 
 export type XpEventSource = (typeof XpEventSource)[keyof typeof XpEventSource];
@@ -263,6 +270,55 @@ export interface FeedSummary {
   postsToday: number;
   topTracks: FeedSummaryTopTracksItem[];
   totalMembers: number;
+}
+
+export interface FollowResponse {
+  following: boolean;
+  followerCount: number;
+}
+
+export interface BankAccount {
+  id: string;
+  userId: string;
+  bankName: string;
+  accountNumber: string;
+  accountName: string;
+  createdAt: string;
+}
+
+export interface CreateBankAccountRequest {
+  bankName: string;
+  accountNumber: string;
+  accountName: string;
+}
+
+export type WithdrawalStatus =
+  (typeof WithdrawalStatus)[keyof typeof WithdrawalStatus];
+
+export const WithdrawalStatus = {
+  pending: "pending",
+  processing: "processing",
+  paid: "paid",
+  failed: "failed",
+} as const;
+
+export interface Withdrawal {
+  id: string;
+  userId: string;
+  bankAccountId: string;
+  amountXp: number;
+  amountKobo: number;
+  status: WithdrawalStatus;
+  createdAt: string;
+}
+
+export interface CreateWithdrawalRequest {
+  bankAccountId: string;
+  amountXp: number;
+}
+
+export interface OkResponse {
+  ok: boolean;
 }
 
 export interface ReferralStats {

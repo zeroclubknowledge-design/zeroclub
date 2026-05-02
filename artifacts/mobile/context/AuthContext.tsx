@@ -24,6 +24,9 @@ export interface UserProfile {
   referralCode?: string | null;
   level: number;
   xpBalance: number;
+  fundsBalance?: number;
+  followerCount?: number;
+  followingCount?: number;
   createdAt: string;
 }
 

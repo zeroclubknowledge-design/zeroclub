@@ -6,3 +6,5 @@ export * from "./bootcamp-modules";
 export * from "./chat";
 export * from "./wallet";
 export * from "./referrals";
+export * from "./follows";
+export * from "./bank-accounts";

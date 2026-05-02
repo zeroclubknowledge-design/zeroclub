@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { profilesTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
-import { requireAuth, type AuthRequest } from "../lib/auth";
+import { profilesTable, followsTable } from "@workspace/db";
+import { eq, sql } from "drizzle-orm";
+import { requireAuth, verifyToken, type AuthRequest } from "../lib/auth";
 import { computeLevel } from "./auth";
 
 const router = Router();
@@ -10,6 +10,18 @@ const router = Router();
 // GET /profiles/:userId
 router.get("/:userId", async (req, res) => {
   const { userId } = req.params as { userId: string };
+  // Extract auth token for isFollowing check
+  const authHeader = req.headers["authorization"];
+  let viewerId: string | null = null;
+  if (authHeader?.startsWith("Bearer ")) {
+    try {
+      const payload = verifyToken(authHeader.slice(7));
+      viewerId = payload?.sub ?? null;
+    } catch {
+      // not authenticated — skip
+    }
+  }
+
   try {
     const profiles = await db
       .select()
@@ -21,7 +33,36 @@ router.get("/:userId", async (req, res) => {
       return;
     }
     const p = profiles[0]!;
-    res.json({ ...p, level: computeLevel(p.xpBalance) });
+
+    const [{ followers }] = await db
+      .select({ followers: sql<number>`count(*)::int` })
+      .from(followsTable)
+      .where(eq(followsTable.followingId, userId));
+
+    const [{ following }] = await db
+      .select({ following: sql<number>`count(*)::int` })
+      .from(followsTable)
+      .where(eq(followsTable.followerId, userId));
+
+    let isFollowing: boolean | null = null;
+    if (viewerId && viewerId !== userId) {
+      const rows = await db
+        .select()
+        .from(followsTable)
+        .where(
+          sql`${followsTable.followerId} = ${viewerId} AND ${followsTable.followingId} = ${userId}`,
+        )
+        .limit(1);
+      isFollowing = rows.length > 0;
+    }
+
+    res.json({
+      ...p,
+      level: computeLevel(p.xpBalance),
+      followerCount: followers,
+      followingCount: following,
+      isFollowing,
+    });
   } catch (err) {
     req.log.error({ err }, "get profile error");
     res.status(500).json({ error: "internal_error", message: "Failed" });
@@ -35,11 +76,12 @@ router.put("/:userId/update", requireAuth, async (req: AuthRequest, res) => {
     res.status(403).json({ error: "forbidden", message: "Cannot update another user's profile" });
     return;
   }
-  const { displayName, bio, avatarUrl, track } = req.body as {
+  const { displayName, bio, avatarUrl, track, school } = req.body as {
     displayName?: string;
     bio?: string;
     avatarUrl?: string;
     track?: string;
+    school?: string;
   };
   try {
     const updates: Partial<typeof profilesTable.$inferInsert> = {};
@@ -47,11 +89,28 @@ router.put("/:userId/update", requireAuth, async (req: AuthRequest, res) => {
     if (bio !== undefined) updates.bio = bio;
     if (avatarUrl !== undefined) updates.avatarUrl = avatarUrl;
     if (track) updates.track = track as typeof updates.track;
+    if (school !== undefined) updates.school = school;
 
     await db.update(profilesTable).set(updates).where(eq(profilesTable.id, userId));
     const updated = await db.select().from(profilesTable).where(eq(profilesTable.id, userId)).limit(1);
     const p = updated[0]!;
-    res.json({ ...p, level: computeLevel(p.xpBalance) });
+
+    const [{ followers }] = await db
+      .select({ followers: sql<number>`count(*)::int` })
+      .from(followsTable)
+      .where(eq(followsTable.followingId, userId));
+    const [{ following }] = await db
+      .select({ following: sql<number>`count(*)::int` })
+      .from(followsTable)
+      .where(eq(followsTable.followerId, userId));
+
+    res.json({
+      ...p,
+      level: computeLevel(p.xpBalance),
+      followerCount: followers,
+      followingCount: following,
+      isFollowing: null,
+    });
   } catch (err) {
     req.log.error({ err }, "update profile error");
     res.status(500).json({ error: "internal_error", message: "Failed" });

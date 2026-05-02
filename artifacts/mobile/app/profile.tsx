@@ -5,11 +5,10 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   Platform,
-  Share,
   ActivityIndicator,
   Image,
+  Alert,
 } from "react-native";
 import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
@@ -31,78 +30,42 @@ const TRACK_LABELS: Record<string, string> = {
   motion_design: "Motion Design",
 };
 
-interface ReferralStats {
-  referralCode: string | null;
-  referredCount: number;
-  totalXpEarned: number;
-  sameSchoolCount: number;
-  crossSchoolCount: number;
+interface ProfileCounts {
+  followerCount: number;
+  followingCount: number;
+  xpBalance: number;
+  fundsBalance: number;
+  level: number;
 }
 
 export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user, token, logout, updateUser } = useAuth();
-  const [referralStats, setReferralStats] = useState<ReferralStats | null>(null);
-  const [loadingStats, setLoadingStats] = useState(true);
-  const [avatarUploading, setAvatarUploading] = useState(false);
-
+  const { user, token, updateUser } = useAuth();
   const topPadding = Platform.OS === "web" ? 67 : insets.top;
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [counts, setCounts] = useState<ProfileCounts | null>(null);
 
   useEffect(() => {
-    if (!token) return;
+    if (!user?.id || !token) return;
     const domain = process.env["EXPO_PUBLIC_DOMAIN"];
     const baseUrl = domain ? `https://${domain}` : "";
-    fetch(`${baseUrl}/api/referrals/stats`, {
+    fetch(`${baseUrl}/api/profiles/${user.id}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((r) => r.json())
-      .then((data) => setReferralStats(data as ReferralStats))
-      .catch(() => {})
-      .finally(() => setLoadingStats(false));
-  }, [token]);
-
-  const handleLogout = () => {
-    Alert.alert("Sign Out", "Are you sure you want to sign out?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Sign Out",
-        style: "destructive",
-        onPress: async () => {
-          await logout();
-          router.replace("/login");
-        },
-      },
-    ]);
-  };
-
-  const handleShareReferral = async () => {
-    if (!referralStats?.referralCode) return;
-    const domain = process.env["EXPO_PUBLIC_DOMAIN"];
-    const baseUrl = domain ? `https://${domain}` : "https://zeroclubapp.com";
-    const link = `${baseUrl}/register?ref=${referralStats.referralCode}`;
-    try {
-      await Share.share({
-        message: `Join me on Zero Club — the private community for SS students building real skills. Use my referral code ${referralStats.referralCode} and get 50 XP free! 🚀\n\n${link}`,
-        url: link,
-      });
-    } catch {}
-  };
-
-  const handleCopyCode = async () => {
-    if (!referralStats?.referralCode) return;
-    const domain = process.env["EXPO_PUBLIC_DOMAIN"];
-    const baseUrl = domain ? `https://${domain}` : "https://zeroclubapp.com";
-    const link = `${baseUrl}/register?ref=${referralStats.referralCode}`;
-    if (Platform.OS === "web") {
-      try {
-        await navigator.clipboard.writeText(link);
-        Alert.alert("Copied!", "Referral link copied to clipboard");
-      } catch {}
-    } else {
-      Alert.alert("Your Referral Link", link);
-    }
-  };
+      .then((data) => {
+        const d = data as ProfileCounts;
+        setCounts({
+          followerCount: d.followerCount ?? 0,
+          followingCount: d.followingCount ?? 0,
+          xpBalance: d.xpBalance ?? user.xpBalance,
+          fundsBalance: d.fundsBalance ?? 0,
+          level: d.level ?? user.level,
+        });
+      })
+      .catch(() => {});
+  }, [user?.id, token]);
 
   const handlePickAvatar = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -124,7 +87,6 @@ export default function ProfileScreen() {
       const filename = uri.split("/").pop() ?? "avatar.jpg";
       const formData = new FormData();
       formData.append("file", { uri, name: filename, type: "image/jpeg" } as unknown as Blob);
-
       const domain = process.env["EXPO_PUBLIC_DOMAIN"];
       const baseUrl = domain ? `https://${domain}` : "";
 
@@ -145,7 +107,6 @@ export default function ProfileScreen() {
       if (!updateRes.ok) throw new Error("Profile update failed");
       const updated = await updateRes.json() as typeof user;
       await updateUser({ ...user, ...updated, avatarUrl });
-      Alert.alert("Done", "Profile photo updated!");
     } catch {
       Alert.alert("Error", "Could not update profile photo. Try again.");
     } finally {
@@ -154,25 +115,56 @@ export default function ProfileScreen() {
   };
 
   const initials = (user?.displayName ?? "U").slice(0, 2).toUpperCase();
+  const followerCount = counts?.followerCount ?? user?.followerCount ?? 0;
+  const followingCount = counts?.followingCount ?? user?.followingCount ?? 0;
+  const xpBalance = counts?.xpBalance ?? user?.xpBalance ?? 0;
+  const level = counts?.level ?? user?.level ?? 1;
+
+  const menuItems = [
+    {
+      icon: "zap" as const,
+      label: "Zero Wallet",
+      subtitle: `${xpBalance.toLocaleString()} XP`,
+      onPress: () => router.push("/(tabs)/wallet" as never),
+      accent: "#F59E0B",
+    },
+    {
+      icon: "book" as const,
+      label: "My Bootcamps",
+      subtitle: "View enrolled courses",
+      onPress: () => router.push("/(tabs)/bootcamps" as never),
+      accent: colors.primary,
+    },
+    {
+      icon: "users" as const,
+      label: "Refer & Earn",
+      subtitle: "Invite students and earn XP",
+      onPress: () => router.push("/referral" as never),
+      accent: "#8B5CF6",
+    },
+    {
+      icon: "settings" as const,
+      label: "Settings",
+      subtitle: "Profile, bank account, account",
+      onPress: () => router.push("/settings" as never),
+      accent: colors.mutedForeground,
+    },
+  ];
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View
         style={[
           styles.header,
-          {
-            paddingTop: topPadding + 8,
-            backgroundColor: colors.background,
-            borderBottomColor: colors.border,
-          },
+          { paddingTop: topPadding + 8, borderBottomColor: colors.border },
         ]}
       >
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <Feather name="arrow-left" size={22} color={colors.foreground} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.foreground }]}>Profile</Text>
-        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-          <Feather name="log-out" size={20} color={colors.mutedForeground} />
+        <Text style={[styles.headerTitle, { color: colors.foreground }]}>My Profile</Text>
+        <TouchableOpacity style={styles.backBtn} onPress={() => router.push("/settings" as never)}>
+          <Feather name="settings" size={20} color={colors.mutedForeground} />
         </TouchableOpacity>
       </View>
 
@@ -180,8 +172,9 @@ export default function ProfileScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Avatar + Name */}
-        <View style={styles.heroSection}>
+        {/* Hero */}
+        <View style={[styles.heroCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          {/* Avatar */}
           <TouchableOpacity
             onPress={handlePickAvatar}
             activeOpacity={0.8}
@@ -193,7 +186,7 @@ export default function ProfileScreen() {
                 <Image
                   source={{ uri: user.avatarUrl }}
                   style={StyleSheet.absoluteFillObject}
-                  borderRadius={40}
+                  borderRadius={44}
                 />
               ) : (
                 <Text style={styles.avatarText}>{initials}</Text>
@@ -203,191 +196,103 @@ export default function ProfileScreen() {
               {avatarUploading ? (
                 <ActivityIndicator size="small" color={colors.primary} />
               ) : (
-                <Feather name="camera" size={13} color={colors.foreground} />
+                <Feather name="camera" size={12} color={colors.foreground} />
               )}
             </View>
           </TouchableOpacity>
-          <Text style={[styles.displayName, { color: colors.foreground }]}>
-            {user?.displayName}
-          </Text>
-          <Text style={[styles.username, { color: colors.mutedForeground }]}>
-            @{user?.username}
-          </Text>
+
+          <Text style={[styles.displayName, { color: colors.foreground }]}>{user?.displayName}</Text>
+          <Text style={[styles.username, { color: colors.mutedForeground }]}>@{user?.username}</Text>
+
+          {user?.bio && (
+            <Text style={[styles.bio, { color: colors.mutedForeground }]}>{user.bio}</Text>
+          )}
+
           {user?.school && (
             <View style={[styles.schoolBadge, { backgroundColor: colors.muted }]}>
-              <Feather name="map-pin" size={12} color={colors.mutedForeground} />
-              <Text style={[styles.schoolText, { color: colors.mutedForeground }]}>
-                {user.school}
-              </Text>
+              <Feather name="map-pin" size={11} color={colors.mutedForeground} />
+              <Text style={[styles.schoolText, { color: colors.mutedForeground }]}>{user.school}</Text>
             </View>
           )}
+
+          {/* Followers / Following */}
+          <View style={styles.followRow}>
+            <TouchableOpacity
+              style={styles.followStat}
+              onPress={() => router.push({ pathname: "/followers", params: { userId: user?.id } } as never)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.followCount, { color: colors.foreground }]}>
+                {followerCount.toLocaleString()}
+              </Text>
+              <Text style={[styles.followLabel, { color: colors.mutedForeground }]}>Followers</Text>
+            </TouchableOpacity>
+            <View style={[styles.followDivider, { backgroundColor: colors.border }]} />
+            <TouchableOpacity
+              style={styles.followStat}
+              onPress={() => router.push({ pathname: "/following", params: { userId: user?.id } } as never)}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.followCount, { color: colors.foreground }]}>
+                {followingCount.toLocaleString()}
+              </Text>
+              <Text style={[styles.followLabel, { color: colors.mutedForeground }]}>Following</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Stats row */}
         <View style={[styles.statsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.statItem}>
             <View style={[styles.levelBadge, { backgroundColor: colors.primary }]}>
-              <Text style={styles.levelText}>{user?.level ?? 1}</Text>
+              <Text style={styles.levelText}>{level}</Text>
             </View>
             <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Level</Text>
           </View>
           <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
           <View style={styles.statItem}>
-            <Text style={[styles.statValue, { color: colors.xpGold }]}>
-              {(user?.xpBalance ?? 0).toLocaleString()}
-            </Text>
-            <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>XP</Text>
+            <View style={styles.xpRow}>
+              <Feather name="zap" size={14} color={colors.xpGold} />
+              <Text style={[styles.statValue, { color: colors.xpGold }]}>
+                {xpBalance.toLocaleString()}
+              </Text>
+            </View>
+            <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Zero Points</Text>
           </View>
           <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
           <View style={styles.statItem}>
             <View style={[styles.trackPill, { backgroundColor: colors.primary + "22" }]}>
               <Text style={[styles.trackText, { color: colors.primary }]}>
-                {TRACK_LABELS[user?.track ?? "frontend"]?.split(" ")[0] ?? "—"}
+                {(TRACK_LABELS[user?.track ?? "frontend"] ?? "").split(" ")[0] ?? "—"}
               </Text>
             </View>
             <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Track</Text>
           </View>
         </View>
 
-        {/* Referral Section */}
-        <View style={styles.sectionHeader}>
-          <Feather name="users" size={16} color={colors.primary} />
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Refer & Earn XP</Text>
-        </View>
-
-        <View style={[styles.referralCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.referralIntro, { color: colors.mutedForeground }]}>
-            Invite your classmates and students from other schools. Earn XP every time someone joins with your code.
-          </Text>
-
-          <View style={[styles.rewardRow, { backgroundColor: colors.muted, borderRadius: 12 }]}>
-            <View style={styles.rewardItem}>
-              <Text style={[styles.rewardXp, { color: colors.xpGold }]}>+250 XP</Text>
-              <Text style={[styles.rewardLabel, { color: colors.mutedForeground }]}>Same school</Text>
-            </View>
-            <View style={[styles.rewardDivider, { backgroundColor: colors.border }]} />
-            <View style={styles.rewardItem}>
-              <Text style={[styles.rewardXp, { color: colors.xpGold }]}>+400 XP</Text>
-              <Text style={[styles.rewardLabel, { color: colors.mutedForeground }]}>Cross-school</Text>
-            </View>
-            <View style={[styles.rewardDivider, { backgroundColor: colors.border }]} />
-            <View style={styles.rewardItem}>
-              <Text style={[styles.rewardXp, { color: colors.primary }]}>+50 XP</Text>
-              <Text style={[styles.rewardLabel, { color: colors.mutedForeground }]}>They get</Text>
-            </View>
-          </View>
-
-          {loadingStats ? (
-            <ActivityIndicator color={colors.primary} style={{ marginVertical: 20 }} />
-          ) : referralStats ? (
-            <>
-              <View style={[styles.codeBox, { backgroundColor: colors.muted, borderColor: colors.border }]}>
-                <View style={styles.codeLeft}>
-                  <Text style={[styles.codeLabel, { color: colors.mutedForeground }]}>
-                    YOUR REFERRAL CODE
-                  </Text>
-                  <Text style={[styles.codeText, { color: colors.foreground }]}>
-                    {referralStats.referralCode ?? "—"}
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  onPress={handleCopyCode}
-                  style={[styles.copyBtn, { backgroundColor: colors.primary }]}
-                >
-                  <Feather name="copy" size={14} color="#fff" />
-                  <Text style={styles.copyText}>Copy Link</Text>
-                </TouchableOpacity>
-              </View>
-
+        {/* Navigation menu */}
+        <View style={[styles.menuCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          {menuItems.map((item, i) => (
+            <View key={item.label}>
+              {i > 0 && <View style={[styles.menuSep, { backgroundColor: colors.border }]} />}
               <TouchableOpacity
-                onPress={handleShareReferral}
-                style={[styles.shareBtn, { backgroundColor: colors.primary + "18", borderColor: colors.primary + "44" }]}
+                style={styles.menuRow}
+                onPress={item.onPress}
+                activeOpacity={0.7}
               >
-                <Feather name="share-2" size={16} color={colors.primary} />
-                <Text style={[styles.shareBtnText, { color: colors.primary }]}>
-                  Share Referral Link
-                </Text>
+                <View style={[styles.menuIconWrap, { backgroundColor: item.accent + "20" }]}>
+                  <Feather name={item.icon} size={17} color={item.accent} />
+                </View>
+                <View style={styles.menuContent}>
+                  <Text style={[styles.menuLabel, { color: colors.foreground }]}>{item.label}</Text>
+                  <Text style={[styles.menuSub, { color: colors.mutedForeground }]}>{item.subtitle}</Text>
+                </View>
+                <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
               </TouchableOpacity>
-
-              <View style={styles.referralStats}>
-                <View style={[styles.referralStatBox, { backgroundColor: colors.muted }]}>
-                  <Text style={[styles.referralStatValue, { color: colors.foreground }]}>
-                    {referralStats.referredCount}
-                  </Text>
-                  <Text style={[styles.referralStatLabel, { color: colors.mutedForeground }]}>
-                    Total Referred
-                  </Text>
-                </View>
-                <View style={[styles.referralStatBox, { backgroundColor: colors.muted }]}>
-                  <Text style={[styles.referralStatValue, { color: colors.foreground }]}>
-                    {referralStats.sameSchoolCount}
-                  </Text>
-                  <Text style={[styles.referralStatLabel, { color: colors.mutedForeground }]}>
-                    Same School
-                  </Text>
-                </View>
-                <View style={[styles.referralStatBox, { backgroundColor: colors.muted }]}>
-                  <Feather name="zap" size={12} color={colors.xpGold} style={{ alignSelf: "center" }} />
-                  <Text style={[styles.referralStatValue, { color: colors.xpGold }]}>
-                    {referralStats.totalXpEarned.toLocaleString()}
-                  </Text>
-                  <Text style={[styles.referralStatLabel, { color: colors.mutedForeground }]}>
-                    XP Earned
-                  </Text>
-                </View>
-              </View>
-            </>
-          ) : null}
+            </View>
+          ))}
         </View>
-
-        {/* Account info */}
-        <View style={styles.sectionHeader}>
-          <Feather name="user" size={16} color={colors.primary} />
-          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Account</Text>
-        </View>
-
-        <View style={[styles.infoCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <InfoRow icon="mail" label="Email" value={user?.email ?? "—"} colors={colors} />
-          <View style={[styles.infoSep, { backgroundColor: colors.border }]} />
-          <InfoRow icon="at-sign" label="Username" value={`@${user?.username ?? "—"}`} colors={colors} />
-          {user?.school && (
-            <>
-              <View style={[styles.infoSep, { backgroundColor: colors.border }]} />
-              <InfoRow icon="map-pin" label="School" value={user.school} colors={colors} />
-            </>
-          )}
-        </View>
-
-        <TouchableOpacity
-          onPress={handleLogout}
-          style={[styles.logoutFullBtn, { backgroundColor: colors.card, borderColor: "#ef4444" + "40" }]}
-        >
-          <Feather name="log-out" size={16} color="#ef4444" />
-          <Text style={[styles.logoutFullText, { color: "#ef4444" }]}>Sign Out</Text>
-        </TouchableOpacity>
       </ScrollView>
-    </View>
-  );
-}
-
-function InfoRow({
-  icon,
-  label,
-  value,
-  colors,
-}: {
-  icon: keyof typeof Feather.glyphMap;
-  label: string;
-  value: string;
-  colors: ReturnType<typeof import("@/hooks/useColors").useColors>;
-}) {
-  return (
-    <View style={styles.infoRow}>
-      <Feather name={icon} size={15} color={colors.mutedForeground} />
-      <View style={styles.infoContent}>
-        <Text style={[styles.infoLabel, { color: colors.mutedForeground }]}>{label}</Text>
-        <Text style={[styles.infoValue, { color: colors.foreground }]}>{value}</Text>
-      </View>
     </View>
   );
 }
@@ -403,14 +308,19 @@ const styles = StyleSheet.create({
   },
   backBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
   headerTitle: { flex: 1, textAlign: "center", fontSize: 17, fontWeight: "700", fontFamily: "Inter_700Bold" },
-  logoutBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
-  content: { padding: 20, gap: 16 },
-  heroSection: { alignItems: "center", gap: 6, paddingBottom: 4 },
-  avatarWrap: { position: "relative", marginBottom: 4 },
+  content: { padding: 16, gap: 12 },
+  heroCard: {
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 20,
+    alignItems: "center",
+    gap: 6,
+  },
+  avatarWrap: { position: "relative", marginBottom: 6 },
   avatarCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 88,
+    height: 88,
+    borderRadius: 44,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
@@ -426,9 +336,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarText: { color: "#fff", fontSize: 28, fontWeight: "800" },
+  avatarText: { color: "#fff", fontSize: 32, fontWeight: "800" },
   displayName: { fontSize: 22, fontWeight: "800", fontFamily: "Inter_700Bold" },
   username: { fontSize: 14, fontWeight: "500" },
+  bio: { fontSize: 13, lineHeight: 18, textAlign: "center" },
   schoolBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -439,6 +350,16 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   schoolText: { fontSize: 12, fontWeight: "500" },
+  followRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 10,
+    gap: 24,
+  },
+  followStat: { alignItems: "center", gap: 2 },
+  followCount: { fontSize: 20, fontWeight: "800" },
+  followLabel: { fontSize: 11, fontWeight: "500" },
+  followDivider: { width: 1, height: 28 },
   statsCard: {
     flexDirection: "row",
     borderRadius: 18,
@@ -446,7 +367,7 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: "center",
   },
-  statItem: { flex: 1, alignItems: "center", gap: 4 },
+  statItem: { flex: 1, alignItems: "center", gap: 5 },
   statDivider: { width: 1, height: 36, marginHorizontal: 4 },
   levelBadge: {
     width: 38,
@@ -456,89 +377,28 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   levelText: { color: "#fff", fontSize: 16, fontWeight: "800" },
-  statValue: { fontSize: 22, fontWeight: "800" },
-  statLabel: { fontSize: 11, fontWeight: "500" },
+  xpRow: { flexDirection: "row", alignItems: "center", gap: 3 },
+  statValue: { fontSize: 18, fontWeight: "800" },
+  statLabel: { fontSize: 10, fontWeight: "500" },
   trackPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
   trackText: { fontSize: 12, fontWeight: "700" },
-  sectionHeader: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 },
-  sectionTitle: { fontSize: 15, fontWeight: "700" },
-  referralCard: {
-    borderRadius: 18,
-    borderWidth: 1,
-    padding: 16,
-    gap: 14,
-  },
-  referralIntro: { fontSize: 13, lineHeight: 19 },
-  rewardRow: {
-    flexDirection: "row",
-    padding: 12,
-    alignItems: "center",
-  },
-  rewardItem: { flex: 1, alignItems: "center", gap: 2 },
-  rewardDivider: { width: 1, height: 30, marginHorizontal: 4 },
-  rewardXp: { fontSize: 14, fontWeight: "800" },
-  rewardLabel: { fontSize: 10, fontWeight: "500", textAlign: "center" },
-  codeBox: {
+  menuCard: { borderRadius: 18, borderWidth: 1, overflow: "hidden" },
+  menuRow: {
     flexDirection: "row",
     alignItems: "center",
-    padding: 12,
-    borderRadius: 14,
-    borderWidth: 1,
-    gap: 10,
-  },
-  codeLeft: { flex: 1 },
-  codeLabel: { fontSize: 10, fontWeight: "600", letterSpacing: 0.5, textTransform: "uppercase", marginBottom: 2 },
-  codeText: { fontSize: 20, fontWeight: "800", letterSpacing: 2, fontFamily: "Inter_700Bold" },
-  copyBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
-  },
-  copyText: { color: "#fff", fontSize: 12, fontWeight: "700" },
-  shareBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 13,
-    borderRadius: 14,
-    borderWidth: 1,
-  },
-  shareBtnText: { fontSize: 14, fontWeight: "700" },
-  referralStats: { flexDirection: "row", gap: 8 },
-  referralStatBox: {
-    flex: 1,
-    alignItems: "center",
-    paddingVertical: 10,
-    borderRadius: 12,
-    gap: 2,
-  },
-  referralStatValue: { fontSize: 18, fontWeight: "800" },
-  referralStatLabel: { fontSize: 10, textAlign: "center", fontWeight: "500" },
-  infoCard: { borderRadius: 18, borderWidth: 1, overflow: "hidden" },
-  infoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
+    gap: 12,
   },
-  infoContent: { flex: 1 },
-  infoLabel: { fontSize: 11, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.4 },
-  infoValue: { fontSize: 14, fontWeight: "500", marginTop: 1 },
-  infoSep: { height: 1, marginHorizontal: 16 },
-  logoutFullBtn: {
-    flexDirection: "row",
+  menuIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 11,
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-    paddingVertical: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-    marginTop: 4,
   },
-  logoutFullText: { fontSize: 15, fontWeight: "700" },
+  menuContent: { flex: 1 },
+  menuLabel: { fontSize: 15, fontWeight: "600" },
+  menuSub: { fontSize: 12, marginTop: 1 },
+  menuSep: { height: 1, marginHorizontal: 16 },
 });

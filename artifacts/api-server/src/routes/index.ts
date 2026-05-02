@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import healthRouter from "./health";
 import authRouter from "./auth";
 import profilesRouter from "./profiles";
+import followsRouter from "./follows";
 import postsRouter from "./posts";
 import bootcampsRouter from "./bootcamps";
 import channelsRouter from "./channels";
@@ -12,12 +13,14 @@ import seedRouter from "./seed";
 import referralsRouter from "./referrals";
 import paymentsRouter from "./payments";
 import uploadRouter from "./upload";
+import bankAccountsRouter from "./bank-accounts";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use("/auth", authRouter);
 router.use("/profiles", profilesRouter);
+router.use("/profiles", followsRouter);
 router.use("/posts", postsRouter);
 router.use("/bootcamps", bootcampsRouter);
 router.use("/channels", channelsRouter);
@@ -28,5 +31,6 @@ router.use("/seed", seedRouter);
 router.use("/referrals", referralsRouter);
 router.use("/payments", paymentsRouter);
 router.use("/upload", uploadRouter);
+router.use("/bank-accounts", bankAccountsRouter);
 
 export default router;

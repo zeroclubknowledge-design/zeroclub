@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Image,
 } from "react-native";
+import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useColors } from "@/hooks/useColors";
@@ -92,26 +93,32 @@ export function PostCard({
     <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
       {/* Header */}
       <View style={styles.header}>
-        <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
-          {author.avatarUrl ? (
-            <Image source={{ uri: author.avatarUrl }} style={StyleSheet.absoluteFillObject} borderRadius={20} />
-          ) : (
-            <Text style={[styles.avatarText, { color: colors.primaryForeground }]}>
-              {author.displayName[0]?.toUpperCase() ?? "?"}
-            </Text>
-          )}
-        </View>
-        <View style={styles.authorInfo}>
-          <View style={styles.authorRow}>
-            <Text style={[styles.displayName, { color: colors.foreground }]}>{author.displayName}</Text>
-            <View style={[styles.levelBadge, { backgroundColor: colors.muted }]}>
-              <Text style={[styles.levelText, { color: colors.primary }]}>Lv{author.level}</Text>
-            </View>
+        <TouchableOpacity
+          onPress={() => router.push({ pathname: "/user/[id]", params: { id: author.id } } as never)}
+          activeOpacity={0.8}
+          style={styles.authorPressable}
+        >
+          <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
+            {author.avatarUrl ? (
+              <Image source={{ uri: author.avatarUrl }} style={StyleSheet.absoluteFillObject} borderRadius={20} />
+            ) : (
+              <Text style={[styles.avatarText, { color: colors.primaryForeground }]}>
+                {author.displayName[0]?.toUpperCase() ?? "?"}
+              </Text>
+            )}
           </View>
-          <Text style={[styles.username, { color: colors.mutedForeground }]}>
-            @{author.username} · {timeAgo(createdAt)}
-          </Text>
-        </View>
+          <View style={styles.authorInfo}>
+            <View style={styles.authorRow}>
+              <Text style={[styles.displayName, { color: colors.foreground }]}>{author.displayName}</Text>
+              <View style={[styles.levelBadge, { backgroundColor: colors.muted }]}>
+                <Text style={[styles.levelText, { color: colors.primary }]}>Lv{author.level}</Text>
+              </View>
+            </View>
+            <Text style={[styles.username, { color: colors.mutedForeground }]}>
+              @{author.username} · {timeAgo(createdAt)}
+            </Text>
+          </View>
+        </TouchableOpacity>
         {isProofProject && (
           <View style={[styles.proofBadge, { backgroundColor: colors.primary }]}>
             <Feather name="zap" size={10} color="#fff" />
@@ -178,6 +185,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 14,
     paddingBottom: 10,
+  },
+  authorPressable: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
     gap: 10,
   },
   avatar: {

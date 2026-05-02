@@ -18,15 +18,19 @@ import type {
 
 import type {
   AuthResponse,
+  BankAccount,
   BookmarkResponse,
   Bootcamp,
   Channel,
   Comment,
+  CreateBankAccountRequest,
   CreateCommentRequest,
   CreatePostRequest,
+  CreateWithdrawalRequest,
   Enrollment,
   ErrorResponse,
   FeedSummary,
+  FollowResponse,
   HealthStatus,
   LikeResponse,
   ListMessagesParams,
@@ -34,6 +38,7 @@ import type {
   ListXpEventsParams,
   LoginRequest,
   Message,
+  OkResponse,
   PaymentInitiateResponse,
   Post,
   PostListResponse,
@@ -46,6 +51,7 @@ import type {
   UpdatePushToken200,
   UpdatePushTokenBody,
   Wallet,
+  Withdrawal,
   XpEvent,
 } from "./api.schemas";
 
@@ -540,6 +546,754 @@ export const useUpdateProfile = <
   TContext
 > => {
   return useMutation(getUpdateProfileMutationOptions(options));
+};
+
+/**
+ * @summary Follow a user
+ */
+export const getFollowUserUrl = (userId: string) => {
+  return `/api/profiles/${userId}/follow`;
+};
+
+export const followUser = async (
+  userId: string,
+  options?: RequestInit,
+): Promise<FollowResponse> => {
+  return customFetch<FollowResponse>(getFollowUserUrl(userId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getFollowUserMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof followUser>>,
+    TError,
+    { userId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof followUser>>,
+  TError,
+  { userId: string },
+  TContext
+> => {
+  const mutationKey = ["followUser"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof followUser>>,
+    { userId: string }
+  > = (props) => {
+    const { userId } = props ?? {};
+
+    return followUser(userId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type FollowUserMutationResult = NonNullable<
+  Awaited<ReturnType<typeof followUser>>
+>;
+
+export type FollowUserMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Follow a user
+ */
+export const useFollowUser = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof followUser>>,
+    TError,
+    { userId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof followUser>>,
+  TError,
+  { userId: string },
+  TContext
+> => {
+  return useMutation(getFollowUserMutationOptions(options));
+};
+
+/**
+ * @summary Unfollow a user
+ */
+export const getUnfollowUserUrl = (userId: string) => {
+  return `/api/profiles/${userId}/follow`;
+};
+
+export const unfollowUser = async (
+  userId: string,
+  options?: RequestInit,
+): Promise<FollowResponse> => {
+  return customFetch<FollowResponse>(getUnfollowUserUrl(userId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getUnfollowUserMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof unfollowUser>>,
+    TError,
+    { userId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof unfollowUser>>,
+  TError,
+  { userId: string },
+  TContext
+> => {
+  const mutationKey = ["unfollowUser"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof unfollowUser>>,
+    { userId: string }
+  > = (props) => {
+    const { userId } = props ?? {};
+
+    return unfollowUser(userId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UnfollowUserMutationResult = NonNullable<
+  Awaited<ReturnType<typeof unfollowUser>>
+>;
+
+export type UnfollowUserMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Unfollow a user
+ */
+export const useUnfollowUser = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof unfollowUser>>,
+    TError,
+    { userId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof unfollowUser>>,
+  TError,
+  { userId: string },
+  TContext
+> => {
+  return useMutation(getUnfollowUserMutationOptions(options));
+};
+
+/**
+ * @summary List followers of a user
+ */
+export const getListFollowersUrl = (userId: string) => {
+  return `/api/profiles/${userId}/followers`;
+};
+
+export const listFollowers = async (
+  userId: string,
+  options?: RequestInit,
+): Promise<Profile[]> => {
+  return customFetch<Profile[]>(getListFollowersUrl(userId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListFollowersQueryKey = (userId: string) => {
+  return [`/api/profiles/${userId}/followers`] as const;
+};
+
+export const getListFollowersQueryOptions = <
+  TData = Awaited<ReturnType<typeof listFollowers>>,
+  TError = ErrorType<unknown>,
+>(
+  userId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listFollowers>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListFollowersQueryKey(userId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listFollowers>>> = ({
+    signal,
+  }) => listFollowers(userId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!userId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listFollowers>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListFollowersQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listFollowers>>
+>;
+export type ListFollowersQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List followers of a user
+ */
+
+export function useListFollowers<
+  TData = Awaited<ReturnType<typeof listFollowers>>,
+  TError = ErrorType<unknown>,
+>(
+  userId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listFollowers>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListFollowersQueryOptions(userId, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List users that a user follows
+ */
+export const getListFollowingUrl = (userId: string) => {
+  return `/api/profiles/${userId}/following`;
+};
+
+export const listFollowing = async (
+  userId: string,
+  options?: RequestInit,
+): Promise<Profile[]> => {
+  return customFetch<Profile[]>(getListFollowingUrl(userId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListFollowingQueryKey = (userId: string) => {
+  return [`/api/profiles/${userId}/following`] as const;
+};
+
+export const getListFollowingQueryOptions = <
+  TData = Awaited<ReturnType<typeof listFollowing>>,
+  TError = ErrorType<unknown>,
+>(
+  userId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listFollowing>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListFollowingQueryKey(userId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listFollowing>>> = ({
+    signal,
+  }) => listFollowing(userId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!userId,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listFollowing>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListFollowingQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listFollowing>>
+>;
+export type ListFollowingQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List users that a user follows
+ */
+
+export function useListFollowing<
+  TData = Awaited<ReturnType<typeof listFollowing>>,
+  TError = ErrorType<unknown>,
+>(
+  userId: string,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listFollowing>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListFollowingQueryOptions(userId, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List my bank accounts
+ */
+export const getListBankAccountsUrl = () => {
+  return `/api/bank-accounts`;
+};
+
+export const listBankAccounts = async (
+  options?: RequestInit,
+): Promise<BankAccount[]> => {
+  return customFetch<BankAccount[]>(getListBankAccountsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListBankAccountsQueryKey = () => {
+  return [`/api/bank-accounts`] as const;
+};
+
+export const getListBankAccountsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listBankAccounts>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listBankAccounts>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListBankAccountsQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listBankAccounts>>
+  > = ({ signal }) => listBankAccounts({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listBankAccounts>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListBankAccountsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listBankAccounts>>
+>;
+export type ListBankAccountsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List my bank accounts
+ */
+
+export function useListBankAccounts<
+  TData = Awaited<ReturnType<typeof listBankAccounts>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listBankAccounts>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListBankAccountsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Add a bank account
+ */
+export const getCreateBankAccountUrl = () => {
+  return `/api/bank-accounts`;
+};
+
+export const createBankAccount = async (
+  createBankAccountRequest: CreateBankAccountRequest,
+  options?: RequestInit,
+): Promise<BankAccount> => {
+  return customFetch<BankAccount>(getCreateBankAccountUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createBankAccountRequest),
+  });
+};
+
+export const getCreateBankAccountMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createBankAccount>>,
+    TError,
+    { data: BodyType<CreateBankAccountRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createBankAccount>>,
+  TError,
+  { data: BodyType<CreateBankAccountRequest> },
+  TContext
+> => {
+  const mutationKey = ["createBankAccount"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createBankAccount>>,
+    { data: BodyType<CreateBankAccountRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createBankAccount(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateBankAccountMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createBankAccount>>
+>;
+export type CreateBankAccountMutationBody = BodyType<CreateBankAccountRequest>;
+export type CreateBankAccountMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Add a bank account
+ */
+export const useCreateBankAccount = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createBankAccount>>,
+    TError,
+    { data: BodyType<CreateBankAccountRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createBankAccount>>,
+  TError,
+  { data: BodyType<CreateBankAccountRequest> },
+  TContext
+> => {
+  return useMutation(getCreateBankAccountMutationOptions(options));
+};
+
+/**
+ * @summary Remove a bank account
+ */
+export const getDeleteBankAccountUrl = (id: string) => {
+  return `/api/bank-accounts/${id}`;
+};
+
+export const deleteBankAccount = async (
+  id: string,
+  options?: RequestInit,
+): Promise<OkResponse> => {
+  return customFetch<OkResponse>(getDeleteBankAccountUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteBankAccountMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteBankAccount>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteBankAccount>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  const mutationKey = ["deleteBankAccount"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteBankAccount>>,
+    { id: string }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteBankAccount(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteBankAccountMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteBankAccount>>
+>;
+
+export type DeleteBankAccountMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Remove a bank account
+ */
+export const useDeleteBankAccount = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteBankAccount>>,
+    TError,
+    { id: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteBankAccount>>,
+  TError,
+  { id: string },
+  TContext
+> => {
+  return useMutation(getDeleteBankAccountMutationOptions(options));
+};
+
+/**
+ * @summary List my withdrawal requests
+ */
+export const getListWithdrawalsUrl = () => {
+  return `/api/bank-accounts/withdrawals`;
+};
+
+export const listWithdrawals = async (
+  options?: RequestInit,
+): Promise<Withdrawal[]> => {
+  return customFetch<Withdrawal[]>(getListWithdrawalsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListWithdrawalsQueryKey = () => {
+  return [`/api/bank-accounts/withdrawals`] as const;
+};
+
+export const getListWithdrawalsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listWithdrawals>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listWithdrawals>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListWithdrawalsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listWithdrawals>>> = ({
+    signal,
+  }) => listWithdrawals({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listWithdrawals>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListWithdrawalsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listWithdrawals>>
+>;
+export type ListWithdrawalsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List my withdrawal requests
+ */
+
+export function useListWithdrawals<
+  TData = Awaited<ReturnType<typeof listWithdrawals>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listWithdrawals>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListWithdrawalsQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Request an XP-to-cash withdrawal
+ */
+export const getCreateWithdrawalUrl = () => {
+  return `/api/bank-accounts/withdrawals`;
+};
+
+export const createWithdrawal = async (
+  createWithdrawalRequest: CreateWithdrawalRequest,
+  options?: RequestInit,
+): Promise<Withdrawal> => {
+  return customFetch<Withdrawal>(getCreateWithdrawalUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createWithdrawalRequest),
+  });
+};
+
+export const getCreateWithdrawalMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createWithdrawal>>,
+    TError,
+    { data: BodyType<CreateWithdrawalRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createWithdrawal>>,
+  TError,
+  { data: BodyType<CreateWithdrawalRequest> },
+  TContext
+> => {
+  const mutationKey = ["createWithdrawal"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createWithdrawal>>,
+    { data: BodyType<CreateWithdrawalRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createWithdrawal(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateWithdrawalMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createWithdrawal>>
+>;
+export type CreateWithdrawalMutationBody = BodyType<CreateWithdrawalRequest>;
+export type CreateWithdrawalMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Request an XP-to-cash withdrawal
+ */
+export const useCreateWithdrawal = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createWithdrawal>>,
+    TError,
+    { data: BodyType<CreateWithdrawalRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createWithdrawal>>,
+  TError,
+  { data: BodyType<CreateWithdrawalRequest> },
+  TContext
+> => {
+  return useMutation(getCreateWithdrawalMutationOptions(options));
 };
 
 /**

@@ -14,6 +14,8 @@ tags:
     description: Authentication
   - name: profiles
     description: User profiles
+  - name: follows
+    description: Follow / unfollow users
   - name: posts
     description: Community feed posts
   - name: bootcamps
@@ -23,11 +25,15 @@ tags:
   - name: messages
     description: Chat messages
   - name: wallet
-    description: XP wallet and events
+    description: Zero Wallet — XP and funds balance
   - name: referrals
     description: Referral system
   - name: payments
     description: Bootcamp payments
+  - name: bank-accounts
+    description: Bank accounts for withdrawals
+  - name: withdrawals
+    description: XP-to-cash withdrawal requests
 paths:
   /healthz:
     get:
@@ -158,6 +164,185 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Profile"
+
+  /profiles/{userId}/follow:
+    post:
+      operationId: followUser
+      tags: [follows]
+      summary: Follow a user
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FollowResponse"
+    delete:
+      operationId: unfollowUser
+      tags: [follows]
+      summary: Unfollow a user
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FollowResponse"
+
+  /profiles/{userId}/followers:
+    get:
+      operationId: listFollowers
+      tags: [follows]
+      summary: List followers of a user
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Profile"
+
+  /profiles/{userId}/following:
+    get:
+      operationId: listFollowing
+      tags: [follows]
+      summary: List users that a user follows
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Profile"
+
+  /bank-accounts:
+    get:
+      operationId: listBankAccounts
+      tags: [bank-accounts]
+      summary: List my bank accounts
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BankAccount"
+    post:
+      operationId: createBankAccount
+      tags: [bank-accounts]
+      summary: Add a bank account
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBankAccountRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BankAccount"
+
+  /bank-accounts/{id}:
+    delete:
+      operationId: deleteBankAccount
+      tags: [bank-accounts]
+      summary: Remove a bank account
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+
+  /bank-accounts/withdrawals:
+    get:
+      operationId: listWithdrawals
+      tags: [withdrawals]
+      summary: List my withdrawal requests
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Withdrawal"
+    post:
+      operationId: createWithdrawal
+      tags: [withdrawals]
+      summary: Request an XP-to-cash withdrawal
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateWithdrawalRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Withdrawal"
 
   /posts:
     get:
@@ -740,6 +925,18 @@ components:
           type: integer
         xpBalance:
           type: integer
+        fundsBalance:
+          type: integer
+          default: 0
+        followerCount:
+          type: integer
+          default: 0
+        followingCount:
+          type: integer
+          default: 0
+        isFollowing:
+          type: boolean
+          nullable: true
         createdAt:
           type: string
           format: date-time
@@ -751,6 +948,9 @@ components:
         - track
         - level
         - xpBalance
+        - fundsBalance
+        - followerCount
+        - followingCount
         - createdAt
 
     UpdateProfileRequest:
@@ -763,6 +963,8 @@ components:
         avatarUrl:
           type: string
         track:
+          type: string
+        school:
           type: string
 
     Post:
@@ -1099,6 +1301,8 @@ components:
           type: string
         xpBalance:
           type: integer
+        fundsBalance:
+          type: integer
         level:
           type: integer
         xpToNextLevel:
@@ -1107,13 +1311,17 @@ components:
           type: integer
         totalXpForNextLevel:
           type: integer
+        minWithdrawalXp:
+          type: integer
       required:
         - userId
         - xpBalance
+        - fundsBalance
         - level
         - xpToNextLevel
         - xpForCurrentLevel
         - totalXpForNextLevel
+        - minWithdrawalXp
 
     XpEvent:
       type: object
@@ -1166,6 +1374,102 @@ components:
         - postsToday
         - topTracks
         - totalMembers
+
+    FollowResponse:
+      type: object
+      properties:
+        following:
+          type: boolean
+        followerCount:
+          type: integer
+      required:
+        - following
+        - followerCount
+
+    BankAccount:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        bankName:
+          type: string
+        accountNumber:
+          type: string
+        accountName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - bankName
+        - accountNumber
+        - accountName
+        - createdAt
+
+    CreateBankAccountRequest:
+      type: object
+      properties:
+        bankName:
+          type: string
+        accountNumber:
+          type: string
+        accountName:
+          type: string
+      required:
+        - bankName
+        - accountNumber
+        - accountName
+
+    Withdrawal:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        bankAccountId:
+          type: string
+        amountXp:
+          type: integer
+        amountKobo:
+          type: integer
+        status:
+          type: string
+          enum: [pending, processing, paid, failed]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - bankAccountId
+        - amountXp
+        - amountKobo
+        - status
+        - createdAt
+
+    CreateWithdrawalRequest:
+      type: object
+      properties:
+        bankAccountId:
+          type: string
+        amountXp:
+          type: integer
+      required:
+        - bankAccountId
+        - amountXp
+
+    OkResponse:
+      type: object
+      properties:
+        ok:
+          type: boolean
+      required:
+        - ok
 
     ReferralStats:
       type: object

@@ -48,6 +48,10 @@ export const LoginBody = zod.object({
   password: zod.string(),
 });
 
+export const loginResponseUserFundsBalanceDefault = 0;
+export const loginResponseUserFollowerCountDefault = 0;
+export const loginResponseUserFollowingCountDefault = 0;
+
 export const LoginResponse = zod.object({
   token: zod.string(),
   user: zod.object({
@@ -62,6 +66,12 @@ export const LoginResponse = zod.object({
     referralCode: zod.string().nullish(),
     level: zod.number(),
     xpBalance: zod.number(),
+    fundsBalance: zod.number().default(loginResponseUserFundsBalanceDefault),
+    followerCount: zod.number().default(loginResponseUserFollowerCountDefault),
+    followingCount: zod
+      .number()
+      .default(loginResponseUserFollowingCountDefault),
+    isFollowing: zod.boolean().nullish(),
     createdAt: zod.coerce.date(),
   }),
 });
@@ -69,6 +79,10 @@ export const LoginResponse = zod.object({
 /**
  * @summary Get current user profile
  */
+export const getMeResponseFundsBalanceDefault = 0;
+export const getMeResponseFollowerCountDefault = 0;
+export const getMeResponseFollowingCountDefault = 0;
+
 export const GetMeResponse = zod.object({
   id: zod.string(),
   email: zod.string(),
@@ -81,6 +95,10 @@ export const GetMeResponse = zod.object({
   referralCode: zod.string().nullish(),
   level: zod.number(),
   xpBalance: zod.number(),
+  fundsBalance: zod.number().default(getMeResponseFundsBalanceDefault),
+  followerCount: zod.number().default(getMeResponseFollowerCountDefault),
+  followingCount: zod.number().default(getMeResponseFollowingCountDefault),
+  isFollowing: zod.boolean().nullish(),
   createdAt: zod.coerce.date(),
 });
 
@@ -90,6 +108,10 @@ export const GetMeResponse = zod.object({
 export const GetProfileParams = zod.object({
   userId: zod.coerce.string(),
 });
+
+export const getProfileResponseFundsBalanceDefault = 0;
+export const getProfileResponseFollowerCountDefault = 0;
+export const getProfileResponseFollowingCountDefault = 0;
 
 export const GetProfileResponse = zod.object({
   id: zod.string(),
@@ -103,6 +125,10 @@ export const GetProfileResponse = zod.object({
   referralCode: zod.string().nullish(),
   level: zod.number(),
   xpBalance: zod.number(),
+  fundsBalance: zod.number().default(getProfileResponseFundsBalanceDefault),
+  followerCount: zod.number().default(getProfileResponseFollowerCountDefault),
+  followingCount: zod.number().default(getProfileResponseFollowingCountDefault),
+  isFollowing: zod.boolean().nullish(),
   createdAt: zod.coerce.date(),
 });
 
@@ -118,7 +144,12 @@ export const UpdateProfileBody = zod.object({
   bio: zod.string().optional(),
   avatarUrl: zod.string().optional(),
   track: zod.string().optional(),
+  school: zod.string().optional(),
 });
+
+export const updateProfileResponseFundsBalanceDefault = 0;
+export const updateProfileResponseFollowerCountDefault = 0;
+export const updateProfileResponseFollowingCountDefault = 0;
 
 export const UpdateProfileResponse = zod.object({
   id: zod.string(),
@@ -132,7 +163,164 @@ export const UpdateProfileResponse = zod.object({
   referralCode: zod.string().nullish(),
   level: zod.number(),
   xpBalance: zod.number(),
+  fundsBalance: zod.number().default(updateProfileResponseFundsBalanceDefault),
+  followerCount: zod
+    .number()
+    .default(updateProfileResponseFollowerCountDefault),
+  followingCount: zod
+    .number()
+    .default(updateProfileResponseFollowingCountDefault),
+  isFollowing: zod.boolean().nullish(),
   createdAt: zod.coerce.date(),
+});
+
+/**
+ * @summary Follow a user
+ */
+export const FollowUserParams = zod.object({
+  userId: zod.coerce.string(),
+});
+
+export const FollowUserResponse = zod.object({
+  following: zod.boolean(),
+  followerCount: zod.number(),
+});
+
+/**
+ * @summary Unfollow a user
+ */
+export const UnfollowUserParams = zod.object({
+  userId: zod.coerce.string(),
+});
+
+export const UnfollowUserResponse = zod.object({
+  following: zod.boolean(),
+  followerCount: zod.number(),
+});
+
+/**
+ * @summary List followers of a user
+ */
+export const ListFollowersParams = zod.object({
+  userId: zod.coerce.string(),
+});
+
+export const listFollowersResponseFundsBalanceDefault = 0;
+export const listFollowersResponseFollowerCountDefault = 0;
+export const listFollowersResponseFollowingCountDefault = 0;
+
+export const ListFollowersResponseItem = zod.object({
+  id: zod.string(),
+  email: zod.string(),
+  username: zod.string(),
+  displayName: zod.string(),
+  avatarUrl: zod.string().nullish(),
+  bio: zod.string().nullish(),
+  track: zod.string(),
+  school: zod.string().nullish(),
+  referralCode: zod.string().nullish(),
+  level: zod.number(),
+  xpBalance: zod.number(),
+  fundsBalance: zod.number().default(listFollowersResponseFundsBalanceDefault),
+  followerCount: zod
+    .number()
+    .default(listFollowersResponseFollowerCountDefault),
+  followingCount: zod
+    .number()
+    .default(listFollowersResponseFollowingCountDefault),
+  isFollowing: zod.boolean().nullish(),
+  createdAt: zod.coerce.date(),
+});
+export const ListFollowersResponse = zod.array(ListFollowersResponseItem);
+
+/**
+ * @summary List users that a user follows
+ */
+export const ListFollowingParams = zod.object({
+  userId: zod.coerce.string(),
+});
+
+export const listFollowingResponseFundsBalanceDefault = 0;
+export const listFollowingResponseFollowerCountDefault = 0;
+export const listFollowingResponseFollowingCountDefault = 0;
+
+export const ListFollowingResponseItem = zod.object({
+  id: zod.string(),
+  email: zod.string(),
+  username: zod.string(),
+  displayName: zod.string(),
+  avatarUrl: zod.string().nullish(),
+  bio: zod.string().nullish(),
+  track: zod.string(),
+  school: zod.string().nullish(),
+  referralCode: zod.string().nullish(),
+  level: zod.number(),
+  xpBalance: zod.number(),
+  fundsBalance: zod.number().default(listFollowingResponseFundsBalanceDefault),
+  followerCount: zod
+    .number()
+    .default(listFollowingResponseFollowerCountDefault),
+  followingCount: zod
+    .number()
+    .default(listFollowingResponseFollowingCountDefault),
+  isFollowing: zod.boolean().nullish(),
+  createdAt: zod.coerce.date(),
+});
+export const ListFollowingResponse = zod.array(ListFollowingResponseItem);
+
+/**
+ * @summary List my bank accounts
+ */
+export const ListBankAccountsResponseItem = zod.object({
+  id: zod.string(),
+  userId: zod.string(),
+  bankName: zod.string(),
+  accountNumber: zod.string(),
+  accountName: zod.string(),
+  createdAt: zod.coerce.date(),
+});
+export const ListBankAccountsResponse = zod.array(ListBankAccountsResponseItem);
+
+/**
+ * @summary Add a bank account
+ */
+export const CreateBankAccountBody = zod.object({
+  bankName: zod.string(),
+  accountNumber: zod.string(),
+  accountName: zod.string(),
+});
+
+/**
+ * @summary Remove a bank account
+ */
+export const DeleteBankAccountParams = zod.object({
+  id: zod.coerce.string(),
+});
+
+export const DeleteBankAccountResponse = zod.object({
+  ok: zod.boolean(),
+});
+
+/**
+ * @summary List my withdrawal requests
+ */
+export const ListWithdrawalsResponseItem = zod.object({
+  id: zod.string(),
+  userId: zod.string(),
+  bankAccountId: zod.string(),
+  amountXp: zod.number(),
+  amountKobo: zod.number(),
+  status: zod.enum(["pending", "processing", "paid", "failed"]),
+  createdAt: zod.coerce.date(),
+});
+export const ListWithdrawalsResponse = zod.array(ListWithdrawalsResponseItem);
+
+/**
+ * @summary Request an XP-to-cash withdrawal
+ */
+export const CreateWithdrawalBody = zod.object({
+  bankAccountId: zod.string(),
+  amountXp: zod.number(),
 });
 
 /**
@@ -146,6 +334,10 @@ export const ListPostsQueryParams = zod.object({
   offset: zod.coerce.number().default(listPostsQueryOffsetDefault),
   track: zod.coerce.string().optional(),
 });
+
+export const listPostsResponsePostsItemAuthorFundsBalanceDefault = 0;
+export const listPostsResponsePostsItemAuthorFollowerCountDefault = 0;
+export const listPostsResponsePostsItemAuthorFollowingCountDefault = 0;
 
 export const ListPostsResponse = zod.object({
   posts: zod.array(
@@ -164,6 +356,16 @@ export const ListPostsResponse = zod.object({
         referralCode: zod.string().nullish(),
         level: zod.number(),
         xpBalance: zod.number(),
+        fundsBalance: zod
+          .number()
+          .default(listPostsResponsePostsItemAuthorFundsBalanceDefault),
+        followerCount: zod
+          .number()
+          .default(listPostsResponsePostsItemAuthorFollowerCountDefault),
+        followingCount: zod
+          .number()
+          .default(listPostsResponsePostsItemAuthorFollowingCountDefault),
+        isFollowing: zod.boolean().nullish(),
         createdAt: zod.coerce.date(),
       }),
       body: zod.string(),
@@ -212,6 +414,10 @@ export const GetPostParams = zod.object({
   postId: zod.coerce.string(),
 });
 
+export const getPostResponseAuthorFundsBalanceDefault = 0;
+export const getPostResponseAuthorFollowerCountDefault = 0;
+export const getPostResponseAuthorFollowingCountDefault = 0;
+
 export const GetPostResponse = zod.object({
   id: zod.string(),
   authorId: zod.string(),
@@ -227,6 +433,16 @@ export const GetPostResponse = zod.object({
     referralCode: zod.string().nullish(),
     level: zod.number(),
     xpBalance: zod.number(),
+    fundsBalance: zod
+      .number()
+      .default(getPostResponseAuthorFundsBalanceDefault),
+    followerCount: zod
+      .number()
+      .default(getPostResponseAuthorFollowerCountDefault),
+    followingCount: zod
+      .number()
+      .default(getPostResponseAuthorFollowingCountDefault),
+    isFollowing: zod.boolean().nullish(),
     createdAt: zod.coerce.date(),
   }),
   body: zod.string(),
@@ -271,6 +487,10 @@ export const ListCommentsParams = zod.object({
   postId: zod.coerce.string(),
 });
 
+export const listCommentsResponseAuthorFundsBalanceDefault = 0;
+export const listCommentsResponseAuthorFollowerCountDefault = 0;
+export const listCommentsResponseAuthorFollowingCountDefault = 0;
+
 export const ListCommentsResponseItem = zod.object({
   id: zod.string(),
   postId: zod.string(),
@@ -287,6 +507,16 @@ export const ListCommentsResponseItem = zod.object({
     referralCode: zod.string().nullish(),
     level: zod.number(),
     xpBalance: zod.number(),
+    fundsBalance: zod
+      .number()
+      .default(listCommentsResponseAuthorFundsBalanceDefault),
+    followerCount: zod
+      .number()
+      .default(listCommentsResponseAuthorFollowerCountDefault),
+    followingCount: zod
+      .number()
+      .default(listCommentsResponseAuthorFollowingCountDefault),
+    isFollowing: zod.boolean().nullish(),
     createdAt: zod.coerce.date(),
   }),
   body: zod.string(),
@@ -503,6 +733,10 @@ export const ListMessagesQueryParams = zod.object({
   limit: zod.coerce.number().default(listMessagesQueryLimitDefault),
 });
 
+export const listMessagesResponseAuthorFundsBalanceDefault = 0;
+export const listMessagesResponseAuthorFollowerCountDefault = 0;
+export const listMessagesResponseAuthorFollowingCountDefault = 0;
+
 export const ListMessagesResponseItem = zod.object({
   id: zod.string(),
   channelId: zod.string(),
@@ -519,6 +753,16 @@ export const ListMessagesResponseItem = zod.object({
     referralCode: zod.string().nullish(),
     level: zod.number(),
     xpBalance: zod.number(),
+    fundsBalance: zod
+      .number()
+      .default(listMessagesResponseAuthorFundsBalanceDefault),
+    followerCount: zod
+      .number()
+      .default(listMessagesResponseAuthorFollowerCountDefault),
+    followingCount: zod
+      .number()
+      .default(listMessagesResponseAuthorFollowingCountDefault),
+    isFollowing: zod.boolean().nullish(),
     createdAt: zod.coerce.date(),
   }),
   body: zod.string(),
@@ -543,10 +787,12 @@ export const SendMessageBody = zod.object({
 export const GetWalletResponse = zod.object({
   userId: zod.string(),
   xpBalance: zod.number(),
+  fundsBalance: zod.number(),
   level: zod.number(),
   xpToNextLevel: zod.number(),
   xpForCurrentLevel: zod.number(),
   totalXpForNextLevel: zod.number(),
+  minWithdrawalXp: zod.number(),
 });
 
 /**

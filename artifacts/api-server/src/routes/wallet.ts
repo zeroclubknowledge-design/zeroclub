@@ -32,10 +32,12 @@ router.get("/", requireAuth, async (req: AuthRequest, res) => {
     res.json({
       userId: p.id,
       xpBalance: p.xpBalance,
+      fundsBalance: p.fundsBalance ?? 0,
       level,
       xpToNextLevel,
       xpForCurrentLevel,
       totalXpForNextLevel,
+      minWithdrawalXp: 2000,
     });
   } catch (err) {
     req.log.error({ err }, "get wallet error");

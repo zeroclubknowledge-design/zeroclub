@@ -27,6 +27,7 @@ export const profilesTable = pgTable("profiles", {
   referralCode: text("referral_code").unique(),
   pushToken: text("push_token"),
   xpBalance: integer("xp_balance").notNull().default(0),
+  fundsBalance: integer("funds_balance").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

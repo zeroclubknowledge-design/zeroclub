@@ -103,6 +103,9 @@ function RootLayoutNav() {
         <Stack.Screen name="channel/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="profile" options={{ headerShown: false, animation: "slide_from_right" }} />
         <Stack.Screen name="bootcamp/[id]" options={{ headerShown: false, animation: "slide_from_right" }} />
+        <Stack.Screen name="user/[id]" options={{ headerShown: false, animation: "slide_from_right" }} />
+        <Stack.Screen name="settings" options={{ headerShown: false, animation: "slide_from_right" }} />
+        <Stack.Screen name="referral" options={{ headerShown: false, animation: "slide_from_right" }} />
       </Stack>
     </AuthGate>
   );
