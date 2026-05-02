@@ -1,6 +1,7 @@
 import { Router } from "express";
+import bcrypt from "bcryptjs";
 import { db } from "@workspace/db";
-import { bootcampsTable, bootcampModulesTable, channelsTable } from "@workspace/db";
+import { bootcampsTable, bootcampModulesTable, channelsTable, usersTable, profilesTable } from "@workspace/db";
 import { generateId } from "../lib/ids";
 
 const router = Router();
@@ -62,6 +63,31 @@ const MODULE_TEMPLATES: Record<string, { title: string; description: string; dur
 
 router.post("/", async (req, res) => {
   try {
+    // Seed demo users
+    const existingUsers = await db.select().from(usersTable);
+    if (existingUsers.length === 0) {
+      const hash = await bcrypt.hash("password123", 10);
+      const demoUsers = [
+        { email: "ada@zeroclub.io", username: "ada_builds", displayName: "Ada Okafor", track: "product_design" as const, school: "UNILAG" },
+        { email: "kofi@zeroclub.io", username: "kofi_codes", displayName: "Kofi Mensah", track: "frontend" as const, school: "KNUST" },
+        { email: "zara@zeroclub.io", username: "zara_grows", displayName: "Zara Yusuf", track: "growth" as const, school: "ABU Zaria" },
+      ];
+      for (const u of demoUsers) {
+        const id = generateId();
+        await db.insert(usersTable).values({ id, email: u.email, passwordHash: hash });
+        await db.insert(profilesTable).values({
+          id,
+          email: u.email,
+          username: u.username,
+          displayName: u.displayName,
+          track: u.track,
+          school: u.school,
+          referralCode: u.username.slice(0, 3).toUpperCase() + "DEMO1",
+          xpBalance: Math.floor(Math.random() * 800) + 100,
+        });
+      }
+    }
+
     const existingChannels = await db.select().from(channelsTable);
     if (existingChannels.length === 0) {
       await db.insert(channelsTable).values([
