@@ -16,6 +16,11 @@ const TRACK_LABELS: Record<string, string> = {
   growth: "Growth",
   branding: "Branding",
   mentorship: "Mentorship",
+  backend: "Backend",
+  full_stack: "Full Stack",
+  vibe_coding: "Vibe Coding",
+  video_editing: "Video Editing",
+  motion_design: "Motion Design",
 };
 
 interface Author {

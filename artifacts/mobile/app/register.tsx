@@ -26,6 +26,11 @@ const TRACKS = [
   { key: "growth", label: "Growth" },
   { key: "branding", label: "Branding" },
   { key: "mentorship", label: "Mentorship" },
+  { key: "backend", label: "Backend" },
+  { key: "full_stack", label: "Full Stack" },
+  { key: "vibe_coding", label: "Vibe Coding" },
+  { key: "video_editing", label: "Video Editing" },
+  { key: "motion_design", label: "Motion Design" },
 ];
 
 export default function RegisterScreen() {

@@ -9,10 +9,12 @@ import {
   Platform,
   Share,
   ActivityIndicator,
+  Image,
 } from "react-native";
 import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import * as ImagePicker from "expo-image-picker";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
 
@@ -22,6 +24,11 @@ const TRACK_LABELS: Record<string, string> = {
   growth: "Growth",
   branding: "Branding",
   mentorship: "Mentorship",
+  backend: "Backend",
+  full_stack: "Full Stack",
+  vibe_coding: "Vibe Coding",
+  video_editing: "Video Editing",
+  motion_design: "Motion Design",
 };
 
 interface ReferralStats {
@@ -35,9 +42,10 @@ interface ReferralStats {
 export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user, token, logout } = useAuth();
+  const { user, token, logout, updateUser } = useAuth();
   const [referralStats, setReferralStats] = useState<ReferralStats | null>(null);
   const [loadingStats, setLoadingStats] = useState(true);
+  const [avatarUploading, setAvatarUploading] = useState(false);
 
   const topPadding = Platform.OS === "web" ? 67 : insets.top;
 
@@ -96,6 +104,55 @@ export default function ProfileScreen() {
     }
   };
 
+  const handlePickAvatar = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert("Permission needed", "Allow access to your photo library to update your avatar.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (result.canceled || !result.assets[0] || !token || !user) return;
+
+    setAvatarUploading(true);
+    try {
+      const uri = result.assets[0].uri;
+      const filename = uri.split("/").pop() ?? "avatar.jpg";
+      const formData = new FormData();
+      formData.append("file", { uri, name: filename, type: "image/jpeg" } as unknown as Blob);
+
+      const domain = process.env["EXPO_PUBLIC_DOMAIN"];
+      const baseUrl = domain ? `https://${domain}` : "";
+
+      const uploadRes = await fetch(`${baseUrl}/api/upload`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      if (!uploadRes.ok) throw new Error("Upload failed");
+      const { url } = await uploadRes.json() as { url: string };
+      const avatarUrl = `${baseUrl}${url}`;
+
+      const updateRes = await fetch(`${baseUrl}/api/profiles/${user.id}/update`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ avatarUrl }),
+      });
+      if (!updateRes.ok) throw new Error("Profile update failed");
+      const updated = await updateRes.json() as typeof user;
+      await updateUser({ ...user, ...updated, avatarUrl });
+      Alert.alert("Done", "Profile photo updated!");
+    } catch {
+      Alert.alert("Error", "Could not update profile photo. Try again.");
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
   const initials = (user?.displayName ?? "U").slice(0, 2).toUpperCase();
 
   return (
@@ -125,9 +182,31 @@ export default function ProfileScreen() {
       >
         {/* Avatar + Name */}
         <View style={styles.heroSection}>
-          <View style={[styles.avatarCircle, { backgroundColor: colors.primary }]}>
-            <Text style={styles.avatarText}>{initials}</Text>
-          </View>
+          <TouchableOpacity
+            onPress={handlePickAvatar}
+            activeOpacity={0.8}
+            style={styles.avatarWrap}
+            disabled={avatarUploading}
+          >
+            <View style={[styles.avatarCircle, { backgroundColor: colors.primary }]}>
+              {user?.avatarUrl ? (
+                <Image
+                  source={{ uri: user.avatarUrl }}
+                  style={StyleSheet.absoluteFillObject}
+                  borderRadius={40}
+                />
+              ) : (
+                <Text style={styles.avatarText}>{initials}</Text>
+              )}
+            </View>
+            <View style={[styles.cameraOverlay, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              {avatarUploading ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <Feather name="camera" size={13} color={colors.foreground} />
+              )}
+            </View>
+          </TouchableOpacity>
           <Text style={[styles.displayName, { color: colors.foreground }]}>
             {user?.displayName}
           </Text>
@@ -327,13 +406,25 @@ const styles = StyleSheet.create({
   logoutBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
   content: { padding: 20, gap: 16 },
   heroSection: { alignItems: "center", gap: 6, paddingBottom: 4 },
+  avatarWrap: { position: "relative", marginBottom: 4 },
   avatarCircle: {
     width: 80,
     height: 80,
     borderRadius: 40,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 4,
+    overflow: "hidden",
+  },
+  cameraOverlay: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
   avatarText: { color: "#fff", fontSize: 28, fontWeight: "800" },
   displayName: { fontSize: 22, fontWeight: "800", fontFamily: "Inter_700Bold" },

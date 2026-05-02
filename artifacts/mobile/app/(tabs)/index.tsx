@@ -29,7 +29,7 @@ import type { Post } from "@workspace/api-client-react";
 
 const LOGO = require("../../assets/images/icon.png");
 
-const TRACKS = ["all", "product_design", "frontend", "growth", "branding", "mentorship"];
+const TRACKS = ["all", "product_design", "frontend", "growth", "branding", "mentorship", "backend", "full_stack", "vibe_coding", "video_editing", "motion_design"];
 const TRACK_LABELS: Record<string, string> = {
   all: "All",
   product_design: "Design",
@@ -37,6 +37,11 @@ const TRACK_LABELS: Record<string, string> = {
   growth: "Growth",
   branding: "Branding",
   mentorship: "Mentor",
+  backend: "Backend",
+  full_stack: "Full Stack",
+  vibe_coding: "Vibe",
+  video_editing: "Video",
+  motion_design: "Motion",
 };
 
 export default function FeedScreen() {

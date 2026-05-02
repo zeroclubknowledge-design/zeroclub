@@ -676,7 +676,7 @@ components:
           type: string
         track:
           type: string
-          enum: [product_design, frontend, growth, branding, mentorship]
+          enum: [product_design, frontend, growth, branding, mentorship, backend, full_stack, vibe_coding, video_editing, motion_design]
         school:
           type: string
         referralCode:
@@ -837,7 +837,7 @@ components:
           nullable: true
         track:
           type: string
-          enum: [product_design, frontend, growth, branding, mentorship]
+          enum: [product_design, frontend, growth, branding, mentorship, backend, full_stack, vibe_coding, video_editing, motion_design]
         isProofProject:
           type: boolean
       required:

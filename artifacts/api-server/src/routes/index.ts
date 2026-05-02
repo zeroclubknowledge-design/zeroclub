@@ -11,6 +11,7 @@ import enrollmentsRouter from "./enrollments";
 import seedRouter from "./seed";
 import referralsRouter from "./referrals";
 import paymentsRouter from "./payments";
+import uploadRouter from "./upload";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use("/enrollments", enrollmentsRouter);
 router.use("/seed", seedRouter);
 router.use("/referrals", referralsRouter);
 router.use("/payments", paymentsRouter);
+router.use("/upload", uploadRouter);
 
 export default router;

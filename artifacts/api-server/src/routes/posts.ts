@@ -70,7 +70,7 @@ router.get("/", requireAuth, async (req: AuthRequest, res) => {
       ? await db
           .select()
           .from(postsTable)
-          .where(eq(postsTable.track, track as "product_design" | "frontend" | "growth" | "branding" | "mentorship"))
+          .where(eq(postsTable.track, track as typeof postsTable.$inferSelect.track))
           .orderBy(desc(postsTable.createdAt))
           .limit(limit)
           .offset(offset)
@@ -116,7 +116,7 @@ router.post("/", requireAuth, async (req: AuthRequest, res) => {
       authorId: req.userId!,
       body,
       imageUrl: imageUrl ?? null,
-      track: track as "product_design" | "frontend" | "growth" | "branding" | "mentorship",
+      track: track as typeof postsTable.$inferSelect.track,
       isProofProject: !!isProofProject,
       xpAwarded,
     });

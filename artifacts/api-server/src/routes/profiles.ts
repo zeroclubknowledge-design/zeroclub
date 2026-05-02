@@ -46,7 +46,7 @@ router.put("/:userId/update", requireAuth, async (req: AuthRequest, res) => {
     if (displayName) updates.displayName = displayName;
     if (bio !== undefined) updates.bio = bio;
     if (avatarUrl !== undefined) updates.avatarUrl = avatarUrl;
-    if (track) updates.track = track as "product_design" | "frontend" | "growth" | "branding" | "mentorship";
+    if (track) updates.track = track as typeof updates.track;
 
     await db.update(profilesTable).set(updates).where(eq(profilesTable.id, userId));
     const updated = await db.select().from(profilesTable).where(eq(profilesTable.id, userId)).limit(1);

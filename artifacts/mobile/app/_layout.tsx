@@ -28,6 +28,12 @@ if (domain) {
   setBaseUrl(`https://${domain}`);
 }
 
+let _splashComplete = false;
+
+export function markSplashComplete() {
+  _splashComplete = true;
+}
+
 function NotificationRegistrar() {
   const { token } = useAuth();
 
@@ -48,12 +54,14 @@ function NotificationRegistrar() {
           body: JSON.stringify({ pushToken }),
         });
       } catch {
-        // Non-critical — silently ignore
+        // Non-critical
       }
     }
 
     void register();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [token]);
 
   return null;
@@ -66,10 +74,15 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (isLoading) return;
-    const isAuthScreen = pathname === "/login" || pathname === "/register";
+    const isSplash = pathname === "/splash";
+    const isAuthScreen = pathname === "/login" || pathname === "/register" || isSplash;
 
     if (!token && !isAuthScreen) {
-      router.replace("/login");
+      if (!_splashComplete) {
+        router.replace("/splash");
+      } else {
+        router.replace("/login");
+      }
     } else if (token && isAuthScreen) {
       router.replace("/(tabs)" as never);
     }
@@ -84,14 +97,12 @@ function RootLayoutNav() {
       <NotificationRegistrar />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="splash" options={{ headerShown: false, animation: "none" }} />
         <Stack.Screen name="login" options={{ headerShown: false, animation: "fade" }} />
         <Stack.Screen name="register" options={{ headerShown: false, animation: "fade" }} />
         <Stack.Screen name="channel/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="profile" options={{ headerShown: false, animation: "slide_from_right" }} />
-        <Stack.Screen
-          name="bootcamp/[id]"
-          options={{ headerShown: false, animation: "slide_from_right" }}
-        />
+        <Stack.Screen name="bootcamp/[id]" options={{ headerShown: false, animation: "slide_from_right" }} />
       </Stack>
     </AuthGate>
   );

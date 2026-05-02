@@ -8,6 +8,11 @@ export const trackEnum = pgEnum("track", [
   "growth",
   "branding",
   "mentorship",
+  "backend",
+  "full_stack",
+  "vibe_coding",
+  "video_editing",
+  "motion_design",
 ]);
 
 export const profilesTable = pgTable("profiles", {

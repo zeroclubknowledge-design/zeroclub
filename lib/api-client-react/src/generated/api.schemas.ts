@@ -23,6 +23,11 @@ export const RegisterRequestTrack = {
   growth: "growth",
   branding: "branding",
   mentorship: "mentorship",
+  backend: "backend",
+  full_stack: "full_stack",
+  vibe_coding: "vibe_coding",
+  video_editing: "video_editing",
+  motion_design: "motion_design",
 } as const;
 
 export interface RegisterRequest {
@@ -99,6 +104,11 @@ export const CreatePostRequestTrack = {
   growth: "growth",
   branding: "branding",
   mentorship: "mentorship",
+  backend: "backend",
+  full_stack: "full_stack",
+  vibe_coding: "vibe_coding",
+  video_editing: "video_editing",
+  motion_design: "motion_design",
 } as const;
 
 export interface CreatePostRequest {

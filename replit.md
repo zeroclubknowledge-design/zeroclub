@@ -50,7 +50,7 @@ Fonts: Inter (400, 500, 600, 700 via `@expo-google-fonts/inter`)
 - `referrals` — referral records (referrer_id, referee_id, same_school, xp_awarded)
 
 ### Enums
-- `track`: product_design, frontend, growth, branding, mentorship
+- `track`: product_design, frontend, growth, branding, mentorship, backend, full_stack, vibe_coding, video_editing, motion_design
 - `difficulty`: beginner, intermediate, advanced
 - `xp_source`: build_posted, proof_project, bootcamp_module, bootcamp_completed, referral_bonus
 
