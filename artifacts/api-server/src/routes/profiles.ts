@@ -49,15 +49,30 @@ router.put("/:userId/update", requireAuth, async (req: AuthRequest, res) => {
     if (track) updates.track = track as "product_design" | "frontend" | "growth" | "branding" | "mentorship";
 
     await db.update(profilesTable).set(updates).where(eq(profilesTable.id, userId));
-    const updated = await db
-      .select()
-      .from(profilesTable)
-      .where(eq(profilesTable.id, userId))
-      .limit(1);
+    const updated = await db.select().from(profilesTable).where(eq(profilesTable.id, userId)).limit(1);
     const p = updated[0]!;
     res.json({ ...p, level: computeLevel(p.xpBalance) });
   } catch (err) {
     req.log.error({ err }, "update profile error");
+    res.status(500).json({ error: "internal_error", message: "Failed" });
+  }
+});
+
+// PUT /profiles/me/push-token
+router.put("/me/push-token", requireAuth, async (req: AuthRequest, res) => {
+  const { pushToken } = req.body as { pushToken: string };
+  if (!pushToken) {
+    res.status(400).json({ error: "bad_request", message: "pushToken required" });
+    return;
+  }
+  try {
+    await db
+      .update(profilesTable)
+      .set({ pushToken })
+      .where(eq(profilesTable.id, req.userId!));
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error({ err }, "push token update error");
     res.status(500).json({ error: "internal_error", message: "Failed" });
   }
 });

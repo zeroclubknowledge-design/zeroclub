@@ -131,6 +131,17 @@ export interface CreateCommentRequest {
   body: string;
 }
 
+export interface BootcampModule {
+  id: string;
+  bootcampId: string;
+  title: string;
+  description: string;
+  durationMinutes: number;
+  xpReward: number;
+  orderIndex: number;
+  createdAt: string;
+}
+
 export type BootcampDifficulty =
   (typeof BootcampDifficulty)[keyof typeof BootcampDifficulty];
 
@@ -150,6 +161,8 @@ export interface Enrollment {
    * @maximum 100
    */
   progress: number;
+  paid: boolean;
+  paymentRef?: string | null;
   completedAt?: string | null;
   createdAt: string;
 }
@@ -163,9 +176,19 @@ export interface Bootcamp {
   difficulty: BootcampDifficulty;
   modulesCount: number;
   xpReward: number;
+  priceCents: number;
   description: string;
   enrolled: boolean;
   enrollment?: Enrollment | null;
+  modules?: BootcampModule[] | null;
+}
+
+export interface PaymentInitiateResponse {
+  clientSecret?: string | null;
+  paymentIntentId: string;
+  amount: number;
+  currency: string;
+  simulated: boolean;
 }
 
 export interface UpdateProgressRequest {
@@ -252,4 +275,12 @@ export type ListMessagesParams = {
 
 export type ListXpEventsParams = {
   limit?: number;
+};
+
+export type UpdatePushTokenBody = {
+  pushToken: string;
+};
+
+export type UpdatePushToken200 = {
+  ok: boolean;
 };

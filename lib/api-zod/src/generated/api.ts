@@ -298,8 +298,11 @@ export const CreateCommentBody = zod.object({
 /**
  * @summary List bootcamp catalog
  */
+export const listBootcampsResponsePriceCentsDefault = 0;
 export const listBootcampsResponseEnrollmentProgressMin = 0;
 export const listBootcampsResponseEnrollmentProgressMax = 100;
+
+export const listBootcampsResponseEnrollmentPaidDefault = false;
 
 export const ListBootcampsResponseItem = zod.object({
   id: zod.string(),
@@ -310,6 +313,7 @@ export const ListBootcampsResponseItem = zod.object({
   difficulty: zod.enum(["beginner", "intermediate", "advanced"]),
   modulesCount: zod.number(),
   xpReward: zod.number(),
+  priceCents: zod.number().default(listBootcampsResponsePriceCentsDefault),
   description: zod.string(),
   enrolled: zod.boolean(),
   enrollment: zod
@@ -322,9 +326,25 @@ export const ListBootcampsResponseItem = zod.object({
         .number()
         .min(listBootcampsResponseEnrollmentProgressMin)
         .max(listBootcampsResponseEnrollmentProgressMax),
+      paid: zod.boolean().default(listBootcampsResponseEnrollmentPaidDefault),
+      paymentRef: zod.string().nullish(),
       completedAt: zod.coerce.date().nullish(),
       createdAt: zod.coerce.date(),
     })
+    .nullish(),
+  modules: zod
+    .array(
+      zod.object({
+        id: zod.string(),
+        bootcampId: zod.string(),
+        title: zod.string(),
+        description: zod.string(),
+        durationMinutes: zod.number(),
+        xpReward: zod.number(),
+        orderIndex: zod.number(),
+        createdAt: zod.coerce.date(),
+      }),
+    )
     .nullish(),
 });
 export const ListBootcampsResponse = zod.array(ListBootcampsResponseItem);
@@ -336,8 +356,11 @@ export const GetBootcampParams = zod.object({
   bootcampId: zod.coerce.string(),
 });
 
+export const getBootcampResponsePriceCentsDefault = 0;
 export const getBootcampResponseEnrollmentProgressMin = 0;
 export const getBootcampResponseEnrollmentProgressMax = 100;
+
+export const getBootcampResponseEnrollmentPaidDefault = false;
 
 export const GetBootcampResponse = zod.object({
   id: zod.string(),
@@ -348,6 +371,7 @@ export const GetBootcampResponse = zod.object({
   difficulty: zod.enum(["beginner", "intermediate", "advanced"]),
   modulesCount: zod.number(),
   xpReward: zod.number(),
+  priceCents: zod.number().default(getBootcampResponsePriceCentsDefault),
   description: zod.string(),
   enrolled: zod.boolean(),
   enrollment: zod
@@ -360,9 +384,25 @@ export const GetBootcampResponse = zod.object({
         .number()
         .min(getBootcampResponseEnrollmentProgressMin)
         .max(getBootcampResponseEnrollmentProgressMax),
+      paid: zod.boolean().default(getBootcampResponseEnrollmentPaidDefault),
+      paymentRef: zod.string().nullish(),
       completedAt: zod.coerce.date().nullish(),
       createdAt: zod.coerce.date(),
     })
+    .nullish(),
+  modules: zod
+    .array(
+      zod.object({
+        id: zod.string(),
+        bootcampId: zod.string(),
+        title: zod.string(),
+        description: zod.string(),
+        durationMinutes: zod.number(),
+        xpReward: zod.number(),
+        orderIndex: zod.number(),
+        createdAt: zod.coerce.date(),
+      }),
+    )
     .nullish(),
 });
 
@@ -387,6 +427,8 @@ export const UpdateProgressBody = zod.object({
 export const updateProgressResponseProgressMin = 0;
 export const updateProgressResponseProgressMax = 100;
 
+export const updateProgressResponsePaidDefault = false;
+
 export const UpdateProgressResponse = zod.object({
   id: zod.string(),
   userId: zod.string(),
@@ -396,6 +438,8 @@ export const UpdateProgressResponse = zod.object({
     .number()
     .min(updateProgressResponseProgressMin)
     .max(updateProgressResponseProgressMax),
+  paid: zod.boolean().default(updateProgressResponsePaidDefault),
+  paymentRef: zod.string().nullish(),
   completedAt: zod.coerce.date().nullish(),
   createdAt: zod.coerce.date(),
 });
@@ -406,6 +450,8 @@ export const UpdateProgressResponse = zod.object({
 export const listEnrollmentsResponseProgressMin = 0;
 export const listEnrollmentsResponseProgressMax = 100;
 
+export const listEnrollmentsResponsePaidDefault = false;
+
 export const ListEnrollmentsResponseItem = zod.object({
   id: zod.string(),
   userId: zod.string(),
@@ -415,6 +461,8 @@ export const ListEnrollmentsResponseItem = zod.object({
     .number()
     .min(listEnrollmentsResponseProgressMin)
     .max(listEnrollmentsResponseProgressMax),
+  paid: zod.boolean().default(listEnrollmentsResponsePaidDefault),
+  paymentRef: zod.string().nullish(),
   completedAt: zod.coerce.date().nullish(),
   createdAt: zod.coerce.date(),
 });
@@ -528,6 +576,32 @@ export const GetFeedSummaryResponse = zod.object({
     }),
   ),
   totalMembers: zod.number(),
+});
+
+/**
+ * @summary Register or update Expo push token
+ */
+export const UpdatePushTokenBody = zod.object({
+  pushToken: zod.string(),
+});
+
+export const UpdatePushTokenResponse = zod.object({
+  ok: zod.boolean(),
+});
+
+/**
+ * @summary Initiate payment for a paid bootcamp
+ */
+export const InitiateBootcampPaymentParams = zod.object({
+  bootcampId: zod.coerce.string(),
+});
+
+export const InitiateBootcampPaymentResponse = zod.object({
+  clientSecret: zod.string().nullish(),
+  paymentIntentId: zod.string(),
+  amount: zod.number(),
+  currency: zod.string(),
+  simulated: zod.boolean(),
 });
 
 /**

@@ -10,6 +10,7 @@ import feedRouter from "./feed";
 import enrollmentsRouter from "./enrollments";
 import seedRouter from "./seed";
 import referralsRouter from "./referrals";
+import paymentsRouter from "./payments";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use("/feed", feedRouter);
 router.use("/enrollments", enrollmentsRouter);
 router.use("/seed", seedRouter);
 router.use("/referrals", referralsRouter);
+router.use("/payments", paymentsRouter);
 
 export default router;

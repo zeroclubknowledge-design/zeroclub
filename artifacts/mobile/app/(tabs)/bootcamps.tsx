@@ -8,35 +8,23 @@ import {
   ActivityIndicator,
   Platform,
 } from "react-native";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import {
-  getListBootcampsQueryOptions,
-  getListBootcampsQueryKey,
-  useEnrollBootcamp,
-} from "@workspace/api-client-react";
+import { getListBootcampsQueryOptions, type Bootcamp } from "@workspace/api-client-react";
 import { useColors } from "@/hooks/useColors";
 import { BootcampCard } from "@/components/BootcampCard";
-import type { Bootcamp } from "@workspace/api-client-react";
 
 export default function BootcampsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const qc = useQueryClient();
+  const router = useRouter();
   const topPadding = Platform.OS === "web" ? 67 : insets.top;
 
   const { data: bootcamps, isLoading, refetch, isRefetching } = useQuery(
     getListBootcampsQueryOptions(),
   );
-
-  const enroll = useEnrollBootcamp();
-
-  const handleEnroll = (bootcampId: string) => {
-    enroll.mutate({ bootcampId }, {
-      onSuccess: () => qc.invalidateQueries({ queryKey: getListBootcampsQueryKey() }),
-    });
-  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -79,13 +67,18 @@ export default function BootcampsScreen() {
               <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
                 No bootcamps yet
               </Text>
+              <Text style={[styles.emptySub, { color: colors.mutedForeground }]}>
+                Check back soon or tap refresh
+              </Text>
             </View>
           }
-          renderItem={({ item }: { item: Bootcamp }) => (
+          renderItem={({ item }: { item: Bootcamp & { priceCents?: number } }) => (
             <BootcampCard
               {...item}
+              priceCents={item.priceCents ?? 0}
               progress={item.enrollment?.progress ?? 0}
-              onEnroll={() => handleEnroll(item.id)}
+              onPress={() => router.push(`/bootcamp/${item.id}`)}
+              onEnroll={() => router.push(`/bootcamp/${item.id}`)}
             />
           )}
         />
@@ -107,4 +100,5 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   empty: { alignItems: "center", paddingTop: 80, gap: 8 },
   emptyTitle: { fontSize: 18, fontWeight: "700", marginTop: 12 },
+  emptySub: { fontSize: 14 },
 });

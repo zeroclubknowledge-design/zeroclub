@@ -26,6 +26,8 @@ tags:
     description: XP wallet and events
   - name: referrals
     description: Referral system
+  - name: payments
+    description: Bootcamp payments
 paths:
   /healthz:
     get:
@@ -543,6 +545,76 @@ paths:
               schema:
                 $ref: "#/components/schemas/FeedSummary"
 
+  /profiles/me/push-token:
+    put:
+      operationId: updatePushToken
+      tags: [profiles]
+      summary: Register or update Expo push token
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                pushToken:
+                  type: string
+              required:
+                - pushToken
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                required:
+                  - ok
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /payments/bootcamp/{bootcampId}/initiate:
+    post:
+      operationId: initiateBootcampPayment
+      tags: [payments]
+      summary: Initiate payment for a paid bootcamp
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: bootcampId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentInitiateResponse"
+        "402":
+          description: Free bootcamp (no payment needed)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /referrals/stats:
     get:
       operationId: getReferralStats
@@ -824,6 +896,36 @@ components:
       required:
         - body
 
+    BootcampModule:
+      type: object
+      properties:
+        id:
+          type: string
+        bootcampId:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        durationMinutes:
+          type: integer
+        xpReward:
+          type: integer
+        orderIndex:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - bootcampId
+        - title
+        - description
+        - durationMinutes
+        - xpReward
+        - orderIndex
+        - createdAt
+
     Bootcamp:
       type: object
       properties:
@@ -845,12 +947,20 @@ components:
           type: integer
         xpReward:
           type: integer
+        priceCents:
+          type: integer
+          default: 0
         description:
           type: string
         enrolled:
           type: boolean
         enrollment:
           $ref: "#/components/schemas/Enrollment"
+          nullable: true
+        modules:
+          type: array
+          items:
+            $ref: "#/components/schemas/BootcampModule"
           nullable: true
       required:
         - id
@@ -860,6 +970,7 @@ components:
         - difficulty
         - modulesCount
         - xpReward
+        - priceCents
         - description
         - enrolled
 
@@ -878,6 +989,12 @@ components:
           type: integer
           minimum: 0
           maximum: 100
+        paid:
+          type: boolean
+          default: false
+        paymentRef:
+          type: string
+          nullable: true
         completedAt:
           type: string
           format: date-time
@@ -891,7 +1008,28 @@ components:
         - bootcampId
         - modulesCompleted
         - progress
+        - paid
         - createdAt
+
+    PaymentInitiateResponse:
+      type: object
+      properties:
+        clientSecret:
+          type: string
+          nullable: true
+        paymentIntentId:
+          type: string
+        amount:
+          type: integer
+        currency:
+          type: string
+        simulated:
+          type: boolean
+      required:
+        - paymentIntentId
+        - amount
+        - currency
+        - simulated
 
     UpdateProgressRequest:
       type: object

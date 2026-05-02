@@ -49,7 +49,7 @@ export default function CreateScreen() {
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     createPost.mutate(
-      { data: { body: body.trim(), track, isProofProject } },
+      { data: { body: body.trim(), track: track as import("@workspace/api-client-react").CreatePostRequestTrack, isProofProject } },
       {
         onSuccess: () => {
           qc.invalidateQueries({ queryKey: getListPostsQueryKey({}) });

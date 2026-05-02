@@ -79,10 +79,7 @@ export default function ChatScreen() {
           }
           renderItem={({ item }: { item: Channel }) => {
             const iconName = CHANNEL_ICONS[item.name] ?? "hash";
-            const lastAt =
-              item.lastMessageAt instanceof Date
-                ? item.lastMessageAt.toISOString()
-                : (item.lastMessageAt as string | null | undefined);
+            const lastAt = item.lastMessageAt as string | null | undefined;
             return (
               <TouchableOpacity
                 style={[

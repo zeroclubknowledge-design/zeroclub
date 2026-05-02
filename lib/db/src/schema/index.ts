@@ -2,6 +2,7 @@ export * from "./users";
 export * from "./profiles";
 export * from "./posts";
 export * from "./bootcamps";
+export * from "./bootcamp-modules";
 export * from "./chat";
 export * from "./wallet";
 export * from "./referrals";

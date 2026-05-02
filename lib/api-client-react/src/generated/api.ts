@@ -34,6 +34,7 @@ import type {
   ListXpEventsParams,
   LoginRequest,
   Message,
+  PaymentInitiateResponse,
   Post,
   PostListResponse,
   Profile,
@@ -42,6 +43,8 @@ import type {
   SendMessageRequest,
   UpdateProfileRequest,
   UpdateProgressRequest,
+  UpdatePushToken200,
+  UpdatePushTokenBody,
   Wallet,
   XpEvent,
 } from "./api.schemas";
@@ -2053,6 +2056,179 @@ export function useGetFeedSummary<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * @summary Register or update Expo push token
+ */
+export const getUpdatePushTokenUrl = () => {
+  return `/api/profiles/me/push-token`;
+};
+
+export const updatePushToken = async (
+  updatePushTokenBody: UpdatePushTokenBody,
+  options?: RequestInit,
+): Promise<UpdatePushToken200> => {
+  return customFetch<UpdatePushToken200>(getUpdatePushTokenUrl(), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updatePushTokenBody),
+  });
+};
+
+export const getUpdatePushTokenMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updatePushToken>>,
+    TError,
+    { data: BodyType<UpdatePushTokenBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updatePushToken>>,
+  TError,
+  { data: BodyType<UpdatePushTokenBody> },
+  TContext
+> => {
+  const mutationKey = ["updatePushToken"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updatePushToken>>,
+    { data: BodyType<UpdatePushTokenBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updatePushToken(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdatePushTokenMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updatePushToken>>
+>;
+export type UpdatePushTokenMutationBody = BodyType<UpdatePushTokenBody>;
+export type UpdatePushTokenMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Register or update Expo push token
+ */
+export const useUpdatePushToken = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updatePushToken>>,
+    TError,
+    { data: BodyType<UpdatePushTokenBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updatePushToken>>,
+  TError,
+  { data: BodyType<UpdatePushTokenBody> },
+  TContext
+> => {
+  return useMutation(getUpdatePushTokenMutationOptions(options));
+};
+
+/**
+ * @summary Initiate payment for a paid bootcamp
+ */
+export const getInitiateBootcampPaymentUrl = (bootcampId: string) => {
+  return `/api/payments/bootcamp/${bootcampId}/initiate`;
+};
+
+export const initiateBootcampPayment = async (
+  bootcampId: string,
+  options?: RequestInit,
+): Promise<PaymentInitiateResponse> => {
+  return customFetch<PaymentInitiateResponse>(
+    getInitiateBootcampPaymentUrl(bootcampId),
+    {
+      ...options,
+      method: "POST",
+    },
+  );
+};
+
+export const getInitiateBootcampPaymentMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof initiateBootcampPayment>>,
+    TError,
+    { bootcampId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof initiateBootcampPayment>>,
+  TError,
+  { bootcampId: string },
+  TContext
+> => {
+  const mutationKey = ["initiateBootcampPayment"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof initiateBootcampPayment>>,
+    { bootcampId: string }
+  > = (props) => {
+    const { bootcampId } = props ?? {};
+
+    return initiateBootcampPayment(bootcampId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type InitiateBootcampPaymentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof initiateBootcampPayment>>
+>;
+
+export type InitiateBootcampPaymentMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Initiate payment for a paid bootcamp
+ */
+export const useInitiateBootcampPayment = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof initiateBootcampPayment>>,
+    TError,
+    { bootcampId: string },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof initiateBootcampPayment>>,
+  TError,
+  { bootcampId: string },
+  TContext
+> => {
+  return useMutation(getInitiateBootcampPaymentMutationOptions(options));
+};
 
 /**
  * @summary Get my referral stats and code

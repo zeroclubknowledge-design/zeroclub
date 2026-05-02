@@ -4,6 +4,7 @@ import {
   timestamp,
   integer,
   pgEnum,
+  boolean,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
@@ -26,6 +27,7 @@ export const bootcampsTable = pgTable("bootcamps", {
   difficulty: difficultyEnum("difficulty").notNull().default("beginner"),
   modulesCount: integer("modules_count").notNull().default(0),
   xpReward: integer("xp_reward").notNull().default(0),
+  priceCents: integer("price_cents").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -39,6 +41,8 @@ export const enrollmentsTable = pgTable("enrollments", {
     .references(() => bootcampsTable.id, { onDelete: "cascade" }),
   modulesCompleted: integer("modules_completed").notNull().default(0),
   progress: integer("progress").notNull().default(0),
+  paid: boolean("paid").notNull().default(false),
+  paymentRef: text("payment_ref"),
   completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

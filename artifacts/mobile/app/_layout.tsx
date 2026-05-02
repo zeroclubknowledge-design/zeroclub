@@ -14,7 +14,8 @@ import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
-import { setBaseUrl } from "@workspace/api-client-react";
+import { setBaseUrl, setAuthTokenGetter } from "@workspace/api-client-react";
+import { registerForPushNotifications } from "@/services/notifications";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -22,10 +23,40 @@ const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30000 } },
 });
 
-// Set base URL from env immediately
 const domain = process.env["EXPO_PUBLIC_DOMAIN"];
 if (domain) {
   setBaseUrl(`https://${domain}`);
+}
+
+function NotificationRegistrar() {
+  const { token } = useAuth();
+
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+
+    async function register() {
+      try {
+        const pushToken = await registerForPushNotifications();
+        if (cancelled || !pushToken) return;
+        const baseUrl = process.env["EXPO_PUBLIC_DOMAIN"]
+          ? `https://${process.env["EXPO_PUBLIC_DOMAIN"]}`
+          : "";
+        await fetch(`${baseUrl}/api/profiles/me/push-token`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ pushToken }),
+        });
+      } catch {
+        // Non-critical — silently ignore
+      }
+    }
+
+    void register();
+    return () => { cancelled = true; };
+  }, [token]);
+
+  return null;
 }
 
 function AuthGate({ children }: { children: React.ReactNode }) {
@@ -36,12 +67,11 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (isLoading) return;
     const isAuthScreen = pathname === "/login" || pathname === "/register";
-    const isInTabs = pathname.startsWith("/(tabs)") || pathname === "/";
 
     if (!token && !isAuthScreen) {
       router.replace("/login");
     } else if (token && isAuthScreen) {
-      router.replace("/(tabs)/");
+      router.replace("/(tabs)" as never);
     }
   }, [token, isLoading, pathname, router]);
 
@@ -51,12 +81,17 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 function RootLayoutNav() {
   return (
     <AuthGate>
+      <NotificationRegistrar />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="login" options={{ headerShown: false, animation: "fade" }} />
         <Stack.Screen name="register" options={{ headerShown: false, animation: "fade" }} />
         <Stack.Screen name="channel/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="profile" options={{ headerShown: false, animation: "slide_from_right" }} />
+        <Stack.Screen
+          name="bootcamp/[id]"
+          options={{ headerShown: false, animation: "slide_from_right" }}
+        />
       </Stack>
     </AuthGate>
   );

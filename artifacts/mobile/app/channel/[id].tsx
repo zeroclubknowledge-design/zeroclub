@@ -74,7 +74,7 @@ export default function ChannelScreen() {
     const prevItem = index > 0 ? (messages ?? [])[index - 1] : null;
     const showAvatar = !prevItem || prevItem.authorId !== item.authorId;
     const createdAt =
-      item.createdAt instanceof Date ? item.createdAt : new Date(item.createdAt as string);
+      new Date(item.createdAt as string);
 
     return (
       <View style={[styles.messageRow, isMe && styles.messageRowMe]}>

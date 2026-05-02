@@ -36,13 +36,14 @@ Fonts: Inter (400, 500, 600, 700 via `@expo-google-fonts/inter`)
 
 ### Tables
 - `users` — auth credentials (id, email, password_hash)
-- `profiles` — user profile (username, display_name, avatar_url, bio, track, xp_balance, school, referral_code)
+- `profiles` — user profile (username, display_name, avatar_url, bio, track, xp_balance, school, referral_code, push_token)
 - `posts` — community feed posts (body, image_url, track, is_proof_project, xp_awarded)
 - `likes` — post likes (composite PK: user_id + post_id)
 - `bookmarks` — saved posts (composite PK: user_id + post_id)
 - `comments` — post comments
-- `bootcamps` — learning bootcamps (title, track, difficulty, modules_count, xp_reward)
-- `enrollments` — user bootcamp enrollments (progress 0-100)
+- `bootcamps` — learning bootcamps (title, track, difficulty, modules_count, xp_reward, price_cents)
+- `bootcamp_modules` — individual modules per bootcamp (title, description, duration_minutes, xp_reward, order_index)
+- `enrollments` — user bootcamp enrollments (progress 0-100, paid, payment_ref)
 - `channels` — chat channels
 - `messages` — channel messages
 - `xp_events` — XP transaction history (source, amount)
@@ -62,6 +63,7 @@ Fonts: Inter (400, 500, 600, 700 via `@expo-google-fonts/inter`)
 | GET | `/auth/me` | Yes | Get current user profile |
 | GET | `/profiles/:userId` | No | Get any profile |
 | PUT | `/profiles/:userId/update` | Yes | Update own profile |
+| PUT | `/profiles/me/push-token` | Yes | Register/update Expo push token |
 | GET | `/posts` | Yes | Feed (paginated, optional track filter) |
 | POST | `/posts` | Yes | Create post (+XP awarded) |
 | POST | `/posts/:postId/like` | Yes | Toggle like |
@@ -69,8 +71,9 @@ Fonts: Inter (400, 500, 600, 700 via `@expo-google-fonts/inter`)
 | GET | `/posts/:postId/comments` | Yes | List comments |
 | POST | `/posts/:postId/comments` | Yes | Add comment |
 | GET | `/bootcamps` | Yes | List bootcamps (with enrollment status) |
-| POST | `/bootcamps/:id/enroll` | Yes | Enroll in bootcamp |
-| PUT | `/bootcamps/:id/progress` | Yes | Update module progress (+XP) |
+| GET | `/bootcamps/:id` | Yes | Bootcamp detail with modules array |
+| POST | `/bootcamps/:id/enroll` | Yes | Enroll (accepts paymentRef for paid) |
+| PUT | `/bootcamps/:id/progress` | Yes | Update module progress (+XP + push notification) |
 | GET | `/channels` | Yes | List channels (with last message) |
 | GET | `/channels/:id/messages` | Yes | List messages |
 | POST | `/channels/:id/messages` | Yes | Send message |
@@ -78,7 +81,8 @@ Fonts: Inter (400, 500, 600, 700 via `@expo-google-fonts/inter`)
 | GET | `/wallet/events` | Yes | XP history |
 | GET | `/feed/summary` | Yes | Active members count, posts today |
 | GET | `/referrals/stats` | Yes | My referral code, count, XP earned |
-| POST | `/seed` | No | Seed DB with bootcamps + channels |
+| POST | `/payments/bootcamp/:id/initiate` | Yes | Initiate payment intent (Stripe or simulated) |
+| POST | `/seed` | No | Seed DB with bootcamps + channels + modules |
 
 ## Auth
 
@@ -101,37 +105,58 @@ Fonts: Inter (400, 500, 600, 700 via `@expo-google-fonts/inter`)
 
 ## Referral System
 
-- Each user gets a unique referral code on registration (3-char username prefix + 5 random alphanumeric chars, e.g. `ADMK7R2PQ`)
-- `school` field on profiles enables same-school vs cross-school detection
-- New user enters referral code during registration → welcome bonus awarded
-- Referrer gets higher XP for bringing in students from other schools
+- Each user gets a unique referral code on registration
+- `school` field enables same-school vs cross-school detection for bonus XP
+- New user enters code during registration → welcome bonus awarded
+- Referrer gets higher XP for cross-school referrals
+
+## Push Notifications
+
+- `expo-notifications` in mobile app
+- On login: requests permission, gets Expo push token, sends to API
+- Server `sendPushToUser()` helper calls Expo push API
+- Triggers: module completed, bootcamp completed
+- Token stored in `profiles.push_token`
+
+## Bootcamp Detail & Modules
+
+- 6 bootcamps seeded with 40 total modules (5–10 per bootcamp)
+- Free bootcamps: UI/UX Fundamentals, Growth Hacking 101, Brand Identity
+- Paid bootcamps: React & TypeScript (₦29.99), Mentorship Masterclass (₦19.99), Advanced Frontend Architecture (₦49.99)
+- Detail screen shows: gradient hero, module list, progress tracking, "Mark Complete" per module
+
+## Payment System
+
+- `priceCents` field on bootcamps (0 = free)
+- `POST /payments/bootcamp/:id/initiate` endpoint
+  - If `STRIPE_SECRET_KEY` env var set: creates real Stripe Payment Intent
+  - Otherwise: returns simulated payment ref for development
+- `PaymentModal` component: card number, expiry, CVV, name on card inputs
+- Enrollment created with `paid: true` + `paymentRef` after payment
 
 ## Mobile Screens
 
 - **`app/login.tsx`** — Login screen
 - **`app/register.tsx`** — Registration with track selector, school, and referral code fields
 - **`app/(tabs)/index.tsx`** — Community feed with track filters + profile avatar in header
-- **`app/(tabs)/bootcamps.tsx`** — Bootcamp browser
+- **`app/(tabs)/bootcamps.tsx`** — Bootcamp browser with price/free badges
 - **`app/(tabs)/create.tsx`** — Create post + proof project toggle
 - **`app/(tabs)/chat.tsx`** — Channel list
 - **`app/(tabs)/wallet.tsx`** — XP balance, level progress, XP history
 - **`app/channel/[id].tsx`** — Real-time chat (3s polling)
-- **`app/profile.tsx`** — User profile: avatar, XP/level, school badge, referral code, copy/share link, referral stats
+- **`app/profile.tsx`** — User profile: avatar, XP/level, school badge, referral code, copy/share
+- **`app/bootcamp/[id].tsx`** — Bootcamp detail: hero, module list, progress, enroll/pay CTA
 
 ## Key Files
 
 - `artifacts/mobile/context/AuthContext.tsx` — JWT auth state + AsyncStorage persistence
+- `artifacts/mobile/services/notifications.ts` — Push notification registration (client)
 - `artifacts/mobile/constants/colors.ts` — Zero Club design tokens
-- `artifacts/mobile/hooks/useColors.ts` — Color scheme hook
-- `artifacts/mobile/components/PostCard.tsx` — Feed post card
-- `artifacts/mobile/components/BootcampCard.tsx` — Bootcamp card
-- `artifacts/api-server/src/routes/auth.ts` — JWT middleware, registration with referral logic
-- `artifacts/api-server/src/routes/referrals.ts` — Referral stats endpoint
-- `artifacts/api-server/src/lib/auth.ts` — JWT middleware + `AuthRequest` type
-- `artifacts/api-server/src/lib/ids.ts` — ID generation utility
-- `lib/db/src/schema/index.ts` — All DB table exports
-- `lib/db/src/schema/profiles.ts` — Profiles table (school + referral_code)
-- `lib/db/src/schema/referrals.ts` — Referrals table
+- `artifacts/mobile/components/BootcampCard.tsx` — Bootcamp card with price badge
+- `artifacts/mobile/components/PaymentModal.tsx` — Card payment UI
+- `artifacts/api-server/src/lib/notifications.ts` — Push notification sender (server)
+- `artifacts/api-server/src/routes/payments.ts` — Payment intent creation (Stripe or simulated)
+- `lib/db/src/schema/bootcamp-modules.ts` — Bootcamp modules table
 - `lib/api-spec/openapi.yaml` — Full API contract
 
 ## Codegen
@@ -154,3 +179,4 @@ pnpm --filter @workspace/db run push
 - `JWT_SECRET` — JWT signing secret (use a strong secret in production)
 - `EXPO_PUBLIC_DOMAIN` — Replit dev domain for API calls from mobile
 - `SESSION_SECRET` — Session secret (available)
+- `STRIPE_SECRET_KEY` — (optional) Stripe secret key to enable real payments

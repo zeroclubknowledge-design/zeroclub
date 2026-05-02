@@ -179,7 +179,7 @@ export default function WalletScreen() {
         renderItem={({ item }: { item: XpEvent }) => {
           const icon = SOURCE_ICONS[item.source] ?? "zap";
           const createdAt =
-            item.createdAt instanceof Date ? item.createdAt : new Date(item.createdAt);
+            new Date(item.createdAt as string);
           return (
             <View
               style={[

@@ -73,7 +73,7 @@ export default function RegisterScreen() {
         return;
       }
       await login(data.token, data.user as UserProfile);
-      router.replace("/(tabs)/");
+      router.replace("/(tabs)" as never);
     } catch {
       Alert.alert("Error", "Network error. Please try again.");
     } finally {
