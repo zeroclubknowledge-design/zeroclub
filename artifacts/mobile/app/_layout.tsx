@@ -100,15 +100,16 @@ function RootLayoutNav() {
         <Stack.Screen name="splash" options={{ headerShown: false, animation: "none" }} />
         <Stack.Screen name="login" options={{ headerShown: false, animation: "fade" }} />
         <Stack.Screen name="register" options={{ headerShown: false, animation: "fade" }} />
-        <Stack.Screen name="channel/[id]" options={{ headerShown: false }} />
-        <Stack.Screen name="profile" options={{ headerShown: false, animation: "slide_from_right" }} />
-        <Stack.Screen name="bootcamp/[id]" options={{ headerShown: false, animation: "slide_from_right" }} />
-        <Stack.Screen name="user/[id]" options={{ headerShown: false, animation: "slide_from_right" }} />
-        <Stack.Screen name="settings" options={{ headerShown: false, animation: "slide_from_right" }} />
-        <Stack.Screen name="referral" options={{ headerShown: false, animation: "slide_from_right" }} />
+        <Stack.Screen name="channel/[id]" options={{ headerShown: false, animation: "none" }} />
+        <Stack.Screen name="profile" options={{ headerShown: false, animation: "none" }} />
+        <Stack.Screen name="bootcamp/[id]" options={{ headerShown: false, animation: "none" }} />
+        <Stack.Screen name="user/[id]" options={{ headerShown: false, animation: "none" }} />
+        <Stack.Screen name="settings" options={{ headerShown: false, animation: "none" }} />
+        <Stack.Screen name="referral" options={{ headerShown: false, animation: "none" }} />
+        <Stack.Screen name="club-levels" options={{ headerShown: false, animation: "none" }} />
         <Stack.Screen name="comments/[postId]" options={{ headerShown: false, animation: "slide_from_bottom", presentation: "modal" }} />
-        <Stack.Screen name="post/[id]" options={{ headerShown: false, animation: "slide_from_right" }} />
-        <Stack.Screen name="bootcamp-hub/[id]" options={{ headerShown: false, animation: "slide_from_right" }} />
+        <Stack.Screen name="post/[id]" options={{ headerShown: false, animation: "none" }} />
+        <Stack.Screen name="bootcamp-hub/[id]" options={{ headerShown: false, animation: "none" }} />
       </Stack>
     </AuthGate>
   );

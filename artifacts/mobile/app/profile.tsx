@@ -122,6 +122,13 @@ export default function ProfileScreen() {
 
   const menuItems = [
     {
+      icon: "award" as const,
+      label: "Zero Club Levels",
+      subtitle: "View your rank & ambassador tiers",
+      onPress: () => router.push("/club-levels" as never),
+      accent: "#D4387C",
+    },
+    {
       icon: "zap" as const,
       label: "Zero Wallet",
       subtitle: `${xpBalance.toLocaleString()} XP`,
