@@ -6,7 +6,7 @@ import {
   useFonts,
 } from "@expo-google-fonts/inter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Stack, useRouter, useSegments } from "expo-router";
+import { Stack, usePathname, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -31,22 +31,19 @@ if (domain) {
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { token, isLoading } = useAuth();
   const router = useRouter();
-  const segments = useSegments();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (isLoading) return;
-    const isOnAuthScreen =
-      segments[0] === "login" ||
-      segments[0] === "register" ||
-      segments[0] === "(auth)";
-    const inTabs = segments[0] === "(tabs)";
+    const isAuthScreen = pathname === "/login" || pathname === "/register";
+    const isInTabs = pathname.startsWith("/(tabs)") || pathname === "/";
 
-    if (!token && !isOnAuthScreen) {
+    if (!token && !isAuthScreen) {
       router.replace("/login");
-    } else if (token && !inTabs) {
+    } else if (token && isAuthScreen) {
       router.replace("/(tabs)/");
     }
-  }, [token, isLoading, segments, router]);
+  }, [token, isLoading, pathname, router]);
 
   return <>{children}</>;
 }

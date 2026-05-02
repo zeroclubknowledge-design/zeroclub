@@ -196,6 +196,13 @@ export default function RegisterScreen() {
   );
 }
 
+type Colors = {
+  card: string;
+  border: string;
+  mutedForeground: string;
+  foreground: string;
+};
+
 function InputField({
   icon,
   placeholder,
@@ -209,7 +216,7 @@ function InputField({
   placeholder: string;
   value: string;
   onChangeText: (t: string) => void;
-  colors: ReturnType<typeof import("@/hooks/useColors").useColors>;
+  colors: Colors;
   keyboardType?: "email-address" | "default";
   autoCapitalize?: "none" | "sentences";
 }) {
