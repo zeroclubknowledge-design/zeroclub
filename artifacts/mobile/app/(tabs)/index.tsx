@@ -184,6 +184,12 @@ export default function FeedScreen() {
               {...item}
               onLike={() => handleLike(item.id)}
               onBookmark={() => handleBookmark(item.id)}
+              onComment={() =>
+                router.push({
+                  pathname: "/comments/[postId]",
+                  params: { postId: item.id },
+                } as never)
+              }
             />
           )}
         />

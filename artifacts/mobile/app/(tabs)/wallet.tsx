@@ -33,6 +33,7 @@ const SOURCE_LABELS: Record<string, string> = {
   bootcamp_module: "Module Complete",
   bootcamp_completed: "Bootcamp Done",
   referral_bonus: "Referral Bonus",
+  build_milestone: "Build Milestone Bonus",
 };
 
 const SOURCE_ICONS: Record<string, keyof typeof Feather.glyphMap> = {
@@ -41,6 +42,7 @@ const SOURCE_ICONS: Record<string, keyof typeof Feather.glyphMap> = {
   bootcamp_module: "book",
   bootcamp_completed: "award",
   referral_bonus: "users",
+  build_milestone: "star",
 };
 
 function timeAgo(dateStr: string | Date): string {
@@ -166,7 +168,7 @@ export default function WalletScreen() {
             {walletLoading ? (
               <ActivityIndicator color={colors.primary} style={{ marginVertical: 40 }} />
             ) : wallet ? (
-              <>
+              <View style={styles.headerCards}>
                 {/* Balance Cards */}
                 <View style={styles.balanceRow}>
                   {/* Zero Points (XP) */}
@@ -260,7 +262,7 @@ export default function WalletScreen() {
                     <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Withdrawals</Text>
                   </View>
                 </View>
-              </>
+              </View>
             ) : null}
             <Text style={[styles.historyTitle, { color: colors.foreground }]}>Zero Points History</Text>
           </>
@@ -424,7 +426,8 @@ const styles = StyleSheet.create({
   },
   withdrawHeaderText: { color: "#fff", fontSize: 13, fontWeight: "700" },
   content: { padding: 16, gap: 12, paddingBottom: 120 },
-  balanceRow: { flexDirection: "row", gap: 10, marginBottom: 4 },
+  headerCards: { gap: 16 },
+  balanceRow: { flexDirection: "row", gap: 10 },
   balanceCard: {
     flex: 1,
     borderRadius: 18,

@@ -205,7 +205,7 @@ const styles = StyleSheet.create({
   tabBarInner: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 32,
+    borderRadius: 20,
     borderWidth: 1,
     paddingHorizontal: 6,
     paddingVertical: 6,

@@ -1,11 +1,42 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { profilesTable, followsTable } from "@workspace/db";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, ilike, or, and, ne } from "drizzle-orm";
 import { requireAuth, verifyToken, type AuthRequest } from "../lib/auth";
 import { computeLevel } from "./auth";
 
 const router = Router();
+
+// GET /profiles/search?q=
+router.get("/search", requireAuth, async (req: AuthRequest, res) => {
+  const q = (req.query["q"] as string | undefined)?.trim();
+  if (!q || q.length < 1) {
+    res.json([]);
+    return;
+  }
+  try {
+    const pattern = `%${q}%`;
+    const results = await db
+      .select()
+      .from(profilesTable)
+      .where(
+        and(
+          or(
+            ilike(profilesTable.displayName, pattern),
+            ilike(profilesTable.username, pattern),
+          ),
+          ne(profilesTable.id, req.userId!),
+        ),
+      )
+      .limit(10);
+    res.json(
+      results.map((p) => ({ ...p, level: computeLevel(p.xpBalance) })),
+    );
+  } catch (err) {
+    req.log.error({ err }, "profile search error");
+    res.status(500).json({ error: "internal_error", message: "Failed" });
+  }
+});
 
 // GET /profiles/:userId
 router.get("/:userId", async (req, res) => {

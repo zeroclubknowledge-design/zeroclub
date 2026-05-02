@@ -161,6 +161,48 @@ router.get("/:postId", requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
+async function maybeAwardBuildMilestone(postId: string) {
+  const posts = await db.select().from(postsTable).where(eq(postsTable.id, postId)).limit(1);
+  if (!posts[0]) return;
+  const authorId = posts[0].authorId;
+
+  const [likeResult, commentResult] = await Promise.all([
+    db.select({ count: sql<number>`count(*)::int` }).from(likesTable).where(eq(likesTable.postId, postId)),
+    db.select({ count: sql<number>`count(*)::int` }).from(commentsTable).where(eq(commentsTable.postId, postId)),
+  ]);
+
+  const likeCount = likeResult[0]?.count ?? 0;
+  const commentCount = commentResult[0]?.count ?? 0;
+
+  if (likeCount >= 3 && commentCount >= 1) {
+    const alreadyAwarded = await db
+      .select()
+      .from(xpEventsTable)
+      .where(
+        and(
+          eq(xpEventsTable.userId, authorId),
+          eq(xpEventsTable.source, "build_milestone"),
+          eq(xpEventsTable.detail, `post:${postId}`),
+        ),
+      )
+      .limit(1);
+
+    if (alreadyAwarded.length === 0) {
+      await db.insert(xpEventsTable).values({
+        id: generateId(),
+        userId: authorId,
+        source: "build_milestone",
+        detail: `post:${postId}`,
+        amount: 15,
+      });
+      await db
+        .update(profilesTable)
+        .set({ xpBalance: sql`${profilesTable.xpBalance} + 15` })
+        .where(eq(profilesTable.id, authorId));
+    }
+  }
+}
+
 // POST /posts/:postId/like
 router.post("/:postId/like", requireAuth, async (req: AuthRequest, res) => {
   const { postId } = req.params as { postId: string };
@@ -177,6 +219,7 @@ router.post("/:postId/like", requireAuth, async (req: AuthRequest, res) => {
         .where(and(eq(likesTable.postId, postId), eq(likesTable.userId, req.userId!)));
     } else {
       await db.insert(likesTable).values({ userId: req.userId!, postId });
+      await maybeAwardBuildMilestone(postId);
     }
 
     const count = await db
@@ -254,6 +297,7 @@ router.post("/:postId/comments", requireAuth, async (req: AuthRequest, res) => {
   try {
     const id = generateId();
     await db.insert(commentsTable).values({ id, postId, authorId: req.userId!, body });
+    await maybeAwardBuildMilestone(postId);
     const authors = await db
       .select()
       .from(profilesTable)
