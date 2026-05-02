@@ -328,16 +328,30 @@ export default function PostDetailScreen() {
 
         {/* Media */}
         {mediaUrl && (
-          <View style={[styles.mediaWrap, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.mediaWrap, { backgroundColor: "#000", borderColor: colors.border }]}>
             {isVideo ? (
-              <Video
-                ref={videoRef}
-                source={{ uri: mediaUrl }}
-                style={styles.video}
-                useNativeControls
-                resizeMode={ResizeMode.CONTAIN}
-                isLooping={false}
-              />
+              Platform.OS === "web" ? (
+                <View style={styles.webVideoWrap}>
+                  {/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */}
+                  {/* @ts-ignore — web-only video element */}
+                  <video
+                    src={mediaUrl}
+                    controls
+                    playsInline
+                    style={{ width: "100%", height: 280, objectFit: "contain", backgroundColor: "#000" }}
+                  />
+                </View>
+              ) : (
+                <Video
+                  ref={videoRef}
+                  source={{ uri: mediaUrl }}
+                  style={styles.video}
+                  useNativeControls
+                  resizeMode={ResizeMode.CONTAIN}
+                  shouldPlay={false}
+                  isLooping={false}
+                />
+              )
             ) : (
               <Image
                 source={{ uri: mediaUrl }}
@@ -595,8 +609,9 @@ const styles = StyleSheet.create({
   xpEarnedText: { fontSize: 12, fontWeight: "700" },
   body: { fontSize: 16, lineHeight: 26, fontFamily: "Inter_400Regular" },
   mediaWrap: { borderRadius: 16, borderWidth: 1, overflow: "hidden" },
-  video: { width: "100%", height: 260, backgroundColor: "#000" },
-  image: { width: "100%", height: 260 },
+  video: { width: "100%", height: 280, backgroundColor: "#000" },
+  webVideoWrap: { width: "100%", backgroundColor: "#000" },
+  image: { width: "100%", height: 280 },
   actionBar: {
     flexDirection: "row",
     alignItems: "center",

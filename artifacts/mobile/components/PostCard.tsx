@@ -11,6 +11,10 @@ import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useColors } from "@/hooks/useColors";
 
+function isVideoUrl(url: string): boolean {
+  return /\.(mp4|mov|webm|avi|m4v|mkv|3gp)(\?.*)?$/i.test(url);
+}
+
 const TRACK_LABELS: Record<string, string> = {
   product_design: "Product Design",
   frontend: "Frontend",
@@ -143,9 +147,22 @@ export function PostCard({
           {body}
         </Text>
 
-        {/* Image — compact height */}
+        {/* Media — image or video preview */}
         {imageUrl ? (
-          <Image source={{ uri: imageUrl }} style={styles.postImage} resizeMode="cover" />
+          isVideoUrl(imageUrl) ? (
+            <View style={[styles.videoPreview, { backgroundColor: "#0a0a0a" }]}>
+              <View style={styles.videoPlayCircle}>
+                <Feather name="play" size={26} color="#fff" style={{ marginLeft: 3 }} />
+              </View>
+              <View style={styles.videoBadge}>
+                <Feather name="film" size={10} color="#fff" />
+                <Text style={styles.videoBadgeText}>VIDEO</Text>
+              </View>
+              <Text style={styles.videoHint}>Tap to watch</Text>
+            </View>
+          ) : (
+            <Image source={{ uri: imageUrl }} style={styles.postImage} resizeMode="cover" />
+          )
         ) : null}
       </TouchableOpacity>
 
@@ -267,6 +284,48 @@ const styles = StyleSheet.create({
     width: "100%",
     height: 160,
     marginBottom: 8,
+  },
+  videoPreview: {
+    width: "100%",
+    height: 160,
+    marginBottom: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 0,
+    gap: 8,
+  },
+  videoPlayCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "rgba(255,255,255,0.15)",
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.4)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  videoBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    position: "absolute",
+    top: 10,
+    right: 10,
+  },
+  videoBadgeText: {
+    color: "#fff",
+    fontSize: 9,
+    fontWeight: "800",
+    letterSpacing: 0.6,
+  },
+  videoHint: {
+    color: "rgba(255,255,255,0.5)",
+    fontSize: 11,
+    fontWeight: "500",
   },
   metaRow: {
     flexDirection: "row",
