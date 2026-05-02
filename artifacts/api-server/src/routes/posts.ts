@@ -318,4 +318,60 @@ router.post("/:postId/comments", requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
+// PUT /posts/:postId
+router.put("/:postId", requireAuth, async (req: AuthRequest, res) => {
+  const { postId } = req.params as { postId: string };
+  const { body } = req.body as { body: string };
+  if (!body?.trim()) {
+    res.status(400).json({ error: "validation_error", message: "body is required" });
+    return;
+  }
+  try {
+    const posts = await db.select().from(postsTable).where(eq(postsTable.id, postId)).limit(1);
+    if (!posts[0]) {
+      res.status(404).json({ error: "not_found", message: "Post not found" });
+      return;
+    }
+    if (posts[0].authorId !== req.userId) {
+      res.status(403).json({ error: "forbidden", message: "Cannot edit another user's post" });
+      return;
+    }
+    await db.update(postsTable).set({ body: body.trim() }).where(eq(postsTable.id, postId));
+    const updated = await db.select().from(postsTable).where(eq(postsTable.id, postId)).limit(1);
+    const enriched = await enrichPost(updated[0]!, req.userId);
+    res.json(enriched);
+  } catch (err) {
+    req.log.error({ err }, "update post error");
+    res.status(500).json({ error: "internal_error", message: "Failed" });
+  }
+});
+
+// DELETE /posts/:postId
+router.delete("/:postId", requireAuth, async (req: AuthRequest, res) => {
+  const { postId } = req.params as { postId: string };
+  try {
+    const posts = await db.select().from(postsTable).where(eq(postsTable.id, postId)).limit(1);
+    if (!posts[0]) {
+      res.status(404).json({ error: "not_found", message: "Post not found" });
+      return;
+    }
+    if (posts[0].authorId !== req.userId) {
+      res.status(403).json({ error: "forbidden", message: "Cannot delete another user's post" });
+      return;
+    }
+    const xpToRemove = posts[0].xpAwarded ?? 0;
+    await db.delete(postsTable).where(eq(postsTable.id, postId));
+    if (xpToRemove > 0) {
+      await db
+        .update(profilesTable)
+        .set({ xpBalance: sql`GREATEST(0, ${profilesTable.xpBalance} - ${xpToRemove})` })
+        .where(eq(profilesTable.id, req.userId!));
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error({ err }, "delete post error");
+    res.status(500).json({ error: "internal_error", message: "Failed" });
+  }
+});
+
 export default router;

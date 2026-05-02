@@ -49,6 +49,7 @@ interface PostCardProps {
   onLike?: () => void;
   onBookmark?: () => void;
   onComment?: () => void;
+  onPress?: () => void;
 }
 
 function timeAgo(dateStr: string): string {
@@ -62,6 +63,7 @@ function timeAgo(dateStr: string): string {
 }
 
 export function PostCard({
+  id,
   author,
   body,
   imageUrl,
@@ -76,6 +78,7 @@ export function PostCard({
   onLike,
   onBookmark,
   onComment,
+  onPress,
 }: PostCardProps) {
   const colors = useColors();
 
@@ -127,19 +130,24 @@ export function PostCard({
         )}
       </View>
 
-      {/* Body — capped at 2 lines */}
-      <Text
-        style={[styles.body, { color: colors.foreground }]}
-        numberOfLines={2}
-        ellipsizeMode="tail"
+      {/* Body — capped at 2 lines, tappable to open full post */}
+      <TouchableOpacity
+        onPress={() => onPress?.() ?? router.push({ pathname: "/post/[id]", params: { id } } as never)}
+        activeOpacity={0.9}
       >
-        {body}
-      </Text>
+        <Text
+          style={[styles.body, { color: colors.foreground }]}
+          numberOfLines={2}
+          ellipsizeMode="tail"
+        >
+          {body}
+        </Text>
 
-      {/* Image — compact height */}
-      {imageUrl ? (
-        <Image source={{ uri: imageUrl }} style={styles.postImage} resizeMode="cover" />
-      ) : null}
+        {/* Image — compact height */}
+        {imageUrl ? (
+          <Image source={{ uri: imageUrl }} style={styles.postImage} resizeMode="cover" />
+        ) : null}
+      </TouchableOpacity>
 
       {/* Track + XP */}
       <View style={styles.metaRow}>

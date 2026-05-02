@@ -5,8 +5,11 @@ import { profilesTable } from "./profiles";
 
 export const channelsTable = pgTable("channels", {
   id: text("id").primaryKey(),
-  name: text("name").notNull().unique(),
+  name: text("name").notNull(),
+  title: text("title"),
   description: text("description"),
+  bootcampId: text("bootcamp_id"),
+  parentChannelId: text("parent_channel_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
