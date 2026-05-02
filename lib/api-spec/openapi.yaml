@@ -3,20 +3,33 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Zero Club API specification
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication
+  - name: profiles
+    description: User profiles
+  - name: posts
+    description: Community feed posts
+  - name: bootcamps
+    description: Bootcamp catalog and enrollments
+  - name: channels
+    description: Chat channels
+  - name: messages
+    description: Chat messages
+  - name: wallet
+    description: XP wallet and events
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,7 +37,516 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user profile
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /profiles/{userId}:
+    get:
+      operationId: getProfile
+      tags: [profiles]
+      summary: Get a user profile
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+
+  /profiles/{userId}/update:
+    put:
+      operationId: updateProfile
+      tags: [profiles]
+      summary: Update own profile
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+
+  /posts:
+    get:
+      operationId: listPosts
+      tags: [posts]
+      summary: List community feed posts
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: track
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PostListResponse"
+    post:
+      operationId: createPost
+      tags: [posts]
+      summary: Create a new post
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePostRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+
+  /posts/{postId}:
+    get:
+      operationId: getPost
+      tags: [posts]
+      summary: Get a single post
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+
+  /posts/{postId}/like:
+    post:
+      operationId: likePost
+      tags: [posts]
+      summary: Toggle like on a post
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LikeResponse"
+
+  /posts/{postId}/bookmark:
+    post:
+      operationId: bookmarkPost
+      tags: [posts]
+      summary: Toggle bookmark on a post
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BookmarkResponse"
+
+  /posts/{postId}/comments:
+    get:
+      operationId: listComments
+      tags: [posts]
+      summary: List comments on a post
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Comment"
+    post:
+      operationId: createComment
+      tags: [posts]
+      summary: Create a comment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCommentRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Comment"
+
+  /bootcamps:
+    get:
+      operationId: listBootcamps
+      tags: [bootcamps]
+      summary: List bootcamp catalog
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Bootcamp"
+
+  /bootcamps/{bootcampId}:
+    get:
+      operationId: getBootcamp
+      tags: [bootcamps]
+      summary: Get a single bootcamp
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: bootcampId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bootcamp"
+
+  /bootcamps/{bootcampId}/enroll:
+    post:
+      operationId: enrollBootcamp
+      tags: [bootcamps]
+      summary: Enroll in a bootcamp
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: bootcampId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "201":
+          description: Enrolled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Enrollment"
+
+  /bootcamps/{bootcampId}/progress:
+    put:
+      operationId: updateProgress
+      tags: [bootcamps]
+      summary: Update module progress
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: bootcampId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProgressRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Enrollment"
+
+  /enrollments:
+    get:
+      operationId: listEnrollments
+      tags: [bootcamps]
+      summary: Get current user enrollments
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Enrollment"
+
+  /channels:
+    get:
+      operationId: listChannels
+      tags: [channels]
+      summary: List chat channels
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Channel"
+
+  /channels/{channelId}/messages:
+    get:
+      operationId: listMessages
+      tags: [messages]
+      summary: List messages in a channel
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Message"
+    post:
+      operationId: sendMessage
+      tags: [messages]
+      summary: Send a message to a channel
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: channelId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendMessageRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+
+  /wallet:
+    get:
+      operationId: getWallet
+      tags: [wallet]
+      summary: Get current user XP wallet
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Wallet"
+
+  /wallet/events:
+    get:
+      operationId: listXpEvents
+      tags: [wallet]
+      summary: Get XP event history
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/XpEvent"
+
+  /feed/summary:
+    get:
+      operationId: getFeedSummary
+      tags: [posts]
+      summary: Get feed summary stats (active members, posts today, top tracks)
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeedSummary"
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
     HealthStatus:
       type: object
@@ -34,3 +556,442 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+      required:
+        - error
+
+    RegisterRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        username:
+          type: string
+        displayName:
+          type: string
+        track:
+          type: string
+          enum: [product_design, frontend, growth, branding, mentorship]
+      required:
+        - email
+        - password
+        - username
+        - displayName
+        - track
+
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      required:
+        - email
+        - password
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        user:
+          $ref: "#/components/schemas/Profile"
+      required:
+        - token
+        - user
+
+    Profile:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        username:
+          type: string
+        displayName:
+          type: string
+        avatarUrl:
+          type: string
+          nullable: true
+        bio:
+          type: string
+          nullable: true
+        track:
+          type: string
+        level:
+          type: integer
+        xpBalance:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - email
+        - username
+        - displayName
+        - track
+        - level
+        - xpBalance
+        - createdAt
+
+    UpdateProfileRequest:
+      type: object
+      properties:
+        displayName:
+          type: string
+        bio:
+          type: string
+        avatarUrl:
+          type: string
+        track:
+          type: string
+
+    Post:
+      type: object
+      properties:
+        id:
+          type: string
+        authorId:
+          type: string
+        author:
+          $ref: "#/components/schemas/Profile"
+        body:
+          type: string
+        imageUrl:
+          type: string
+          nullable: true
+        track:
+          type: string
+        isProofProject:
+          type: boolean
+        xpAwarded:
+          type: integer
+        likeCount:
+          type: integer
+        commentCount:
+          type: integer
+        isLiked:
+          type: boolean
+        isBookmarked:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - authorId
+        - author
+        - body
+        - track
+        - isProofProject
+        - xpAwarded
+        - likeCount
+        - commentCount
+        - isLiked
+        - isBookmarked
+        - createdAt
+
+    PostListResponse:
+      type: object
+      properties:
+        posts:
+          type: array
+          items:
+            $ref: "#/components/schemas/Post"
+        total:
+          type: integer
+        hasMore:
+          type: boolean
+      required:
+        - posts
+        - total
+        - hasMore
+
+    CreatePostRequest:
+      type: object
+      properties:
+        body:
+          type: string
+          maxLength: 500
+        imageUrl:
+          type: string
+          nullable: true
+        track:
+          type: string
+          enum: [product_design, frontend, growth, branding, mentorship]
+        isProofProject:
+          type: boolean
+      required:
+        - body
+        - track
+        - isProofProject
+
+    LikeResponse:
+      type: object
+      properties:
+        liked:
+          type: boolean
+        likeCount:
+          type: integer
+      required:
+        - liked
+        - likeCount
+
+    BookmarkResponse:
+      type: object
+      properties:
+        bookmarked:
+          type: boolean
+      required:
+        - bookmarked
+
+    Comment:
+      type: object
+      properties:
+        id:
+          type: string
+        postId:
+          type: string
+        authorId:
+          type: string
+        author:
+          $ref: "#/components/schemas/Profile"
+        body:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - postId
+        - authorId
+        - author
+        - body
+        - createdAt
+
+    CreateCommentRequest:
+      type: object
+      properties:
+        body:
+          type: string
+      required:
+        - body
+
+    Bootcamp:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        subtitle:
+          type: string
+        coverUrl:
+          type: string
+          nullable: true
+        track:
+          type: string
+        difficulty:
+          type: string
+          enum: [beginner, intermediate, advanced]
+        modulesCount:
+          type: integer
+        xpReward:
+          type: integer
+        description:
+          type: string
+        enrolled:
+          type: boolean
+        enrollment:
+          $ref: "#/components/schemas/Enrollment"
+          nullable: true
+      required:
+        - id
+        - title
+        - subtitle
+        - track
+        - difficulty
+        - modulesCount
+        - xpReward
+        - description
+        - enrolled
+
+    Enrollment:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        bootcampId:
+          type: string
+        modulesCompleted:
+          type: integer
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 100
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - bootcampId
+        - modulesCompleted
+        - progress
+        - createdAt
+
+    UpdateProgressRequest:
+      type: object
+      properties:
+        modulesCompleted:
+          type: integer
+      required:
+        - modulesCompleted
+
+    Channel:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        lastMessage:
+          type: string
+          nullable: true
+        lastMessageAt:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - id
+        - name
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: string
+        channelId:
+          type: string
+        authorId:
+          type: string
+        author:
+          $ref: "#/components/schemas/Profile"
+        body:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - channelId
+        - authorId
+        - author
+        - body
+        - createdAt
+
+    SendMessageRequest:
+      type: object
+      properties:
+        body:
+          type: string
+      required:
+        - body
+
+    Wallet:
+      type: object
+      properties:
+        userId:
+          type: string
+        xpBalance:
+          type: integer
+        level:
+          type: integer
+        xpToNextLevel:
+          type: integer
+        xpForCurrentLevel:
+          type: integer
+        totalXpForNextLevel:
+          type: integer
+      required:
+        - userId
+        - xpBalance
+        - level
+        - xpToNextLevel
+        - xpForCurrentLevel
+        - totalXpForNextLevel
+
+    XpEvent:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        source:
+          type: string
+          enum: [build_posted, proof_project, bootcamp_module, bootcamp_completed]
+        detail:
+          type: string
+          nullable: true
+        amount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - source
+        - amount
+        - createdAt
+
+    FeedSummary:
+      type: object
+      properties:
+        activeMembersToday:
+          type: integer
+        postsToday:
+          type: integer
+        topTracks:
+          type: array
+          items:
+            type: object
+            properties:
+              track:
+                type: string
+              count:
+                type: integer
+            required:
+              - track
+              - count
+        totalMembers:
+          type: integer
+      required:
+        - activeMembersToday
+        - postsToday
+        - topTracks
+        - totalMembers

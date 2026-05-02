@@ -1,0 +1,157 @@
+Zero Club — Product Requirements Document (PRD)
+1. Overview
+Product Name: Zero Club Tagline: A private club for builders. Type: Premium social learning & earning platform (mobile-first web app) Status: MVP in active development
+
+1.1 Description
+Zero Club is an invite-flavored, premium social learning community where students and early-career builders learn digital skills, ship real work, and earn XP for their progress. It blends the best of a Discord-style community, a Skool-style cohort academy, and a gamified portfolio — wrapped in a confident, modern brand aesthetic.
+
+Members don't just consume lessons. They post builds, complete bootcamps, chat in channels, and level up through a transparent XP economy that rewards proof-of-work over passive participation.
+
+1.2 Vision
+To become the most trusted private club where the next generation of digital builders learn in public, ship consistently, and turn skills into income — together.
+
+1.3 Mission
+Make skill-building social, accountable, and rewarding by combining structured bootcamps with a live community feed, gamified XP, and a culture that celebrates shipping over scrolling.
+
+2. Goals & Success Metrics
+2.1 Product Goals
+Activate new members within 24h of signup (first post + first bootcamp enrollment).
+Retain through weekly XP streaks, cohort progress, and feed engagement.
+Reward verified builds with disproportionate XP to drive proof-of-work culture.
+Convert free members into paying club members through visible peer progress.
+2.2 Success Metrics (North Stars)
+Metric	Target (90 days)
+D1 / D7 / D30 retention	60% / 35% / 20%
+Weekly active posters	≥ 40% of MAU
+Avg. XP earned / week / active user	≥ 100
+Bootcamp completion rate	≥ 30%
+Posts marked as "Proof Project"	≥ 25% of all posts
+3. Target Audience
+Primary: Students and self-taught builders (16–28) learning product design, frontend, growth, branding, or building startups. Secondary: Mentors and operators who want to give back, scout talent, and signal expertise.
+
+User personas:
+
+The Shipper — wants accountability and proof of progress.
+The Learner — wants structured bootcamps and a peer group.
+The Mentor — wants reach, reputation, and to spot talent early.
+4. Brand & Design
+Identity: Premium, confident, creative — feels like a top-tier design club, not a course platform.
+Logo: Zero Club mark (transparent PNG, used in app header and login).
+Primary accent: Magenta/pink (--primary) — used sparingly for CTAs, XP, and key highlights.
+Typography: Inter (400/500/600/700).
+Aesthetic: Light hero → dark feature sections, soft shadows, subtle glow, rounded UI, glassmorphism nav.
+Tone of voice: Direct, encouraging, builder-first. No fluff. No corporate.
+Design tokens: All colors via semantic tokens in src/styles.css (oklch). No hard-coded colors in components.
+5. Information Architecture
+5.1 Public surface
+/ — Landing page (hero, services, testimonials, CTAs)
+/login — Email + Google + Apple authentication
+5.2 Authenticated app (/_app)
+/feed — Community feed (home for members)
+/bootcamps — Browse & enroll in cohorts
+/chat — Channel-based real-time chat
+/wallet — XP balance, level, XP event history
+/create — Modal route for composing a post
+Bottom tab navigation on mobile: Feed · Bootcamps · Create · Chat · Wallet.
+
+6. Core Features
+6.1 Authentication
+Email/password sign-up + sign-in
+Google OAuth
+Apple OAuth
+Session persistence via Supabase Auth
+Protected _app/* routes with redirect to /login when unauthenticated
+Auto-created profile row on signup (trigger)
+6.2 Profiles
+Every user has a public profile:
+
+username, display_name, avatar_url, bio
+track (Product Design, Frontend, Growth, Branding, Mentorship)
+level (derived from XP)
+xp_balance (running total)
+6.3 Community Feed
+Reverse-chronological feed of member posts
+Each post: author, body, optional image, track tag, XP awarded, like/comment counts, timestamp
+Like, bookmark, comment
+Author profile links
+Pull-to-refresh + optimistic updates
+6.4 Create Post
+Modal composer (mobile bottom sheet, desktop centered)
+Text (max 500 chars), optional image (max 5MB), track selector
+"Mark as Proof Project" toggle → +50 XP (vs +15 XP for standard posts)
+Image upload to post-images bucket (per-user folder)
+XP event logged on every post
+6.5 Bootcamps
+Browse catalog of cohorts (cover, title, subtitle, track, difficulty, modules count, XP reward)
+Enroll → creates enrollment row
+Track modules_completed and progress (0–100)
+XP reward on completion
+6.6 Chat
+Channel list (e.g. #general, #design, #frontend, #wins)
+Real-time messages via Supabase Realtime
+Author avatars, timestamps, message body
+Last 200 messages per channel
+6.7 Wallet & XP
+Current XP balance + level
+Full XP event history (source, detail, amount, timestamp)
+Sources: Build Posted (+15), Proof Project (+50), Bootcamp Module (+25), Bootcamp Completed (variable)
+Level curve: Level N requires 100 × N × (N+1) / 2 total XP (triangular)
+6.8 Landing Page (Public)
+Sticky glass navbar
+Light hero with floating social-proof badges
+Services grid with previews
+Testimonials carousel ("Loved by the club")
+Strong CTAs to /login
+7. Data Model (Supabase / Lovable Cloud)
+Table	Purpose
+profiles	User profile (1:1 with auth.users)
+posts	Community feed posts
+likes	Post likes (composite PK: user_id + post_id)
+bookmarks	Saved posts
+comments	Post comments
+channels	Chat channels
+messages	Chat messages
+bootcamps	Cohort catalog
+enrollments	User ↔ bootcamp progress
+xp_events	Append-only XP ledger
+user_roles	Role assignments (separate table — never on profiles)
+Storage buckets: post-images (public read, authenticated write to own folder), avatars (public read, owner write).
+
+8. Security & Permissions
+Row Level Security on every table.
+Roles via app_role enum + user_roles table + has_role() SECURITY DEFINER function (no recursive RLS).
+Users can only mutate their own posts, comments, likes, bookmarks, enrollments, and XP events tied to their user_id.
+Public read on profiles, posts, comments, bootcamps, channels.
+Authenticated read on messages (channel-scoped).
+Webhooks/cron use /api/public/* with signature verification.
+9. Technical Stack
+Framework: TanStack Start v1 (React 19, SSR-capable)
+Build: Vite 7
+Styling: Tailwind CSS v4 (tokens in src/styles.css, oklch)
+Backend: Lovable Cloud (Supabase) — Postgres, Auth, Storage, Realtime, Edge Functions
+Auth: Supabase Auth + Lovable OAuth wrapper (Google, Apple)
+Deployment: Cloudflare Workers (edge runtime)
+AI (future): Lovable AI Gateway (Gemini / GPT-5 family) — no user API keys
+10. Non-Functional Requirements
+Mobile-first, fully responsive down to 360px width.
+Performance: First contentful paint < 1.5s on 4G; lazy-load images.
+Accessibility: Semantic HTML, alt text on all images, keyboard navigable, sufficient contrast in light + dark.
+SEO: Per-route titles < 60 chars, descriptions < 160 chars, single H1, JSON-LD where applicable, canonical tags.
+Realtime: Chat updates < 500ms p95.
+11. Out of Scope (V1)
+Native iOS / Android apps
+Direct messaging (1:1 DMs)
+Paid subscriptions / billing
+Mentor marketplace / paid sessions
+Job board
+Public profile pages with custom URLs
+Notifications (email / push)
+12. Roadmap
+V1 (current): Auth, profiles, feed, create post, bootcamps browse + enroll, chat, wallet, landing page. V1.1: Comments UI polish, bookmarks page, profile pages, push notifications. V1.2: Mentor verification, paid membership, leaderboards, weekly streaks. V2: DMs, mentor marketplace, job board, mobile apps.
+
+13. Risks & Mitigations
+Risk	Mitigation
+Empty-feed cold start	Seed with founding members; pin onboarding posts; daily prompts
+XP gaming / spam	Rate limit posts, mod tools, Proof Project review
+Low bootcamp completion	Cohort cadence, weekly checkpoints, peer accountability
+Toxic chat behavior	Channel mods, report flow, role-based moderation
