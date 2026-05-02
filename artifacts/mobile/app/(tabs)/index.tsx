@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import {
   getListPostsQueryOptions,
@@ -22,6 +23,7 @@ import {
   getGetFeedSummaryQueryKey,
 } from "@workspace/api-client-react";
 import { useColors } from "@/hooks/useColors";
+import { useAuth } from "@/context/AuthContext";
 import { PostCard } from "@/components/PostCard";
 import type { Post } from "@workspace/api-client-react";
 
@@ -40,6 +42,7 @@ const TRACK_LABELS: Record<string, string> = {
 export default function FeedScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { user } = useAuth();
   const qc = useQueryClient();
   const [selectedTrack, setSelectedTrack] = useState<string>("all");
   const [refreshing, setRefreshing] = useState(false);
@@ -99,14 +102,19 @@ export default function FeedScreen() {
           <Image source={LOGO} style={styles.logo} />
           <Text style={[styles.headerTitle, { color: colors.foreground }]}>Zero Club</Text>
           <View style={styles.headerRight}>
-            {summary && (
-              <View style={[styles.liveChip, { backgroundColor: colors.primary + "22" }]}>
-                <View style={[styles.liveDot, { backgroundColor: colors.primary }]} />
-                <Text style={[styles.liveText, { color: colors.primary }]}>
-                  {summary.activeMembersToday} active
+            <TouchableOpacity
+              onPress={() => router.push("/profile")}
+              style={[styles.avatarBtn, { backgroundColor: colors.primary + "22" }]}
+              activeOpacity={0.7}
+            >
+              {user?.avatarUrl ? (
+                <Image source={{ uri: user.avatarUrl }} style={styles.avatarImg} />
+              ) : (
+                <Text style={[styles.avatarInitials, { color: colors.primary }]}>
+                  {(user?.displayName ?? "U").slice(0, 1).toUpperCase()}
                 </Text>
-              </View>
-            )}
+              )}
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -200,16 +208,16 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
   },
   headerRight: { flexDirection: "row", gap: 8 },
-  liveChip: {
-    flexDirection: "row",
+  avatarBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: "center",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 20,
-    gap: 5,
+    justifyContent: "center",
+    overflow: "hidden",
   },
-  liveDot: { width: 6, height: 6, borderRadius: 3 },
-  liveText: { fontSize: 11, fontWeight: "600" },
+  avatarImg: { width: 34, height: 34, borderRadius: 17 },
+  avatarInitials: { fontSize: 14, fontWeight: "700" },
   trackFilters: { paddingHorizontal: 16, gap: 8 },
   trackFilter: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
   trackFilterText: { fontSize: 12, fontWeight: "600" },

@@ -2,7 +2,7 @@
 
 ## Overview
 
-Zero Club is a premium social learning mobile app for builders. Members share builds, join bootcamps, earn XP, and connect via real-time chat.
+Zero Club is a premium social learning mobile app for senior secondary school students / builders. Members share builds, join bootcamps, earn XP, refer friends, and connect via real-time chat.
 
 ## Architecture
 
@@ -36,7 +36,7 @@ Fonts: Inter (400, 500, 600, 700 via `@expo-google-fonts/inter`)
 
 ### Tables
 - `users` — auth credentials (id, email, password_hash)
-- `profiles` — user profile (username, display_name, avatar_url, bio, track, xp_balance)
+- `profiles` — user profile (username, display_name, avatar_url, bio, track, xp_balance, school, referral_code)
 - `posts` — community feed posts (body, image_url, track, is_proof_project, xp_awarded)
 - `likes` — post likes (composite PK: user_id + post_id)
 - `bookmarks` — saved posts (composite PK: user_id + post_id)
@@ -46,17 +46,18 @@ Fonts: Inter (400, 500, 600, 700 via `@expo-google-fonts/inter`)
 - `channels` — chat channels
 - `messages` — channel messages
 - `xp_events` — XP transaction history (source, amount)
+- `referrals` — referral records (referrer_id, referee_id, same_school, xp_awarded)
 
 ### Enums
 - `track`: product_design, frontend, growth, branding, mentorship
 - `difficulty`: beginner, intermediate, advanced
-- `xp_source`: build_posted, proof_project, bootcamp_module, bootcamp_completed
+- `xp_source`: build_posted, proof_project, bootcamp_module, bootcamp_completed, referral_bonus
 
 ## API Routes (`/api/...`)
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| POST | `/auth/register` | No | Register new user |
+| POST | `/auth/register` | No | Register new user (accepts school + referral_code) |
 | POST | `/auth/login` | No | Login, returns JWT |
 | GET | `/auth/me` | Yes | Get current user profile |
 | GET | `/profiles/:userId` | No | Get any profile |
@@ -76,6 +77,7 @@ Fonts: Inter (400, 500, 600, 700 via `@expo-google-fonts/inter`)
 | GET | `/wallet` | Yes | XP balance + level info |
 | GET | `/wallet/events` | Yes | XP history |
 | GET | `/feed/summary` | Yes | Active members count, posts today |
+| GET | `/referrals/stats` | Yes | My referral code, count, XP earned |
 | POST | `/seed` | No | Seed DB with bootcamps + channels |
 
 ## Auth
@@ -84,6 +86,7 @@ Fonts: Inter (400, 500, 600, 700 via `@expo-google-fonts/inter`)
 - Passwords hashed with `bcryptjs` (10 rounds)
 - JWT secret via `JWT_SECRET` env var (falls back to dev default)
 - Token stored in AsyncStorage on mobile
+- AuthGate uses `usePathname` to protect routes
 
 ## XP System
 
@@ -91,18 +94,29 @@ Fonts: Inter (400, 500, 600, 700 via `@expo-google-fonts/inter`)
 - Proof project post: +50 XP
 - Complete bootcamp module: +25 XP
 - Complete full bootcamp: bootcamp.xpReward XP (250–750)
+- Welcome bonus (used referral code): +50 XP
+- Referral bonus same-school: +250 XP to referrer
+- Referral bonus cross-school: +400 XP to referrer
 - Level formula: Level N requires `100 * N * (N+1) / 2` total XP
+
+## Referral System
+
+- Each user gets a unique referral code on registration (3-char username prefix + 5 random alphanumeric chars, e.g. `ADMK7R2PQ`)
+- `school` field on profiles enables same-school vs cross-school detection
+- New user enters referral code during registration → welcome bonus awarded
+- Referrer gets higher XP for bringing in students from other schools
 
 ## Mobile Screens
 
 - **`app/login.tsx`** — Login screen
-- **`app/register.tsx`** — Registration with track selector
-- **`app/(tabs)/index.tsx`** — Community feed with track filters
+- **`app/register.tsx`** — Registration with track selector, school, and referral code fields
+- **`app/(tabs)/index.tsx`** — Community feed with track filters + profile avatar in header
 - **`app/(tabs)/bootcamps.tsx`** — Bootcamp browser
 - **`app/(tabs)/create.tsx`** — Create post + proof project toggle
 - **`app/(tabs)/chat.tsx`** — Channel list
 - **`app/(tabs)/wallet.tsx`** — XP balance, level progress, XP history
 - **`app/channel/[id].tsx`** — Real-time chat (3s polling)
+- **`app/profile.tsx`** — User profile: avatar, XP/level, school badge, referral code, copy/share link, referral stats
 
 ## Key Files
 
@@ -111,9 +125,13 @@ Fonts: Inter (400, 500, 600, 700 via `@expo-google-fonts/inter`)
 - `artifacts/mobile/hooks/useColors.ts` — Color scheme hook
 - `artifacts/mobile/components/PostCard.tsx` — Feed post card
 - `artifacts/mobile/components/BootcampCard.tsx` — Bootcamp card
+- `artifacts/api-server/src/routes/auth.ts` — JWT middleware, registration with referral logic
+- `artifacts/api-server/src/routes/referrals.ts` — Referral stats endpoint
 - `artifacts/api-server/src/lib/auth.ts` — JWT middleware + `AuthRequest` type
 - `artifacts/api-server/src/lib/ids.ts` — ID generation utility
 - `lib/db/src/schema/index.ts` — All DB table exports
+- `lib/db/src/schema/profiles.ts` — Profiles table (school + referral_code)
+- `lib/db/src/schema/referrals.ts` — Referrals table
 - `lib/api-spec/openapi.yaml` — Full API contract
 
 ## Codegen

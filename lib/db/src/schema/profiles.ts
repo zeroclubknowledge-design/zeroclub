@@ -18,6 +18,8 @@ export const profilesTable = pgTable("profiles", {
   avatarUrl: text("avatar_url"),
   bio: text("bio"),
   track: trackEnum("track").notNull().default("frontend"),
+  school: text("school"),
+  referralCode: text("referral_code").unique(),
   xpBalance: integer("xp_balance").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

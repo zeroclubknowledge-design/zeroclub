@@ -56,6 +56,7 @@ function RootLayoutNav() {
         <Stack.Screen name="login" options={{ headerShown: false, animation: "fade" }} />
         <Stack.Screen name="register" options={{ headerShown: false, animation: "fade" }} />
         <Stack.Screen name="channel/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="profile" options={{ headerShown: false, animation: "slide_from_right" }} />
       </Stack>
     </AuthGate>
   );

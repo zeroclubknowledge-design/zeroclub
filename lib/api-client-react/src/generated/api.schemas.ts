@@ -32,6 +32,8 @@ export interface RegisterRequest {
   username: string;
   displayName: string;
   track: RegisterRequestTrack;
+  school?: string;
+  referralCode?: string;
 }
 
 export interface LoginRequest {
@@ -47,6 +49,8 @@ export interface Profile {
   avatarUrl?: string | null;
   bio?: string | null;
   track: string;
+  school?: string | null;
+  referralCode?: string | null;
   level: number;
   xpBalance: number;
   createdAt: string;
@@ -226,6 +230,14 @@ export interface FeedSummary {
   postsToday: number;
   topTracks: FeedSummaryTopTracksItem[];
   totalMembers: number;
+}
+
+export interface ReferralStats {
+  referralCode: string | null;
+  referredCount: number;
+  totalXpEarned: number;
+  sameSchoolCount: number;
+  crossSchoolCount: number;
 }
 
 export type ListPostsParams = {

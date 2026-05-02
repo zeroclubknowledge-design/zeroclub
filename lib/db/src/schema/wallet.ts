@@ -8,6 +8,7 @@ export const xpSourceEnum = pgEnum("xp_source", [
   "proof_project",
   "bootcamp_module",
   "bootcamp_completed",
+  "referral_bonus",
 ]);
 
 export const xpEventsTable = pgTable("xp_events", {

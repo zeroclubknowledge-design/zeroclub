@@ -31,6 +31,8 @@ export const RegisterBody = zod.object({
     "branding",
     "mentorship",
   ]),
+  school: zod.string().optional(),
+  referralCode: zod.string().optional(),
 });
 
 /**
@@ -51,6 +53,8 @@ export const LoginResponse = zod.object({
     avatarUrl: zod.string().nullish(),
     bio: zod.string().nullish(),
     track: zod.string(),
+    school: zod.string().nullish(),
+    referralCode: zod.string().nullish(),
     level: zod.number(),
     xpBalance: zod.number(),
     createdAt: zod.coerce.date(),
@@ -68,6 +72,8 @@ export const GetMeResponse = zod.object({
   avatarUrl: zod.string().nullish(),
   bio: zod.string().nullish(),
   track: zod.string(),
+  school: zod.string().nullish(),
+  referralCode: zod.string().nullish(),
   level: zod.number(),
   xpBalance: zod.number(),
   createdAt: zod.coerce.date(),
@@ -88,6 +94,8 @@ export const GetProfileResponse = zod.object({
   avatarUrl: zod.string().nullish(),
   bio: zod.string().nullish(),
   track: zod.string(),
+  school: zod.string().nullish(),
+  referralCode: zod.string().nullish(),
   level: zod.number(),
   xpBalance: zod.number(),
   createdAt: zod.coerce.date(),
@@ -115,6 +123,8 @@ export const UpdateProfileResponse = zod.object({
   avatarUrl: zod.string().nullish(),
   bio: zod.string().nullish(),
   track: zod.string(),
+  school: zod.string().nullish(),
+  referralCode: zod.string().nullish(),
   level: zod.number(),
   xpBalance: zod.number(),
   createdAt: zod.coerce.date(),
@@ -145,6 +155,8 @@ export const ListPostsResponse = zod.object({
         avatarUrl: zod.string().nullish(),
         bio: zod.string().nullish(),
         track: zod.string(),
+        school: zod.string().nullish(),
+        referralCode: zod.string().nullish(),
         level: zod.number(),
         xpBalance: zod.number(),
         createdAt: zod.coerce.date(),
@@ -201,6 +213,8 @@ export const GetPostResponse = zod.object({
     avatarUrl: zod.string().nullish(),
     bio: zod.string().nullish(),
     track: zod.string(),
+    school: zod.string().nullish(),
+    referralCode: zod.string().nullish(),
     level: zod.number(),
     xpBalance: zod.number(),
     createdAt: zod.coerce.date(),
@@ -259,6 +273,8 @@ export const ListCommentsResponseItem = zod.object({
     avatarUrl: zod.string().nullish(),
     bio: zod.string().nullish(),
     track: zod.string(),
+    school: zod.string().nullish(),
+    referralCode: zod.string().nullish(),
     level: zod.number(),
     xpBalance: zod.number(),
     createdAt: zod.coerce.date(),
@@ -441,6 +457,8 @@ export const ListMessagesResponseItem = zod.object({
     avatarUrl: zod.string().nullish(),
     bio: zod.string().nullish(),
     track: zod.string(),
+    school: zod.string().nullish(),
+    referralCode: zod.string().nullish(),
     level: zod.number(),
     xpBalance: zod.number(),
     createdAt: zod.coerce.date(),
@@ -510,4 +528,15 @@ export const GetFeedSummaryResponse = zod.object({
     }),
   ),
   totalMembers: zod.number(),
+});
+
+/**
+ * @summary Get my referral stats and code
+ */
+export const GetReferralStatsResponse = zod.object({
+  referralCode: zod.string().nullable(),
+  referredCount: zod.number(),
+  totalXpEarned: zod.number(),
+  sameSchoolCount: zod.number(),
+  crossSchoolCount: zod.number(),
 });

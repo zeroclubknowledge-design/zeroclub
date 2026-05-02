@@ -9,6 +9,7 @@ import walletRouter from "./wallet";
 import feedRouter from "./feed";
 import enrollmentsRouter from "./enrollments";
 import seedRouter from "./seed";
+import referralsRouter from "./referrals";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use("/wallet", walletRouter);
 router.use("/feed", feedRouter);
 router.use("/enrollments", enrollmentsRouter);
 router.use("/seed", seedRouter);
+router.use("/referrals", referralsRouter);
 
 export default router;

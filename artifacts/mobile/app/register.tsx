@@ -36,6 +36,8 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
+  const [school, setSchool] = useState("");
+  const [referralCode, setReferralCode] = useState("");
   const [track, setTrack] = useState("frontend");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -55,7 +57,15 @@ export default function RegisterScreen() {
       const res = await fetch(`${baseUrl}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, username, displayName, track }),
+        body: JSON.stringify({
+          email,
+          password,
+          username,
+          displayName,
+          track,
+          school: school.trim() || undefined,
+          referralCode: referralCode.trim().toUpperCase() || undefined,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -120,6 +130,21 @@ export default function RegisterScreen() {
             onChangeText={setEmail}
             colors={colors}
             keyboardType="email-address"
+            autoCapitalize="none"
+          />
+          <InputField
+            icon="map-pin"
+            placeholder="School name (e.g. Kings College Lagos)"
+            value={school}
+            onChangeText={setSchool}
+            colors={colors}
+          />
+          <InputField
+            icon="gift"
+            placeholder="Referral code (optional)"
+            value={referralCode}
+            onChangeText={(t) => setReferralCode(t.toUpperCase())}
+            colors={colors}
             autoCapitalize="none"
           />
           <View

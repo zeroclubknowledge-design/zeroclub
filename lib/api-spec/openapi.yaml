@@ -24,6 +24,8 @@ tags:
     description: Chat messages
   - name: wallet
     description: XP wallet and events
+  - name: referrals
+    description: Referral system
 paths:
   /healthz:
     get:
@@ -541,6 +543,27 @@ paths:
               schema:
                 $ref: "#/components/schemas/FeedSummary"
 
+  /referrals/stats:
+    get:
+      operationId: getReferralStats
+      tags: [referrals]
+      summary: Get my referral stats and code
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReferralStats"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -582,6 +605,10 @@ components:
         track:
           type: string
           enum: [product_design, frontend, growth, branding, mentorship]
+        school:
+          type: string
+        referralCode:
+          type: string
       required:
         - email
         - password
@@ -631,6 +658,12 @@ components:
           nullable: true
         track:
           type: string
+        school:
+          type: string
+          nullable: true
+        referralCode:
+          type: string
+          nullable: true
         level:
           type: integer
         xpBalance:
@@ -995,3 +1028,24 @@ components:
         - postsToday
         - topTracks
         - totalMembers
+
+    ReferralStats:
+      type: object
+      properties:
+        referralCode:
+          type: string
+          nullable: true
+        referredCount:
+          type: integer
+        totalXpEarned:
+          type: integer
+        sameSchoolCount:
+          type: integer
+        crossSchoolCount:
+          type: integer
+      required:
+        - referralCode
+        - referredCount
+        - totalXpEarned
+        - sameSchoolCount
+        - crossSchoolCount

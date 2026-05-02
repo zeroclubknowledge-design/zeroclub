@@ -20,6 +20,8 @@ export interface UserProfile {
   avatarUrl?: string | null;
   bio?: string | null;
   track: string;
+  school?: string | null;
+  referralCode?: string | null;
   level: number;
   xpBalance: number;
   createdAt: string;
