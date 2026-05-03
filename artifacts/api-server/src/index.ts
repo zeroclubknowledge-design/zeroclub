@@ -1,13 +1,10 @@
 import app from "./app";
 import { logger } from "./lib/logger";
-import { syncBootcampChannels } from "./routes/channels";
 
 const rawPort = process.env["PORT"];
 
 if (!rawPort) {
-  throw new Error(
-    "PORT environment variable is required but was not provided.",
-  );
+  throw new Error("PORT environment variable is required but was not provided.");
 }
 
 const port = Number(rawPort);
@@ -23,5 +20,4 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
-  syncBootcampChannels().catch((e: unknown) => logger.error({ err: e }, "syncBootcampChannels failed"));
 });

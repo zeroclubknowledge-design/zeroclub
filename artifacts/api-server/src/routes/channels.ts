@@ -7,14 +7,9 @@ import { computeLevel } from "./auth";
 
 const router = Router();
 
-export async function syncBootcampChannels() {
-  return;
-}
-
 router.get("/", requireAuth, async (req: AuthRequest, res) => {
   try {
     const channels = await db.select().from(channelsTable);
-
     const enriched = await Promise.all(
       channels.map(async (c) => {
         const lastMsg = await db
@@ -23,16 +18,9 @@ router.get("/", requireAuth, async (req: AuthRequest, res) => {
           .where(eq(messagesTable.channelId, c.id))
           .orderBy(desc(messagesTable.createdAt))
           .limit(1);
-
-        return {
-          ...c,
-          lastMessage: lastMsg[0]?.body ?? null,
-          lastMessageAt: lastMsg[0]?.createdAt ?? null,
-          subChannelCount: 0,
-        };
+        return { ...c, lastMessage: lastMsg[0]?.body ?? null, lastMessageAt: lastMsg[0]?.createdAt ?? null };
       }),
     );
-
     res.json(enriched);
   } catch (err) {
     req.log.error({ err }, "list channels error");
@@ -50,18 +38,10 @@ router.get("/:channelId/messages", requireAuth, async (req: AuthRequest, res) =>
       .where(eq(messagesTable.channelId, channelId))
       .orderBy(desc(messagesTable.createdAt))
       .limit(limit);
-
     const enriched = await Promise.all(
       messages.map(async (m) => {
-        const authors = await db
-          .select()
-          .from(profilesTable)
-          .where(eq(profilesTable.id, m.authorId))
-          .limit(1);
-        return {
-          ...m,
-          author: { ...authors[0]!, level: computeLevel(authors[0]!.xpBalance) },
-        };
+        const authors = await db.select().from(profilesTable).where(eq(profilesTable.id, m.authorId)).limit(1);
+        return { ...m, author: { ...authors[0]!, level: computeLevel(authors[0]!.xpBalance) } };
       }),
     );
     res.json(enriched.reverse());
@@ -81,20 +61,9 @@ router.post("/:channelId/messages", requireAuth, async (req: AuthRequest, res) =
   try {
     const id = `${channelId}-${Date.now()}`;
     await db.insert(messagesTable).values({ id, channelId, authorId: req.userId!, body });
-    const authors = await db
-      .select()
-      .from(profilesTable)
-      .where(eq(profilesTable.id, req.userId!))
-      .limit(1);
-    const msg = await db
-      .select()
-      .from(messagesTable)
-      .where(eq(messagesTable.id, id))
-      .limit(1);
-    res.status(201).json({
-      ...msg[0]!,
-      author: { ...authors[0]!, level: computeLevel(authors[0]!.xpBalance) },
-    });
+    const authors = await db.select().from(profilesTable).where(eq(profilesTable.id, req.userId!)).limit(1);
+    const msg = await db.select().from(messagesTable).where(eq(messagesTable.id, id)).limit(1);
+    res.status(201).json({ ...msg[0]!, author: { ...authors[0]!, level: computeLevel(authors[0]!.xpBalance) } });
   } catch (err) {
     req.log.error({ err }, "send message error");
     res.status(500).json({ error: "internal_error", message: "Failed" });
