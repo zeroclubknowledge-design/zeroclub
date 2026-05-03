@@ -16,9 +16,7 @@ function Nav() {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-12 py-4 bg-[#0D0D0D]/80 backdrop-blur-md border-b border-white/5">
       <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-xl bg-indigo-500/20 flex items-center justify-center">
-          <span className="text-base font-black text-indigo-400">Z</span>
-        </div>
+        <img src={`${import.meta.env.BASE_URL}zero-club-logo.png`} alt="Zero Club" className="w-8 h-8 rounded-xl object-cover" />
         <span className="font-bold text-white text-base tracking-tight">Zero Club</span>
       </div>
       <nav className="hidden md:flex items-center gap-7 text-sm text-white/60">
@@ -75,7 +73,7 @@ function Hero() {
           </a>
         </div>
 
-        {/* Mock phone mockup */}
+        {/* App preview illustration */}
         <div className="mt-14 relative w-[280px] mx-auto">
           <div className="w-[220px] mx-auto rounded-[36px] bg-[#1A1A1A] border border-white/10 shadow-2xl overflow-hidden aspect-[9/19]">
             <div className="h-full bg-gradient-to-b from-[#1A1A1A] to-[#111] flex flex-col">
@@ -91,26 +89,24 @@ function Hero() {
               <div className="flex-1 flex flex-col px-4 gap-3 overflow-hidden pt-2">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-[10px] text-white/40">Good morning,</p>
-                    <p className="text-sm font-bold text-white">Ada Okonkwo</p>
+                    <p className="text-[10px] text-white/40">Welcome back,</p>
+                    <p className="text-sm font-bold text-white">Zero Builder</p>
                   </div>
-                  <div className="w-8 h-8 rounded-full bg-indigo-500/30 flex items-center justify-center">
-                    <span className="text-xs font-bold text-indigo-300">AO</span>
-                  </div>
+                  <img src={`${import.meta.env.BASE_URL}zero-club-logo.png`} alt="" className="w-8 h-8 rounded-full object-cover" />
                 </div>
                 {/* XP card */}
                 <div className="rounded-2xl bg-indigo-500/15 border border-indigo-500/20 p-3">
                   <p className="text-[9px] text-indigo-300 mb-1">Your XP Balance</p>
-                  <p className="text-xl font-black text-amber-400">4,320 XP</p>
+                  <p className="text-xl font-black text-amber-400">XP Balance</p>
                   <div className="mt-2 h-1 rounded-full bg-white/10">
                     <div className="h-full w-3/5 rounded-full bg-indigo-500" />
                   </div>
-                  <p className="text-[8px] text-white/30 mt-1">Level 7 → 8 · 60%</p>
+                  <p className="text-[8px] text-white/30 mt-1">Keep completing modules to level up</p>
                 </div>
                 {/* Bootcamp cards */}
                 {[
-                  { title: "React Mastery", tag: "Video", color: "#6366F1" },
-                  { title: "UI Systems", tag: "Live", color: "#10B981" },
+                  { title: "Your active bootcamp", tag: "Video", color: "#6366F1" },
+                  { title: "Next on your path", tag: "Live", color: "#10B981" },
                 ].map((c) => (
                   <div key={c.title} className="rounded-xl bg-[#242424] border border-white/5 p-3 flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg flex-shrink-0" style={{ background: `${c.color}25` }}>
@@ -127,12 +123,12 @@ function Hero() {
           </div>
           {/* Floating badges */}
           <div className="absolute -right-8 top-16 bg-[#1A1A1A] border border-white/10 rounded-2xl px-3 py-2 shadow-xl">
-            <p className="text-[10px] text-white/40">Earned</p>
-            <p className="text-sm font-black text-amber-400">₦12,500</p>
+            <p className="text-[10px] text-white/40">Cash Rewards</p>
+            <p className="text-sm font-black text-amber-400">Withdraw anytime</p>
           </div>
           <div className="absolute -left-10 bottom-20 bg-[#1A1A1A] border border-white/10 rounded-2xl px-3 py-2 shadow-xl">
             <p className="text-[10px] text-white/40">Zero Proofs</p>
-            <p className="text-sm font-black text-indigo-400">3 badges</p>
+            <p className="text-sm font-black text-indigo-400">Earn badges</p>
           </div>
         </div>
       </div>
@@ -230,14 +226,14 @@ function HowItWorks() {
 }
 
 const tracks = [
-  { name: "Product Design", icon: "🎨", count: "12 bootcamps" },
-  { name: "Frontend Dev", icon: "💻", count: "8 bootcamps" },
-  { name: "Backend Dev", icon: "⚙️", count: "6 bootcamps" },
-  { name: "Full Stack", icon: "🚀", count: "5 bootcamps" },
-  { name: "Branding", icon: "✨", count: "4 bootcamps" },
-  { name: "Motion Design", icon: "🎬", count: "3 bootcamps" },
-  { name: "Growth", icon: "📈", count: "4 bootcamps" },
-  { name: "Vibe Coding", icon: "🎵", count: "3 bootcamps" },
+  { name: "Product Design", icon: "🎨" },
+  { name: "Frontend Dev", icon: "💻" },
+  { name: "Backend Dev", icon: "⚙️" },
+  { name: "Full Stack", icon: "🚀" },
+  { name: "Branding", icon: "✨" },
+  { name: "Motion Design", icon: "🎬" },
+  { name: "Growth", icon: "📈" },
+  { name: "Vibe Coding", icon: "🎵" },
 ];
 
 function Tracks() {
@@ -257,7 +253,6 @@ function Tracks() {
           >
             <span className="text-3xl">{t.icon}</span>
             <p className="font-semibold text-white text-sm">{t.name}</p>
-            <p className="text-xs text-white/35">{t.count}</p>
           </div>
         ))}
       </div>
@@ -310,9 +305,7 @@ function Footer() {
     <footer className="px-6 md:px-12 py-10 border-t border-white/5">
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-indigo-500/20 flex items-center justify-center">
-            <span className="text-sm font-black text-indigo-400">Z</span>
-          </div>
+          <img src={`${import.meta.env.BASE_URL}zero-club-logo.png`} alt="Zero Club" className="w-7 h-7 rounded-lg object-cover" />
           <span className="font-bold text-white/70 text-sm">Zero Club</span>
         </div>
         <p className="text-xs text-white/25">© {new Date().getFullYear()} Zero Club. Built for African creatives.</p>

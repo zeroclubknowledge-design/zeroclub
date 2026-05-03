@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, type AdminBootcamp, type BootcampFormData } from "@/lib/api";
+import { api, uploadImage, type AdminBootcamp, type BootcampFormData } from "@/lib/api";
 import { TRACKS, DIFFICULTIES, DELIVERY_MEDIUMS, formatPrice } from "@/lib/utils";
-import { Plus, Edit2, Trash2, ChevronRight, BookOpen, Users, Layers, Star, Video, Radio, FileText } from "lucide-react";
+import { Plus, Edit2, Trash2, ChevronRight, BookOpen, Users, Layers, Star, Video, Radio, FileText, Upload, X } from "lucide-react";
 
 interface BootcampFormProps {
   initial?: Partial<BootcampFormData>;
@@ -23,6 +23,9 @@ function BootcampForm({ initial, onSave, onCancel, saving }: BootcampFormProps) 
     xpReward: initial?.xpReward ?? 100,
     priceCents: initial?.priceCents ?? 0,
   });
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,6 +34,22 @@ function BootcampForm({ initial, onSave, onCancel, saving }: BootcampFormProps) 
 
   const set = (key: keyof BootcampFormData, val: string | number) =>
     setForm((f) => ({ ...f, [key]: val }));
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadError("");
+    setUploading(true);
+    try {
+      const url = await uploadImage(file);
+      set("coverUrl", url);
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -51,9 +70,31 @@ function BootcampForm({ initial, onSave, onCancel, saving }: BootcampFormProps) 
             className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground text-sm focus:outline-none focus:border-primary resize-none" />
         </div>
         <div className="sm:col-span-2">
-          <label className="block text-xs font-medium text-muted-foreground mb-1">Cover Image URL</label>
-          <input type="url" value={form.coverUrl ?? ""} onChange={(e) => set("coverUrl", e.target.value)} placeholder="https://..."
-            className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground text-sm focus:outline-none focus:border-primary" />
+          <label className="block text-xs font-medium text-muted-foreground mb-1">Cover Image</label>
+          <input ref={fileRef} type="file" accept="image/*" onChange={handleFileChange} className="hidden" id="cover-upload" />
+          {form.coverUrl ? (
+            <div className="relative rounded-lg overflow-hidden border border-border">
+              <img src={form.coverUrl.startsWith("/") ? `/api${form.coverUrl}` : form.coverUrl} alt="Cover" className="w-full h-36 object-cover" />
+              <button type="button" onClick={() => set("coverUrl", "")}
+                className="absolute top-2 right-2 p-1 rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <label htmlFor="cover-upload"
+              className="flex flex-col items-center justify-center gap-2 w-full h-28 rounded-lg border-2 border-dashed border-border hover:border-primary/50 hover:bg-primary/5 transition-colors cursor-pointer">
+              {uploading ? (
+                <span className="text-xs text-muted-foreground animate-pulse">Uploading...</span>
+              ) : (
+                <>
+                  <Upload className="w-5 h-5 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">Click to upload cover image</span>
+                  <span className="text-xs text-muted-foreground/50">PNG, JPG, WEBP up to 10MB</span>
+                </>
+              )}
+            </label>
+          )}
+          {uploadError && <p className="text-xs text-destructive mt-1">{uploadError}</p>}
         </div>
         <div>
           <label className="block text-xs font-medium text-muted-foreground mb-1">Track *</label>
@@ -87,12 +128,6 @@ function BootcampForm({ initial, onSave, onCancel, saving }: BootcampFormProps) 
             className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground text-sm focus:outline-none focus:border-primary" />
         </div>
       </div>
-
-      {form.coverUrl && (
-        <div className="rounded-lg overflow-hidden border border-border">
-          <img src={form.coverUrl} alt="Cover preview" className="w-full h-32 object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
-        </div>
-      )}
 
       <div className="flex gap-2 justify-end pt-2">
         <button type="button" onClick={onCancel} className="px-4 py-2 rounded-lg border border-border text-muted-foreground text-sm hover:text-foreground transition-colors">

@@ -85,8 +85,8 @@ export default function LoginPage({ onLogin }: LoginProps) {
     <div className="min-h-screen flex items-center justify-center bg-background px-4 py-10">
       <div className="w-full max-w-sm">
         <div className="mb-7 text-center">
-          <div className="inline-flex items-center justify-center w-13 h-13 rounded-2xl bg-primary/15 mb-4">
-            <span className="text-2xl font-black text-primary">Z</span>
+          <div className="inline-flex items-center justify-center mb-4">
+            <img src={`${import.meta.env.BASE_URL}zero-club-logo.png`} alt="Zero Club" className="w-14 h-14 rounded-2xl object-cover" />
           </div>
           <h1 className="text-2xl font-bold text-foreground">Zero Club Admin</h1>
           <p className="text-sm text-muted-foreground mt-1">Tutor & Bootcamp Management</p>

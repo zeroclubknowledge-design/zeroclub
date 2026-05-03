@@ -29,6 +29,23 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+export async function uploadImage(file: File): Promise<string> {
+  const token = getToken();
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await fetch(`${API_BASE}/upload`, {
+    method: "POST",
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error((body as { message?: string }).message ?? `HTTP ${res.status}`);
+  }
+  const data = await res.json() as { url: string };
+  return data.url;
+}
+
 export const api = {
   login: (email: string, password: string) =>
     request<{ token: string }>("/auth/login", {

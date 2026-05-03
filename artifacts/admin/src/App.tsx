@@ -78,9 +78,7 @@ function AdminShell() {
       <aside className={`fixed lg:static inset-y-0 left-0 z-30 w-60 bg-sidebar border-r border-sidebar-border flex flex-col transition-transform duration-200 ${sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}>
         <div className="px-5 py-5 border-b border-sidebar-border">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-primary/20 flex items-center justify-center">
-              <span className="text-sm font-black text-primary">Z</span>
-            </div>
+            <img src={`${import.meta.env.BASE_URL}zero-club-logo.png`} alt="Zero Club" className="w-8 h-8 rounded-xl object-cover" />
             <div>
               <p className="text-sm font-bold text-sidebar-foreground">Zero Club</p>
               <p className="text-xs text-muted-foreground">Admin Panel</p>
