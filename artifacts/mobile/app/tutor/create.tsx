@@ -189,7 +189,7 @@ export default function CreateBootcampScreen() {
     }
   };
 
-  const coverUri = coverUrl?.startsWith("/") ? `${BASE_URL()}/api${coverUrl}` : coverUrl ?? undefined;
+  const coverUri = coverUrl?.startsWith("/") ? `${BASE_URL()}${coverUrl}` : coverUrl ?? undefined;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>

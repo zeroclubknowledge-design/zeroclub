@@ -526,7 +526,7 @@ export default function TutorBootcampDetailScreen() {
     { key: "channels", label: "Community", icon: "message-circle" },
   ];
 
-  const coverUri = form.coverUrl?.startsWith("/") ? `${BASE_URL()}/api${form.coverUrl}` : (form.coverUrl ?? undefined);
+  const coverUri = form.coverUrl?.startsWith("/") ? `${BASE_URL()}${form.coverUrl}` : (form.coverUrl ?? undefined);
 
   if (isLoading) {
     return (
