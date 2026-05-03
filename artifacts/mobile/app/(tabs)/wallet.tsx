@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import {
   View,
   Text,
-  FlatList,
+  SectionList,
   StyleSheet,
   ActivityIndicator,
   Platform,
@@ -11,6 +11,7 @@ import {
   TextInput,
   ScrollView,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
@@ -45,15 +46,28 @@ const SOURCE_ICONS: Record<string, keyof typeof Feather.glyphMap> = {
   build_milestone: "star",
 };
 
-function timeAgo(dateStr: string | Date): string {
-  const d = typeof dateStr === "string" ? new Date(dateStr) : dateStr;
-  const diff = Date.now() - d.getTime();
-  const m = Math.floor(diff / 60000);
-  if (m < 1) return "just now";
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.floor(h / 24)}d ago`;
+const SOURCE_COLORS: Record<string, string> = {
+  build_posted: "#6366F1",
+  proof_project: "#F59E0B",
+  bootcamp_module: "#6366F1",
+  bootcamp_completed: "#10B981",
+  referral_bonus: "#8B5CF6",
+  build_milestone: "#F59E0B",
+};
+
+function formatDate(dateStr: string): string {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString("en-NG", { day: "numeric", month: "long", year: "numeric" });
+}
+
+function groupByDate(events: XpEvent[]): { title: string; data: XpEvent[] }[] {
+  const map = new Map<string, XpEvent[]>();
+  for (const e of events) {
+    const key = formatDate(e.createdAt as string);
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(e);
+  }
+  return Array.from(map.entries()).map(([title, data]) => ({ title, data }));
 }
 
 function formatNaira(kobo: number): string {
@@ -67,6 +81,8 @@ const PRESET_AMOUNTS = [
   { label: "₦50,000", kobo: 5_000_000 },
 ];
 
+type ActiveTab = "activity" | "stats";
+
 export default function WalletScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -75,6 +91,7 @@ export default function WalletScreen() {
   const topPadding = Platform.OS === "web" ? 67 : insets.top;
   const bottomPadding = Platform.OS === "web" ? 0 : insets.bottom;
 
+  const [activeTab, setActiveTab] = useState<ActiveTab>("activity");
   const [withdrawModal, setWithdrawModal] = useState(false);
   const [addModal, setAddModal] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<BankAccount | null>(null);
@@ -83,12 +100,15 @@ export default function WalletScreen() {
   const [addLoading, setAddLoading] = useState(false);
 
   const { data: wallet, isLoading: walletLoading } = useQuery(getGetWalletQueryOptions());
-  const { data: events, isLoading: eventsLoading } = useQuery(getListXpEventsQueryOptions());
+  const { data: events } = useQuery(getListXpEventsQueryOptions());
   const { data: bankAccounts } = useQuery(getListBankAccountsQueryOptions());
   const { data: withdrawals } = useQuery(getListWithdrawalsQueryOptions());
 
   const { showToast } = useToast();
   const createWithdrawal = useCreateWithdrawal();
+
+  const minXp = wallet?.minWithdrawalXp ?? 2000;
+  const canWithdraw = wallet ? wallet.xpBalance >= minXp : false;
 
   const xpProgress =
     wallet && wallet.totalXpForNextLevel !== wallet.xpForCurrentLevel
@@ -102,8 +122,6 @@ export default function WalletScreen() {
           ),
         )
       : 0;
-
-  const minXp = wallet?.minWithdrawalXp ?? 2000;
 
   const handleWithdrawSubmit = () => {
     const xp = parseInt(withdrawXp, 10);
@@ -142,10 +160,7 @@ export default function WalletScreen() {
   };
 
   const handleAddFunds = async (kobo: number) => {
-    if (!kobo || kobo <= 0) {
-      showToast({ type: "warning", title: "Invalid amount", message: "Enter a valid amount to add." });
-      return;
-    }
+    if (!kobo || kobo <= 0) return;
     setAddLoading(true);
     try {
       const domain = process.env["EXPO_PUBLIC_DOMAIN"];
@@ -186,226 +201,232 @@ export default function WalletScreen() {
       showToast({ type: "warning", title: "Invalid amount", message: "Enter a valid amount in Naira." });
       return;
     }
-    const kobo = Math.round(naira * 100);
-    void handleAddFunds(kobo);
+    void handleAddFunds(Math.round(naira * 100));
   };
 
-  const canWithdraw = wallet ? wallet.xpBalance >= minXp : false;
+  const sections = groupByDate(events ?? []);
+
+  const statsContent = (
+    <View style={styles.statsWrap}>
+      {/* Level progress */}
+      {wallet && (
+        <View style={[styles.statsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={styles.statsCardRow}>
+            <View style={[styles.levelCircle, { backgroundColor: colors.primary }]}>
+              <Text style={styles.levelNum}>{wallet.level}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.statsCardTitle, { color: colors.foreground }]}>
+                Level {wallet.level} · {user?.displayName ?? "Builder"}
+              </Text>
+              <Text style={[styles.statsCardSub, { color: colors.mutedForeground }]}>
+                {wallet.xpToNextLevel} XP to next level
+              </Text>
+            </View>
+          </View>
+          <View style={[styles.progBg, { backgroundColor: colors.muted }]}>
+            <View style={[styles.progFill, { backgroundColor: colors.primary, width: `${xpProgress}%` as `${number}%` }]} />
+          </View>
+        </View>
+      )}
+
+      {/* Stat grid */}
+      <View style={styles.statGrid}>
+        {[
+          { label: "Proofs Earned", value: events?.filter((e) => e.source === "proof_project").length ?? 0, icon: "zap" as const, color: colors.xpGold },
+          { label: "Bootcamps Done", value: events?.filter((e) => e.source === "bootcamp_completed").length ?? 0, icon: "award" as const, color: "#10B981" },
+          { label: "Builds Posted", value: events?.filter((e) => e.source === "build_posted").length ?? 0, icon: "edit-3" as const, color: colors.primary },
+          { label: "Withdrawals", value: withdrawals?.length ?? 0, icon: "arrow-up-right" as const, color: "#8B5CF6" },
+        ].map((s) => (
+          <View key={s.label} style={[styles.statCell, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={[styles.statCellIcon, { backgroundColor: s.color + "22" }]}>
+              <Feather name={s.icon} size={16} color={s.color} />
+            </View>
+            <Text style={[styles.statCellValue, { color: colors.foreground }]}>{s.value}</Text>
+            <Text style={[styles.statCellLabel, { color: colors.mutedForeground }]}>{s.label}</Text>
+          </View>
+        ))}
+      </View>
+
+      {/* Withdrawal hint */}
+      {wallet && !canWithdraw && (
+        <View style={[styles.hintRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.hintIconWrap, { backgroundColor: colors.xpGold + "22" }]}>
+            <Feather name="info" size={15} color={colors.xpGold} />
+          </View>
+          <Text style={[styles.hintText, { color: colors.mutedForeground }]}>
+            Earn {(minXp - wallet.xpBalance).toLocaleString()} more XP to unlock cash withdrawals (min {minXp.toLocaleString()} XP = {formatNaira(minXp * 10)})
+          </Text>
+        </View>
+      )}
+    </View>
+  );
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View
-        style={[
-          styles.header,
-          {
-            paddingTop: topPadding + 10,
-            backgroundColor: colors.background,
-            borderBottomColor: colors.border,
-          },
-        ]}
+
+      {/* ── Hero Card ── */}
+      <LinearGradient
+        colors={["#4F52D3", "#6366F1", "#818CF8"]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[styles.hero, { paddingTop: topPadding + 14 }]}
       >
-        <Text style={[styles.headerTitle, { color: colors.foreground }]}>Zero Wallet</Text>
-        <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>
-          Your points & earnings
+        {/* Decorative circles */}
+        <View style={styles.deco1} />
+        <View style={styles.deco2} />
+
+        <Text style={styles.heroLabel}>Zero Wallet</Text>
+        <Text style={styles.heroBalance}>
+          {walletLoading ? "—" : (wallet?.xpBalance ?? 0).toLocaleString()}
         </Text>
-      </View>
+        <Text style={styles.heroUnit}>Zero Points (XP)</Text>
 
-      <FlatList
-        data={events ?? []}
-        keyExtractor={(e) => e.id}
-        contentContainerStyle={[styles.content, { paddingBottom: bottomPadding + 120 }]}
-        showsVerticalScrollIndicator={false}
-        ListHeaderComponent={
-          <>
-            {walletLoading ? (
-              <ActivityIndicator color={colors.primary} style={{ marginVertical: 40 }} />
-            ) : wallet ? (
-              <View style={styles.headerCards}>
-                {/* Balance Cards */}
-                <View style={styles.balanceRow}>
-                  {/* Zero Points (XP) */}
-                  <View style={[styles.balanceCard, { backgroundColor: "#1A1200", borderColor: colors.xpGold + "40" }]}>
-                    <View style={[styles.balanceIconWrap, { backgroundColor: colors.xpGold + "20" }]}>
-                      <Feather name="zap" size={18} color={colors.xpGold} />
-                    </View>
-                    <Text style={[styles.balanceLabel, { color: colors.xpGold + "CC" }]}>
-                      Zero Points
-                    </Text>
-                    <Text style={[styles.balanceAmount, { color: colors.xpGold }]}>
-                      {wallet.xpBalance.toLocaleString()}
-                    </Text>
-                    <Text style={[styles.balanceUnit, { color: colors.xpGold + "88" }]}>XP</Text>
-                  </View>
-
-                  {/* Cash / Funds */}
-                  <View style={[styles.balanceCard, { backgroundColor: "#001A10", borderColor: "#10B981" + "40" }]}>
-                    <View style={[styles.balanceIconWrap, { backgroundColor: "#10B981" + "20" }]}>
-                      <Feather name="credit-card" size={18} color="#10B981" />
-                    </View>
-                    <Text style={[styles.balanceLabel, { color: "#10B981CC" }]}>Cash Balance</Text>
-                    <Text style={[styles.balanceAmount, { color: "#10B981" }]}>
-                      {formatNaira(wallet.fundsBalance ?? 0)}
-                    </Text>
-                    <Text style={[styles.balanceUnit, { color: "#10B98188" }]}>NGN</Text>
-                  </View>
-                </View>
-
-                {/* Level Card */}
-                <View style={[styles.levelCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                  <View style={styles.levelRow}>
-                    <View style={[styles.levelCircle, { backgroundColor: colors.primary }]}>
-                      <Text style={styles.levelNumber}>{wallet.level}</Text>
-                    </View>
-                    <View style={styles.levelInfo}>
-                      <Text style={[styles.levelName, { color: colors.foreground }]}>
-                        {user?.displayName ?? "Builder"}
-                      </Text>
-                      <Text style={[styles.levelLabel, { color: colors.mutedForeground }]}>
-                        Level {wallet.level} · {wallet.xpToNextLevel} XP to next level
-                      </Text>
-                    </View>
-                  </View>
-                  <View style={[styles.progressBg, { backgroundColor: colors.muted }]}>
-                    <View
-                      style={[
-                        styles.progressFill,
-                        { backgroundColor: colors.primary, width: `${xpProgress}%` },
-                      ]}
-                    />
-                  </View>
-                  <View style={styles.progressLabels}>
-                    <Text style={[styles.progressLabel, { color: colors.mutedForeground }]}>
-                      Lv {wallet.level}
-                    </Text>
-                    <Text style={[styles.progressLabel, { color: colors.mutedForeground }]}>
-                      Lv {wallet.level + 1}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Withdrawal hint if below minimum */}
-                {wallet.xpBalance < minXp && (
-                  <View style={[styles.hintCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                    <Feather name="info" size={14} color={colors.mutedForeground} />
-                    <Text style={[styles.hintText, { color: colors.mutedForeground }]}>
-                      Earn {(minXp - wallet.xpBalance).toLocaleString()} more XP to unlock XP→cash withdrawal (min {minXp.toLocaleString()} XP = {formatNaira(minXp * 10)})
-                    </Text>
-                  </View>
-                )}
-
-                {/* Stats row */}
-                <View style={styles.statsRow}>
-                  <View style={[styles.statBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                    <Text style={[styles.statValue, { color: colors.foreground }]}>
-                      {events?.filter((e) => e.source === "proof_project").length ?? 0}
-                    </Text>
-                    <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Proofs</Text>
-                  </View>
-                  <View style={[styles.statBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                    <Text style={[styles.statValue, { color: colors.foreground }]}>
-                      {events?.filter((e) => e.source === "bootcamp_completed").length ?? 0}
-                    </Text>
-                    <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Bootcamps</Text>
-                  </View>
-                  <View style={[styles.statBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                    <Text style={[styles.statValue, { color: colors.foreground }]}>
-                      {withdrawals?.length ?? 0}
-                    </Text>
-                    <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Withdrawals</Text>
-                  </View>
-                </View>
-              </View>
-            ) : null}
-            <Text style={[styles.historyTitle, { color: colors.foreground }]}>Zero Points History</Text>
-          </>
-        }
-        ListEmptyComponent={
-          eventsLoading ? (
-            <ActivityIndicator color={colors.primary} />
-          ) : (
-            <View style={styles.empty}>
-              <Feather name="zap" size={32} color={colors.mutedForeground} />
-              <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-                No activity yet. Start posting!
-              </Text>
-            </View>
-          )
-        }
-        renderItem={({ item }: { item: XpEvent }) => {
-          const icon = SOURCE_ICONS[item.source] ?? "zap";
-          return (
-            <View style={[styles.eventRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <View style={[styles.eventIcon, { backgroundColor: colors.primary + "22" }]}>
-                <Feather name={icon} size={16} color={colors.primary} />
-              </View>
-              <View style={styles.eventInfo}>
-                <Text style={[styles.eventSource, { color: colors.foreground }]}>
-                  {SOURCE_LABELS[item.source] ?? item.source}
-                </Text>
-                {item.detail && (
-                  <Text style={[styles.eventDetail, { color: colors.mutedForeground }]} numberOfLines={1}>
-                    {item.detail}
-                  </Text>
-                )}
-                <Text style={[styles.eventTime, { color: colors.mutedForeground }]}>
-                  {timeAgo(new Date(item.createdAt as string))}
-                </Text>
-              </View>
-              {item.amount > 0 && (
-                <View style={styles.eventXp}>
-                  <Feather name="zap" size={12} color={colors.xpGold} />
-                  <Text style={[styles.eventAmount, { color: colors.xpGold }]}>+{item.amount}</Text>
-                </View>
-              )}
-            </View>
-          );
-        }}
-      />
-
-      {/* ── Sticky Action Bar ── */}
-      <View
-        style={[
-          styles.actionBar,
-          {
-            backgroundColor: colors.card,
-            borderTopColor: colors.border,
-            paddingBottom: bottomPadding + 12,
-          },
-        ]}
-      >
-        <TouchableOpacity
-          style={[styles.actionBtn, styles.addBtn]}
-          onPress={() => setAddModal(true)}
-          activeOpacity={0.85}
-        >
-          <View style={styles.actionBtnIcon}>
-            <Feather name="plus" size={18} color="#fff" />
-          </View>
-          <View>
-            <Text style={styles.actionBtnLabel}>Add Funds</Text>
-            <Text style={styles.actionBtnSub}>Top up cash balance</Text>
-          </View>
-        </TouchableOpacity>
-
-        <View style={[styles.actionDivider, { backgroundColor: colors.border }]} />
-
-        <TouchableOpacity
-          style={[styles.actionBtn, canWithdraw ? styles.withdrawBtn : styles.withdrawBtnDisabled]}
-          onPress={() => setWithdrawModal(true)}
-          activeOpacity={canWithdraw ? 0.85 : 1}
-        >
-          <View style={[styles.actionBtnIcon, { backgroundColor: "rgba(255,255,255,0.2)" }]}>
-            <Feather name="arrow-up-right" size={18} color="#fff" />
-          </View>
-          <View>
-            <Text style={styles.actionBtnLabel}>Withdraw XP</Text>
-            <Text style={styles.actionBtnSub}>
-              {canWithdraw ? `${wallet?.xpBalance.toLocaleString()} XP available` : `Min ${minXp.toLocaleString()} XP needed`}
+        <View style={styles.heroBadgeRow}>
+          <View style={styles.heroBadge}>
+            <Feather name="zap" size={11} color="#6366F1" />
+            <Text style={styles.heroBadgeText}>
+              {canWithdraw ? "Withdrawals Unlocked" : `${minXp.toLocaleString()} XP to withdraw`}
             </Text>
           </View>
-        </TouchableOpacity>
+          <View style={[styles.heroBadge, { backgroundColor: "rgba(255,255,255,0.18)" }]}>
+            <Feather name="credit-card" size={11} color="#fff" />
+            <Text style={[styles.heroBadgeText, { color: "#fff" }]}>
+              {walletLoading ? "—" : formatNaira(wallet?.fundsBalance ?? 0)} Cash
+            </Text>
+          </View>
+        </View>
+      </LinearGradient>
+
+      {/* ── Action Toggle ── */}
+      <View style={[styles.actionToggleWrap, { backgroundColor: colors.background }]}>
+        <View style={[styles.actionToggle, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <TouchableOpacity
+            style={[styles.actionToggleBtn, styles.actionToggleBtnActive]}
+            onPress={() => setAddModal(true)}
+            activeOpacity={0.85}
+          >
+            <Feather name="plus" size={14} color="#fff" />
+            <Text style={styles.actionToggleBtnActiveText}>Add Funds</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.actionToggleBtn,
+              canWithdraw ? styles.actionToggleBtnSecondary : styles.actionToggleBtnDisabled,
+            ]}
+            onPress={() => setWithdrawModal(true)}
+            activeOpacity={canWithdraw ? 0.85 : 0.5}
+          >
+            <Feather name="arrow-up-right" size={14} color={canWithdraw ? colors.foreground : colors.mutedForeground} />
+            <Text style={[styles.actionToggleBtnText, { color: canWithdraw ? colors.foreground : colors.mutedForeground }]}>
+              Withdraw
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
+
+      {/* ── Tab Switcher ── */}
+      <View style={[styles.tabRow, { borderBottomColor: colors.border }]}>
+        {(["activity", "stats"] as ActiveTab[]).map((t) => (
+          <TouchableOpacity
+            key={t}
+            style={[styles.tabBtn, activeTab === t && { borderBottomColor: colors.primary, borderBottomWidth: 2 }]}
+            onPress={() => setActiveTab(t)}
+            activeOpacity={0.8}
+          >
+            <Text
+              style={[
+                styles.tabBtnText,
+                { color: activeTab === t ? colors.primary : colors.mutedForeground },
+              ]}
+            >
+              {t === "activity" ? "Activity" : "Stats"}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      {/* ── Content ── */}
+      {activeTab === "stats" ? (
+        <ScrollView
+          contentContainerStyle={[styles.statsScroll, { paddingBottom: bottomPadding + 100 }]}
+          showsVerticalScrollIndicator={false}
+        >
+          {statsContent}
+        </ScrollView>
+      ) : (
+        <SectionList
+          sections={sections}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={[styles.listContent, { paddingBottom: bottomPadding + 100 }]}
+          showsVerticalScrollIndicator={false}
+          stickySectionHeadersEnabled={false}
+          ListHeaderComponent={
+            canWithdraw ? (
+              <TouchableOpacity
+                style={[styles.featureCard, { backgroundColor: colors.card, borderColor: colors.primary + "50" }]}
+                onPress={() => setWithdrawModal(true)}
+                activeOpacity={0.85}
+              >
+                <View style={[styles.featureCardIcon, { backgroundColor: colors.primary + "22" }]}>
+                  <Feather name="arrow-up-right" size={20} color={colors.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.featureCardTitle, { color: colors.foreground }]}>
+                    Withdraw Your XP
+                  </Text>
+                  <Text style={[styles.featureCardSub, { color: colors.mutedForeground }]}>
+                    Convert {wallet?.xpBalance.toLocaleString()} XP → {formatNaira((wallet?.xpBalance ?? 0) * 10)}. Arrives in 1–3 days.
+                  </Text>
+                </View>
+                <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
+              </TouchableOpacity>
+            ) : null
+          }
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <View style={[styles.emptyIcon, { backgroundColor: colors.card }]}>
+                <Feather name="zap" size={28} color={colors.mutedForeground} />
+              </View>
+              <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No activity yet</Text>
+              <Text style={[styles.emptySub, { color: colors.mutedForeground }]}>
+                Complete modules, post builds, or earn referral bonuses to see your XP history here.
+              </Text>
+            </View>
+          }
+          renderSectionHeader={({ section }) => (
+            <Text style={[styles.sectionDate, { color: colors.mutedForeground }]}>
+              {section.title}
+            </Text>
+          )}
+          renderItem={({ item }: { item: XpEvent }) => {
+            const icon = SOURCE_ICONS[item.source] ?? "zap";
+            const iconColor = SOURCE_COLORS[item.source] ?? colors.primary;
+            return (
+              <View style={[styles.txRow, { borderBottomColor: colors.border }]}>
+                <View style={[styles.txIcon, { backgroundColor: iconColor + "20" }]}>
+                  <Feather name={icon} size={15} color={iconColor} />
+                </View>
+                <View style={styles.txInfo}>
+                  <Text style={[styles.txLabel, { color: colors.foreground }]}>
+                    {SOURCE_LABELS[item.source] ?? item.source}
+                  </Text>
+                  {item.detail && (
+                    <Text style={[styles.txDetail, { color: colors.mutedForeground }]} numberOfLines={1}>
+                      {item.detail}
+                    </Text>
+                  )}
+                </View>
+                {item.amount > 0 && (
+                  <Text style={[styles.txAmount, { color: colors.xpGold }]}>
+                    +{item.amount} XP
+                  </Text>
+                )}
+              </View>
+            );
+          }}
+        />
+      )}
 
       {/* ── Add Funds Modal ── */}
       <Modal visible={addModal} transparent animationType="slide">
@@ -414,7 +435,7 @@ export default function WalletScreen() {
             <View style={styles.modalHandle} />
             <Text style={[styles.modalTitle, { color: colors.foreground }]}>Add Funds</Text>
             <Text style={[styles.modalSub, { color: colors.mutedForeground }]}>
-              Add Naira to your Zero Wallet cash balance
+              Top up your Zero Wallet cash balance
             </Text>
 
             <View style={styles.presetRow}>
@@ -431,7 +452,7 @@ export default function WalletScreen() {
             </View>
 
             <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Custom amount (₦)</Text>
-            <View style={[styles.inputWrap, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+            <View style={[styles.inputWrap, { backgroundColor: colors.muted }]}>
               <Text style={[styles.currencySymbol, { color: colors.mutedForeground }]}>₦</Text>
               <TextInput
                 style={[styles.input, { color: colors.foreground }]}
@@ -471,22 +492,22 @@ export default function WalletScreen() {
         <View style={styles.modalOverlay}>
           <View style={[styles.modalSheet, { backgroundColor: colors.card }]}>
             <View style={styles.modalHandle} />
-            <Text style={[styles.modalTitle, { color: colors.foreground }]}>Request Withdrawal</Text>
+            <Text style={[styles.modalTitle, { color: colors.foreground }]}>Withdraw XP</Text>
             <Text style={[styles.modalSub, { color: colors.mutedForeground }]}>
               1,000 XP = {formatNaira(10000)} · Min {(wallet?.minWithdrawalXp ?? 2000).toLocaleString()} XP
             </Text>
 
-            {wallet && wallet.xpBalance < minXp && (
+            {!canWithdraw && (
               <View style={[styles.warnBox, { backgroundColor: "#F59E0B18", borderColor: "#F59E0B44" }]}>
                 <Feather name="alert-triangle" size={14} color="#F59E0B" />
                 <Text style={[styles.warnText, { color: "#F59E0B" }]}>
-                  You need {(minXp - wallet.xpBalance).toLocaleString()} more XP to withdraw.
+                  You need {(minXp - (wallet?.xpBalance ?? 0)).toLocaleString()} more XP to withdraw.
                 </Text>
               </View>
             )}
 
             <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>XP to withdraw</Text>
-            <View style={[styles.inputWrap, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+            <View style={[styles.inputWrap, { backgroundColor: colors.muted }]}>
               <Feather name="zap" size={16} color={colors.xpGold} />
               <TextInput
                 style={[styles.input, { color: colors.foreground }]}
@@ -497,7 +518,7 @@ export default function WalletScreen() {
                 onChangeText={setWithdrawXp}
               />
               {withdrawXp && !isNaN(parseInt(withdrawXp, 10)) && (
-                <Text style={[styles.convertedAmount, { color: "#10B981" }]}>
+                <Text style={[styles.convertedAmt, { color: "#10B981" }]}>
                   = {formatNaira(parseInt(withdrawXp, 10) * 10)}
                 </Text>
               )}
@@ -505,8 +526,8 @@ export default function WalletScreen() {
 
             <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Bank account</Text>
             {!bankAccounts?.length ? (
-              <View style={[styles.noAccountBox, { backgroundColor: colors.muted, borderColor: colors.border }]}>
-                <Feather name="alert-circle" size={16} color={colors.mutedForeground} />
+              <View style={[styles.noAccountBox, { backgroundColor: colors.muted }]}>
+                <Feather name="alert-circle" size={15} color={colors.mutedForeground} />
                 <Text style={[styles.noAccountText, { color: colors.mutedForeground }]}>
                   No bank account added. Go to Settings to add one.
                 </Text>
@@ -526,11 +547,9 @@ export default function WalletScreen() {
                     onPress={() => setSelectedAccount(acct)}
                     activeOpacity={0.8}
                   >
-                    <View style={styles.accountOptionInfo}>
-                      <Text style={[styles.accountBankName, { color: colors.foreground }]}>
-                        {acct.bankName}
-                      </Text>
-                      <Text style={[styles.accountDetails, { color: colors.mutedForeground }]}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.accountBank, { color: colors.foreground }]}>{acct.bankName}</Text>
+                      <Text style={[styles.accountDetail, { color: colors.mutedForeground }]}>
                         {acct.accountNumber} · {acct.accountName}
                       </Text>
                     </View>
@@ -573,150 +592,243 @@ export default function WalletScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    borderBottomWidth: 1,
-    paddingHorizontal: 20,
-    paddingBottom: 14,
+
+  // Hero
+  hero: {
+    paddingHorizontal: 24,
+    paddingBottom: 28,
+    overflow: "hidden",
   },
-  headerTitle: { fontSize: 26, fontWeight: "800", fontFamily: "Inter_700Bold" },
-  headerSub: { fontSize: 12, marginTop: 2 },
-  content: { padding: 16, gap: 12 },
-  headerCards: { gap: 16 },
-  balanceRow: { flexDirection: "row", gap: 10 },
-  balanceCard: {
-    flex: 1,
-    borderRadius: 18,
-    borderWidth: 1,
-    padding: 16,
-    gap: 4,
+  deco1: {
+    position: "absolute",
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: "rgba(255,255,255,0.07)",
+    top: -60,
+    right: -60,
   },
-  balanceIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
+  deco2: {
+    position: "absolute",
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    bottom: -40,
+    left: -30,
+  },
+  heroLabel: {
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 13,
+    fontWeight: "600",
+    letterSpacing: 0.5,
     marginBottom: 6,
   },
-  balanceLabel: { fontSize: 11, fontWeight: "600", letterSpacing: 0.3 },
-  balanceAmount: { fontSize: 26, fontWeight: "800", fontFamily: "Inter_700Bold" },
-  balanceUnit: { fontSize: 11, fontWeight: "600" },
-  levelCard: {
-    borderRadius: 18,
-    borderWidth: 1,
-    padding: 16,
-    gap: 10,
+  heroBalance: {
+    color: "#fff",
+    fontSize: 52,
+    fontWeight: "900",
+    fontFamily: "Inter_700Bold",
+    letterSpacing: -1,
   },
-  levelRow: { flexDirection: "row", alignItems: "center", gap: 12 },
-  levelCircle: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    alignItems: "center",
-    justifyContent: "center",
+  heroUnit: {
+    color: "rgba(255,255,255,0.65)",
+    fontSize: 13,
+    fontWeight: "500",
+    marginBottom: 16,
+    marginTop: 2,
   },
-  levelNumber: { color: "#fff", fontSize: 20, fontWeight: "800" },
-  levelInfo: { flex: 1 },
-  levelName: { fontSize: 15, fontWeight: "700" },
-  levelLabel: { fontSize: 12, marginTop: 1 },
-  progressBg: { height: 6, borderRadius: 3, overflow: "hidden" },
-  progressFill: { height: "100%" as `${number}%`, borderRadius: 3 },
-  progressLabels: { flexDirection: "row", justifyContent: "space-between" },
-  progressLabel: { fontSize: 11 },
-  hintCard: {
+  heroBadgeRow: { flexDirection: "row", gap: 8 },
+  heroBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 5,
+    backgroundColor: "#fff",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+  },
+  heroBadgeText: { fontSize: 11, fontWeight: "700", color: "#6366F1" },
+
+  // Action toggle
+  actionToggleWrap: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 4,
+  },
+  actionToggle: {
+    flexDirection: "row",
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 4,
+    gap: 4,
+  },
+  actionToggleBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    paddingVertical: 13,
     borderRadius: 12,
-    borderWidth: 1,
-    padding: 12,
   },
-  hintText: { flex: 1, fontSize: 12, lineHeight: 17 },
-  statsRow: { flexDirection: "row", gap: 8 },
-  statBox: {
-    flex: 1,
-    alignItems: "center",
-    padding: 12,
-    borderRadius: 14,
-    borderWidth: 1,
-    gap: 3,
-  },
-  statValue: { fontSize: 20, fontWeight: "800" },
-  statLabel: { fontSize: 10, textAlign: "center" },
-  historyTitle: { fontSize: 16, fontWeight: "700", marginBottom: 2, marginTop: 4 },
-  eventRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 12,
-    borderRadius: 14,
-    borderWidth: 1,
-    gap: 12,
-    marginBottom: 8,
-  },
-  eventIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  eventInfo: { flex: 1, gap: 2 },
-  eventSource: { fontSize: 14, fontWeight: "600" },
-  eventDetail: { fontSize: 12 },
-  eventTime: { fontSize: 11 },
-  eventXp: { flexDirection: "row", alignItems: "center", gap: 3 },
-  eventAmount: { fontSize: 14, fontWeight: "700" },
-  empty: { alignItems: "center", paddingTop: 40, gap: 8 },
-  emptyText: { fontSize: 14, textAlign: "center" },
-  // Sticky action bar
-  actionBar: {
-    flexDirection: "row",
-    borderTopWidth: 1,
-    paddingTop: 12,
-    paddingHorizontal: 12,
-    gap: 0,
-  },
-  actionBtn: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 14,
-    marginHorizontal: 4,
-  },
-  addBtn: {
-    backgroundColor: "#10B981",
-  },
-  withdrawBtn: {
+  actionToggleBtnActive: {
     backgroundColor: "#6366F1",
   },
-  withdrawBtnDisabled: {
-    backgroundColor: "#6366F180",
+  actionToggleBtnSecondary: {
+    backgroundColor: "transparent",
   },
-  actionBtnIcon: {
+  actionToggleBtnDisabled: {
+    backgroundColor: "transparent",
+    opacity: 0.45,
+  },
+  actionToggleBtnActiveText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  actionToggleBtnText: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+
+  // Tabs
+  tabRow: {
+    flexDirection: "row",
+    borderBottomWidth: 1,
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  tabBtn: {
+    paddingVertical: 10,
+    paddingHorizontal: 4,
+    marginRight: 24,
+  },
+  tabBtnText: { fontSize: 14, fontWeight: "600" },
+
+  // Activity list
+  listContent: { paddingTop: 8, paddingHorizontal: 16 },
+  featureCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 16,
+    marginTop: 4,
+  },
+  featureCardIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  featureCardTitle: { fontSize: 14, fontWeight: "700" },
+  featureCardSub: { fontSize: 12, marginTop: 2, lineHeight: 17 },
+  sectionDate: {
+    fontSize: 12,
+    fontWeight: "600",
+    letterSpacing: 0.3,
+    textTransform: "uppercase",
+    marginTop: 16,
+    marginBottom: 6,
+  },
+  txRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 13,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  txIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  txInfo: { flex: 1, gap: 2 },
+  txLabel: { fontSize: 14, fontWeight: "600" },
+  txDetail: { fontSize: 12 },
+  txAmount: { fontSize: 14, fontWeight: "700" },
+  empty: { alignItems: "center", paddingTop: 48, gap: 10 },
+  emptyIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyTitle: { fontSize: 16, fontWeight: "700" },
+  emptySub: { fontSize: 13, textAlign: "center", lineHeight: 19 },
+
+  // Stats tab
+  statsScroll: { paddingHorizontal: 16, paddingTop: 12 },
+  statsWrap: { gap: 12 },
+  statsCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    gap: 12,
+  },
+  statsCardRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  statsCardTitle: { fontSize: 14, fontWeight: "700" },
+  statsCardSub: { fontSize: 12, marginTop: 2 },
+  levelCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  levelNum: { color: "#fff", fontSize: 18, fontWeight: "800" },
+  progBg: { height: 6, borderRadius: 3, overflow: "hidden" },
+  progFill: { height: "100%" as `${number}%`, borderRadius: 3 },
+  statGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  statCell: {
+    width: "47%",
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 14,
+    gap: 6,
+  },
+  statCellIcon: {
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: "rgba(255,255,255,0.2)",
     alignItems: "center",
     justifyContent: "center",
   },
-  actionBtnLabel: { color: "#fff", fontSize: 14, fontWeight: "700" },
-  actionBtnSub: { color: "rgba(255,255,255,0.7)", fontSize: 11, marginTop: 1 },
-  actionDivider: { width: 1, marginVertical: 4 },
-  // Modals
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "#000000AA",
-    justifyContent: "flex-end",
+  statCellValue: { fontSize: 22, fontWeight: "800" },
+  statCellLabel: { fontSize: 11 },
+  hintRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 14,
   },
+  hintIconWrap: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  hintText: { flex: 1, fontSize: 12, lineHeight: 17 },
+
+  // Modals
+  modalOverlay: { flex: 1, backgroundColor: "#000000BB", justifyContent: "flex-end" },
   modalSheet: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
     padding: 20,
-    paddingBottom: 40,
+    paddingBottom: 44,
     gap: 12,
   },
   modalHandle: {
@@ -727,7 +839,7 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     marginBottom: 4,
   },
-  modalTitle: { fontSize: 20, fontWeight: "800", fontFamily: "Inter_700Bold" },
+  modalTitle: { fontSize: 20, fontWeight: "800" },
   modalSub: { fontSize: 13, marginTop: -6 },
   warnBox: {
     flexDirection: "row",
@@ -739,40 +851,21 @@ const styles = StyleSheet.create({
   },
   warnText: { flex: 1, fontSize: 13, fontWeight: "500" },
   presetRow: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
-  presetBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
+  presetBtn: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, borderWidth: 1 },
   presetText: { fontSize: 13, fontWeight: "600" },
-  fieldLabel: {
-    fontSize: 11,
-    fontWeight: "600",
-    textTransform: "uppercase",
-    letterSpacing: 0.4,
-    marginBottom: -4,
-  },
+  fieldLabel: { fontSize: 11, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.4, marginBottom: -4 },
   currencySymbol: { fontSize: 16, fontWeight: "700" },
   inputWrap: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
     borderRadius: 12,
-    borderWidth: 1,
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 13,
   },
   input: { flex: 1, fontSize: 16, fontWeight: "600" },
-  convertedAmount: { fontSize: 13, fontWeight: "700" },
-  noAccountBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
+  convertedAmt: { fontSize: 13, fontWeight: "700" },
+  noAccountBox: { flexDirection: "row", alignItems: "center", gap: 8, padding: 12, borderRadius: 12 },
   noAccountText: { flex: 1, fontSize: 13 },
   accountList: { maxHeight: 160 },
   accountOption: {
@@ -784,22 +877,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     gap: 10,
   },
-  accountOptionInfo: { flex: 1 },
-  accountBankName: { fontSize: 14, fontWeight: "600" },
-  accountDetails: { fontSize: 12, marginTop: 2 },
+  accountBank: { fontSize: 14, fontWeight: "600" },
+  accountDetail: { fontSize: 12, marginTop: 2 },
   modalActions: { flexDirection: "row", gap: 10, marginTop: 4 },
-  modalCancelBtn: {
-    flex: 1,
-    paddingVertical: 13,
-    borderRadius: 12,
-    alignItems: "center",
-  },
+  modalCancelBtn: { flex: 1, paddingVertical: 14, borderRadius: 12, alignItems: "center" },
   modalCancelText: { fontSize: 15, fontWeight: "600" },
-  modalSubmitBtn: {
-    flex: 2,
-    paddingVertical: 13,
-    borderRadius: 12,
-    alignItems: "center",
-  },
+  modalSubmitBtn: { flex: 2, paddingVertical: 14, borderRadius: 12, alignItems: "center" },
   modalSubmitText: { color: "#fff", fontSize: 15, fontWeight: "700" },
 });
