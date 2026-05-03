@@ -140,21 +140,12 @@ export default function ChannelScreen() {
       behavior="padding"
     >
       {/* Header */}
-      <View
-        style={[
-          styles.header,
-          {
-            paddingTop: topPadding + 8,
-            backgroundColor: colors.background,
-            borderBottomColor: colors.border,
-          },
-        ]}
-      >
+      <View style={[styles.header, { paddingTop: topPadding + 8, backgroundColor: colors.background, borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Feather name="arrow-left" size={20} color={colors.foreground} />
         </TouchableOpacity>
         <View style={styles.channelInfo}>
-          <Text style={[styles.channelName, { color: colors.foreground }]}>
+          <Text style={[styles.channelName, { color: colors.foreground }]} numberOfLines={1}>
             #{channel?.name ?? id}
           </Text>
           {channel?.description && (
