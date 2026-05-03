@@ -1,19 +1,39 @@
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
 import { useColors } from "@/hooks/useColors";
+import { Feather } from "@expo/vector-icons";
+import { router, useLocalSearchParams } from "expo-router";
 
 export default function TutorBootcampScreen() {
   const colors = useColors();
+  const { id } = useLocalSearchParams<{ id: string }>();
+
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}> 
-      <Text style={[styles.title, { color: colors.foreground }]}>Tutor Studio</Text>
-      <Text style={[styles.sub, { color: colors.mutedForeground }]}>Manage your bootcamp here.</Text>
-    </View>
+    <ScrollView style={[styles.container, { backgroundColor: colors.background }]} contentContainerStyle={styles.content}>
+      <Text style={[styles.title, { color: colors.foreground }]}>Bootcamp details</Text>
+      <Text style={[styles.sub, { color: colors.mutedForeground }]}>Manage modules, students, pricing, and room setup for this bootcamp.</Text>
+
+      <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Text style={[styles.cardTitle, { color: colors.foreground }]}>Bootcamp ID</Text>
+        <Text style={[styles.cardValue, { color: colors.mutedForeground }]}>{id}</Text>
+      </View>
+
+      <TouchableOpacity style={[styles.button, { backgroundColor: colors.primary }]} onPress={() => router.push("/tutor/create")}> 
+        <Feather name="plus" size={16} color="#fff" />
+        <Text style={styles.buttonText}>Create another bootcamp</Text>
+      </TouchableOpacity>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: "center", justifyContent: "center", padding: 24, gap: 10 },
-  title: { fontSize: 18, fontWeight: "700" },
-  sub: { fontSize: 13, textAlign: "center" },
+  container: { flex: 1 },
+  content: { padding: 16, gap: 14 },
+  title: { fontSize: 22, fontWeight: "700" },
+  sub: { fontSize: 14, lineHeight: 20 },
+  card: { borderWidth: 1, borderRadius: 16, padding: 14, gap: 6 },
+  cardTitle: { fontSize: 14, fontWeight: "700" },
+  cardValue: { fontSize: 13 },
+  button: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 14, borderRadius: 14 },
+  buttonText: { color: "#fff", fontWeight: "700", fontSize: 15 },
 });

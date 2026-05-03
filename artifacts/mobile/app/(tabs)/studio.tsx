@@ -12,7 +12,7 @@ export default function StudioScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}> 
       <Text style={[styles.title, { color: colors.foreground }]}>Tutor Studio</Text>
       <Text style={[styles.sub, { color: colors.mutedForeground }]}>Create and manage your bootcamps here.</Text>
-      <TouchableOpacity style={[styles.button, { backgroundColor: colors.primary }]} onPress={() => router.push("/tutor")}> 
+      <TouchableOpacity style={[styles.button, { backgroundColor: colors.primary }]} onPress={() => router.push("/tutor/create")}> 
         <Feather name="plus" size={16} color="#fff" />
         <Text style={styles.buttonText}>Create bootcamp</Text>
       </TouchableOpacity>
