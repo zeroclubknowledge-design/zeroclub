@@ -1145,6 +1145,10 @@ components:
         difficulty:
           type: string
           enum: [beginner, intermediate, advanced]
+        deliveryMedium:
+          type: string
+          enum: [video, live, text, hybrid]
+          nullable: true
         modulesCount:
           type: integer
         xpReward:

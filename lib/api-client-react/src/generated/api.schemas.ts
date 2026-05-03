@@ -166,6 +166,17 @@ export const BootcampDifficulty = {
   advanced: "advanced",
 } as const;
 
+export type BootcampDeliveryMedium =
+  | (typeof BootcampDeliveryMedium)[keyof typeof BootcampDeliveryMedium]
+  | null;
+
+export const BootcampDeliveryMedium = {
+  video: "video",
+  live: "live",
+  text: "text",
+  hybrid: "hybrid",
+} as const;
+
 export interface Enrollment {
   id: string;
   userId: string;
@@ -189,6 +200,7 @@ export interface Bootcamp {
   coverUrl?: string | null;
   track: string;
   difficulty: BootcampDifficulty;
+  deliveryMedium?: BootcampDeliveryMedium;
   modulesCount: number;
   xpReward: number;
   priceCents: number;

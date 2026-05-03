@@ -59,7 +59,7 @@ const TRACK_GRADIENTS: Record<string, [string, string]> = {
   product_design: ["#7C3AED", "#4F46E5"],
   frontend: ["#2563EB", "#0EA5E9"],
   growth: ["#D97706", "#F59E0B"],
-  branding: ["#D4387C", "#9333EA"],
+  branding: ["#6366F1", "#9333EA"],
   mentorship: ["#059669", "#10B981"],
 };
 
@@ -169,6 +169,22 @@ export default function BootcampDetailScreen() {
                 {bootcamp.difficulty.charAt(0).toUpperCase() + bootcamp.difficulty.slice(1)}
               </Text>
             </View>
+            {bootcamp.deliveryMedium && (
+              <View style={[styles.heroBadge, { backgroundColor: "rgba(99,102,241,0.25)" }]}>
+                <Feather
+                  name={
+                    bootcamp.deliveryMedium === "video" ? "play-circle" :
+                    bootcamp.deliveryMedium === "live" ? "radio" :
+                    bootcamp.deliveryMedium === "text" ? "book-open" : "layers"
+                  }
+                  size={11}
+                  color="#A5B4FC"
+                />
+                <Text style={[styles.heroBadgeText, { color: "#A5B4FC" }]}>
+                  {bootcamp.deliveryMedium.charAt(0).toUpperCase() + bootcamp.deliveryMedium.slice(1)}
+                </Text>
+              </View>
+            )}
             {isPaid ? (
               <View style={[styles.heroBadge, { backgroundColor: "#F59E0B33" }]}>
                 <Feather name="star" size={11} color="#F59E0B" />
