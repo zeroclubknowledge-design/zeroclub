@@ -73,6 +73,7 @@ export default function WalletScreen() {
   const { user, token } = useAuth();
   const qc = useQueryClient();
   const topPadding = Platform.OS === "web" ? 67 : insets.top;
+  const bottomPadding = Platform.OS === "web" ? 0 : insets.bottom;
 
   const [withdrawModal, setWithdrawModal] = useState(false);
   const [addModal, setAddModal] = useState(false);
@@ -189,8 +190,11 @@ export default function WalletScreen() {
     void handleAddFunds(kobo);
   };
 
+  const canWithdraw = wallet ? wallet.xpBalance >= minXp : false;
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Header */}
       <View
         style={[
           styles.header,
@@ -201,36 +205,16 @@ export default function WalletScreen() {
           },
         ]}
       >
-        <View>
-          <Text style={[styles.headerTitle, { color: colors.foreground }]}>Zero Wallet</Text>
-          <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>
-            Your points & earnings
-          </Text>
-        </View>
-        <View style={styles.headerBtns}>
-          <TouchableOpacity
-            style={[styles.headerBtn, { backgroundColor: "#10B981" }]}
-            onPress={() => setAddModal(true)}
-            activeOpacity={0.85}
-          >
-            <Feather name="plus" size={14} color="#fff" />
-            <Text style={styles.headerBtnText}>Add</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.headerBtn, { backgroundColor: colors.primary }]}
-            onPress={() => setWithdrawModal(true)}
-            activeOpacity={0.85}
-          >
-            <Feather name="arrow-up-right" size={14} color="#fff" />
-            <Text style={styles.headerBtnText}>Withdraw</Text>
-          </TouchableOpacity>
-        </View>
+        <Text style={[styles.headerTitle, { color: colors.foreground }]}>Zero Wallet</Text>
+        <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>
+          Your points & earnings
+        </Text>
       </View>
 
       <FlatList
         data={events ?? []}
         keyExtractor={(e) => e.id}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: bottomPadding + 120 }]}
         showsVerticalScrollIndicator={false}
         ListHeaderComponent={
           <>
@@ -255,11 +239,7 @@ export default function WalletScreen() {
                   </View>
 
                   {/* Cash / Funds */}
-                  <TouchableOpacity
-                    style={[styles.balanceCard, { backgroundColor: "#001A10", borderColor: "#10B981" + "40" }]}
-                    onPress={() => setAddModal(true)}
-                    activeOpacity={0.85}
-                  >
+                  <View style={[styles.balanceCard, { backgroundColor: "#001A10", borderColor: "#10B981" + "40" }]}>
                     <View style={[styles.balanceIconWrap, { backgroundColor: "#10B981" + "20" }]}>
                       <Feather name="credit-card" size={18} color="#10B981" />
                     </View>
@@ -268,11 +248,7 @@ export default function WalletScreen() {
                       {formatNaira(wallet.fundsBalance ?? 0)}
                     </Text>
                     <Text style={[styles.balanceUnit, { color: "#10B98188" }]}>NGN</Text>
-                    <View style={styles.tapToAdd}>
-                      <Feather name="plus-circle" size={10} color="#10B981" />
-                      <Text style={[styles.tapToAddText, { color: "#10B981" }]}>Tap to add</Text>
-                    </View>
-                  </TouchableOpacity>
+                  </View>
                 </View>
 
                 {/* Level Card */}
@@ -387,6 +363,50 @@ export default function WalletScreen() {
         }}
       />
 
+      {/* ── Sticky Action Bar ── */}
+      <View
+        style={[
+          styles.actionBar,
+          {
+            backgroundColor: colors.card,
+            borderTopColor: colors.border,
+            paddingBottom: bottomPadding + 12,
+          },
+        ]}
+      >
+        <TouchableOpacity
+          style={[styles.actionBtn, styles.addBtn]}
+          onPress={() => setAddModal(true)}
+          activeOpacity={0.85}
+        >
+          <View style={styles.actionBtnIcon}>
+            <Feather name="plus" size={18} color="#fff" />
+          </View>
+          <View>
+            <Text style={styles.actionBtnLabel}>Add Funds</Text>
+            <Text style={styles.actionBtnSub}>Top up cash balance</Text>
+          </View>
+        </TouchableOpacity>
+
+        <View style={[styles.actionDivider, { backgroundColor: colors.border }]} />
+
+        <TouchableOpacity
+          style={[styles.actionBtn, canWithdraw ? styles.withdrawBtn : styles.withdrawBtnDisabled]}
+          onPress={() => setWithdrawModal(true)}
+          activeOpacity={canWithdraw ? 0.85 : 1}
+        >
+          <View style={[styles.actionBtnIcon, { backgroundColor: "rgba(255,255,255,0.2)" }]}>
+            <Feather name="arrow-up-right" size={18} color="#fff" />
+          </View>
+          <View>
+            <Text style={styles.actionBtnLabel}>Withdraw XP</Text>
+            <Text style={styles.actionBtnSub}>
+              {canWithdraw ? `${wallet?.xpBalance.toLocaleString()} XP available` : `Min ${minXp.toLocaleString()} XP needed`}
+            </Text>
+          </View>
+        </TouchableOpacity>
+      </View>
+
       {/* ── Add Funds Modal ── */}
       <Modal visible={addModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
@@ -397,7 +417,6 @@ export default function WalletScreen() {
               Add Naira to your Zero Wallet cash balance
             </Text>
 
-            {/* Preset amounts */}
             <View style={styles.presetRow}>
               {PRESET_AMOUNTS.map((p) => (
                 <TouchableOpacity
@@ -432,10 +451,7 @@ export default function WalletScreen() {
                 <Text style={[styles.modalCancelText, { color: colors.mutedForeground }]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[
-                  styles.modalSubmitBtn,
-                  { backgroundColor: addLoading ? colors.muted : "#10B981" },
-                ]}
+                style={[styles.modalSubmitBtn, { backgroundColor: addLoading ? colors.muted : "#10B981" }]}
                 onPress={handleAddSubmit}
                 disabled={addLoading}
               >
@@ -561,23 +577,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     paddingHorizontal: 20,
     paddingBottom: 14,
-    flexDirection: "row",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
   },
   headerTitle: { fontSize: 26, fontWeight: "800", fontFamily: "Inter_700Bold" },
-  headerSub: { fontSize: 12, marginTop: 1 },
-  headerBtns: { flexDirection: "row", gap: 8 },
-  headerBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
-  },
-  headerBtnText: { color: "#fff", fontSize: 13, fontWeight: "700" },
-  content: { padding: 16, gap: 12, paddingBottom: 120 },
+  headerSub: { fontSize: 12, marginTop: 2 },
+  content: { padding: 16, gap: 12 },
   headerCards: { gap: 16 },
   balanceRow: { flexDirection: "row", gap: 10 },
   balanceCard: {
@@ -598,8 +601,6 @@ const styles = StyleSheet.create({
   balanceLabel: { fontSize: 11, fontWeight: "600", letterSpacing: 0.3 },
   balanceAmount: { fontSize: 26, fontWeight: "800", fontFamily: "Inter_700Bold" },
   balanceUnit: { fontSize: 11, fontWeight: "600" },
-  tapToAdd: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 4 },
-  tapToAddText: { fontSize: 10, fontWeight: "600" },
   levelCard: {
     borderRadius: 18,
     borderWidth: 1,
@@ -642,7 +643,7 @@ const styles = StyleSheet.create({
   },
   statValue: { fontSize: 20, fontWeight: "800" },
   statLabel: { fontSize: 10, textAlign: "center" },
-  historyTitle: { fontSize: 16, fontWeight: "700", marginBottom: 2 },
+  historyTitle: { fontSize: 16, fontWeight: "700", marginBottom: 2, marginTop: 4 },
   eventRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -650,6 +651,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     gap: 12,
+    marginBottom: 8,
   },
   eventIcon: {
     width: 38,
@@ -666,6 +668,45 @@ const styles = StyleSheet.create({
   eventAmount: { fontSize: 14, fontWeight: "700" },
   empty: { alignItems: "center", paddingTop: 40, gap: 8 },
   emptyText: { fontSize: 14, textAlign: "center" },
+  // Sticky action bar
+  actionBar: {
+    flexDirection: "row",
+    borderTopWidth: 1,
+    paddingTop: 12,
+    paddingHorizontal: 12,
+    gap: 0,
+  },
+  actionBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 14,
+    marginHorizontal: 4,
+  },
+  addBtn: {
+    backgroundColor: "#10B981",
+  },
+  withdrawBtn: {
+    backgroundColor: "#6366F1",
+  },
+  withdrawBtnDisabled: {
+    backgroundColor: "#6366F180",
+  },
+  actionBtnIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  actionBtnLabel: { color: "#fff", fontSize: 14, fontWeight: "700" },
+  actionBtnSub: { color: "rgba(255,255,255,0.7)", fontSize: 11, marginTop: 1 },
+  actionDivider: { width: 1, marginVertical: 4 },
+  // Modals
   modalOverlay: {
     flex: 1,
     backgroundColor: "#000000AA",
@@ -741,25 +782,24 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     borderWidth: 1,
     marginBottom: 8,
+    gap: 10,
   },
   accountOptionInfo: { flex: 1 },
   accountBankName: { fontSize: 14, fontWeight: "600" },
-  accountDetails: { fontSize: 12, marginTop: 1 },
+  accountDetails: { fontSize: 12, marginTop: 2 },
   modalActions: { flexDirection: "row", gap: 10, marginTop: 4 },
   modalCancelBtn: {
     flex: 1,
+    paddingVertical: 13,
+    borderRadius: 12,
     alignItems: "center",
-    paddingVertical: 14,
-    borderRadius: 14,
   },
   modalCancelText: { fontSize: 15, fontWeight: "600" },
   modalSubmitBtn: {
     flex: 2,
+    paddingVertical: 13,
+    borderRadius: 12,
     alignItems: "center",
-    paddingVertical: 14,
-    borderRadius: 14,
-    flexDirection: "row",
-    justifyContent: "center",
   },
   modalSubmitText: { color: "#fff", fontSize: 15, fontWeight: "700" },
 });

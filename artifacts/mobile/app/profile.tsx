@@ -140,7 +140,7 @@ export default function ProfileScreen() {
       icon: "book" as const,
       label: "My Bootcamps",
       subtitle: "View enrolled courses",
-      onPress: () => router.push("/(tabs)/bootcamps" as never),
+      onPress: () => router.push("/my-bootcamps" as never),
       accent: colors.primary,
     },
     {
