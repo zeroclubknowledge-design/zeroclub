@@ -25,24 +25,33 @@ export default function ChatScreen() {
   const sections = useMemo<Section[]>(() => {
     const all = (channels ?? []) as ExtChannel[];
     const communityChannels = all.filter((c) => !c.bootcampId && !c.parentChannelId);
-    return communityChannels.length ? [{ title: "Community", data: communityChannels }] : [];
+    const bootcampRooms = all.filter((c) => c.bootcampId && !c.parentChannelId);
+    const result: Section[] = [];
+    if (communityChannels.length) result.push({ title: "Community", data: communityChannels });
+    result.push({ title: "Bootcamp Rooms", data: bootcampRooms });
+    return result;
   }, [channels]);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}> 
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Text style={[styles.title, { color: colors.foreground }]}>Chat</Text>
-      <Text style={[styles.sub, { color: colors.mutedForeground }]}>Community channels only.</Text>
+      <Text style={[styles.sub, { color: colors.mutedForeground }]}>Community channels and bootcamp rooms.</Text>
       <SectionList
         sections={sections}
         keyExtractor={(item) => item.id}
-        renderSectionHeader={() => null}
-        renderItem={({ item }) => (
-          <TouchableOpacity style={[styles.row, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={() => router.push(`/channel/${item.id}`)}>
-            <Feather name="hash" size={16} color={colors.primary} />
-            <Text style={{ color: colors.foreground }}>#{item.name}</Text>
+        renderSectionHeader={({ section }) => (
+          <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>{section.title}</Text>
+        )}
+        renderItem={({ item, section }) => (
+          <TouchableOpacity
+            style={[styles.row, { backgroundColor: colors.card, borderColor: colors.border }]}
+            onPress={() => router.push(section.title === "Bootcamp Rooms" ? { pathname: "/bootcamp-hub/[id]", params: { id: item.id } } as never : `/channel/${item.id}`)}
+          >
+            <Feather name={section.title === "Bootcamp Rooms" ? "book-open" : "hash"} size={16} color={colors.primary} />
+            <Text style={{ color: colors.foreground }}>{section.title === "Bootcamp Rooms" ? item.title ?? item.name : `#${item.name}`}</Text>
           </TouchableOpacity>
         )}
-        ListEmptyComponent={<Text style={{ color: colors.mutedForeground }}>No community channels yet.</Text>}
+        ListEmptyComponent={<Text style={{ color: colors.mutedForeground }}>No channels yet.</Text>}
       />
     </View>
   );
@@ -52,5 +61,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, gap: 10 },
   title: { fontSize: 24, fontWeight: "700" },
   sub: { fontSize: 14 },
-  row: { flexDirection: "row", alignItems: "center", gap: 10, padding: 14, borderWidth: 1, borderRadius: 12, marginTop: 10 },
+  sectionTitle: { fontSize: 11, fontWeight: "700", marginTop: 14, marginBottom: 6 },
+  row: { flexDirection: "row", alignItems: "center", gap: 10, padding: 14, borderWidth: 1, borderRadius: 12, marginBottom: 8 },
 });
