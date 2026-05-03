@@ -7,6 +7,7 @@ import {
   bookmarksTable,
   commentsTable,
   xpEventsTable,
+  proofClicksTable,
 } from "@workspace/db";
 import { eq, desc, sql, and } from "drizzle-orm";
 import { requireAuth, type AuthRequest } from "../lib/auth";
@@ -15,8 +16,16 @@ import { computeLevel } from "./auth";
 
 const router = Router();
 
+function getMultiplier(proofCount: number): number {
+  if (proofCount >= 50) return 5;
+  if (proofCount >= 25) return 3;
+  if (proofCount >= 10) return 2;
+  if (proofCount >= 5) return 1.5;
+  return 1;
+}
+
 async function enrichPost(post: typeof postsTable.$inferSelect, userId?: string) {
-  const [authorArr, likeCount, commentCount, liked, bookmarked] = await Promise.all([
+  const [authorArr, likeCount, commentCount, liked, bookmarked, proofClicked] = await Promise.all([
     db.select().from(profilesTable).where(eq(profilesTable.id, post.authorId)).limit(1),
     db
       .select({ count: sql<number>`count(*)::int` })
@@ -40,8 +49,16 @@ async function enrichPost(post: typeof postsTable.$inferSelect, userId?: string)
           .where(and(eq(bookmarksTable.postId, post.id), eq(bookmarksTable.userId, userId)))
           .limit(1)
       : Promise.resolve([]),
+    userId
+      ? db
+          .select()
+          .from(proofClicksTable)
+          .where(and(eq(proofClicksTable.postId, post.id), eq(proofClicksTable.userId, userId)))
+          .limit(1)
+      : Promise.resolve([]),
   ]);
   const author = authorArr[0]!;
+  const proofClickCount = post.proofClickCount ?? 0;
   return {
     ...post,
     author: { ...author, level: computeLevel(author.xpBalance) },
@@ -49,6 +66,9 @@ async function enrichPost(post: typeof postsTable.$inferSelect, userId?: string)
     commentCount: commentCount[0]?.count ?? 0,
     isLiked: liked.length > 0,
     isBookmarked: bookmarked.length > 0,
+    proofClickCount,
+    isProofClicked: proofClicked.length > 0,
+    multiplier: getMultiplier(proofClickCount),
   };
 }
 
@@ -255,6 +275,75 @@ router.post("/:postId/bookmark", requireAuth, async (req: AuthRequest, res) => {
     res.json({ bookmarked: existing.length === 0 });
   } catch (err) {
     req.log.error({ err }, "bookmark post error");
+    res.status(500).json({ error: "internal_error", message: "Failed" });
+  }
+});
+
+// POST /posts/:postId/proof
+router.post("/:postId/proof", requireAuth, async (req: AuthRequest, res) => {
+  const { postId } = req.params as { postId: string };
+  if (!req.userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  try {
+    const post = await db.select().from(postsTable).where(eq(postsTable.id, postId)).limit(1);
+    if (!post[0]) {
+      res.status(404).json({ error: "not_found", message: "Post not found" });
+      return;
+    }
+
+    // Cannot proof your own post
+    if (post[0].authorId === req.userId) {
+      res.status(400).json({ error: "invalid", message: "Cannot proof your own post" });
+      return;
+    }
+
+    const existing = await db
+      .select()
+      .from(proofClicksTable)
+      .where(and(eq(proofClicksTable.postId, postId), eq(proofClicksTable.userId, req.userId)))
+      .limit(1);
+
+    if (existing.length > 0) {
+      // Un-proof
+      await db
+        .delete(proofClicksTable)
+        .where(and(eq(proofClicksTable.postId, postId), eq(proofClicksTable.userId, req.userId)));
+      await db
+        .update(postsTable)
+        .set({ proofClickCount: sql`GREATEST(0, ${postsTable.proofClickCount} - 1)` })
+        .where(eq(postsTable.id, postId));
+    } else {
+      // Proof — record click and award XP to post author
+      await db.insert(proofClicksTable).values({ userId: req.userId, postId });
+      await db
+        .update(postsTable)
+        .set({ proofClickCount: sql`${postsTable.proofClickCount} + 1` })
+        .where(eq(postsTable.id, postId));
+
+      // Award +5 XP to the post author for each unique proof
+      await db.insert(xpEventsTable).values({
+        id: generateId(),
+        userId: post[0].authorId,
+        source: "build_milestone",
+        detail: `proof:${postId}`,
+        amount: 5,
+      });
+      await db
+        .update(profilesTable)
+        .set({ xpBalance: sql`${profilesTable.xpBalance} + 5` })
+        .where(eq(profilesTable.id, post[0].authorId));
+    }
+
+    const updated = await db.select().from(postsTable).where(eq(postsTable.id, postId)).limit(1);
+    const proofClickCount = updated[0]?.proofClickCount ?? 0;
+
+    res.json({
+      proofed: existing.length === 0,
+      proofClickCount,
+      multiplier: getMultiplier(proofClickCount),
+    });
+  } catch (err) {
+    req.log.error({ err }, "proof post error");
     res.status(500).json({ error: "internal_error", message: "Failed" });
   }
 });

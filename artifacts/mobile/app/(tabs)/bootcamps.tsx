@@ -127,18 +127,6 @@ export default function BootcampsScreen() {
                 ]}
                 activeOpacity={0.8}
               >
-                {d !== "all" && (
-                  <View
-                    style={[
-                      styles.filterDot,
-                      {
-                        backgroundColor: isActive
-                          ? "#fff"
-                          : (DIFFICULTY_COLORS[d] ?? colors.mutedForeground),
-                      },
-                    ]}
-                  />
-                )}
                 <Text
                   style={[
                     styles.filterPillText,
@@ -229,18 +217,17 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   searchInput: { flex: 1, fontSize: 14 },
-  filterRow: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
+  filterRow: { flexDirection: "row", gap: 6 },
   filterPill: {
-    flexDirection: "row",
+    flex: 1,
     alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    justifyContent: "center",
+    paddingHorizontal: 6,
+    paddingVertical: 5,
     borderRadius: 20,
     borderWidth: 1,
   },
-  filterDot: { width: 6, height: 6, borderRadius: 3 },
-  filterPillText: { fontSize: 12, fontWeight: "600" },
+  filterPillText: { fontSize: 11, fontWeight: "600" },
   list: { paddingTop: 12, paddingBottom: 100 },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   empty: { alignItems: "center", paddingTop: 80, gap: 8 },

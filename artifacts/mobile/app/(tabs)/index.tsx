@@ -48,7 +48,7 @@ const TRACK_LABELS: Record<string, string> = {
 export default function FeedScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const { showToast } = useToast();
   const qc = useQueryClient();
   const [selectedTrack, setSelectedTrack] = useState<string>("all");
@@ -89,6 +89,29 @@ export default function FeedScreen() {
       });
     },
     [bookmarkPost, qc, params],
+  );
+
+  const handleProof = useCallback(
+    async (postId: string) => {
+      const domain = process.env["EXPO_PUBLIC_DOMAIN"];
+      const baseUrl = domain ? `https://${domain}` : "";
+      try {
+        const res = await fetch(`${baseUrl}/api/posts/${postId}/proof`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token ?? ""}` },
+        });
+        if (res.ok) {
+          const json = await res.json() as { proofed: boolean };
+          qc.invalidateQueries({ queryKey: getListPostsQueryKey(params) });
+          if (json.proofed) {
+            showToast({ type: "success", title: "Proof recorded", message: "You tested this build. The author gets +5 XP!" });
+          }
+        }
+      } catch {
+        // silent
+      }
+    },
+    [token, qc, params, showToast],
   );
 
   const topPadding = Platform.OS === "web" ? 67 : insets.top;
@@ -192,8 +215,11 @@ export default function FeedScreen() {
           renderItem={({ item }: { item: Post }) => (
             <PostCard
               {...item}
+              proofClickCount={(item as unknown as { proofClickCount?: number }).proofClickCount ?? 0}
+              isProofClicked={(item as unknown as { isProofClicked?: boolean }).isProofClicked ?? false}
               onLike={() => handleLike(item.id)}
               onBookmark={() => handleBookmark(item.id)}
+              onProof={() => { void handleProof(item.id); }}
               onComment={() =>
                 router.push({
                   pathname: "/comments/[postId]",

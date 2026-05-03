@@ -5,14 +5,24 @@ import {
   StyleSheet,
   TouchableOpacity,
   Image,
+  Platform,
 } from "react-native";
 import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { Video, ResizeMode } from "expo-av";
 import { useColors } from "@/hooks/useColors";
 
 function isVideoUrl(url: string): boolean {
   return /\.(mp4|mov|webm|avi|m4v|mkv|3gp)(\?.*)?$/i.test(url);
+}
+
+function getMultiplierLabel(count: number): string | null {
+  if (count >= 50) return "5x";
+  if (count >= 25) return "3x";
+  if (count >= 10) return "2x";
+  if (count >= 5) return "1.5x";
+  return null;
 }
 
 const TRACK_LABELS: Record<string, string> = {
@@ -49,10 +59,13 @@ interface PostCardProps {
   commentCount: number;
   isLiked: boolean;
   isBookmarked: boolean;
+  proofClickCount?: number;
+  isProofClicked?: boolean;
   createdAt: string;
   onLike?: () => void;
   onBookmark?: () => void;
   onComment?: () => void;
+  onProof?: () => void;
   onPress?: () => void;
 }
 
@@ -78,13 +91,17 @@ export function PostCard({
   commentCount,
   isLiked,
   isBookmarked,
+  proofClickCount = 0,
+  isProofClicked = false,
   createdAt,
   onLike,
   onBookmark,
   onComment,
+  onProof,
   onPress,
 }: PostCardProps) {
   const colors = useColors();
+  const multiplierLabel = getMultiplierLabel(proofClickCount);
 
   const handleLike = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -95,6 +112,13 @@ export function PostCard({
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     onBookmark?.();
   };
+
+  const handleProof = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    onProof?.();
+  };
+
+  const isVideo = imageUrl ? isVideoUrl(imageUrl) : false;
 
   return (
     <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -147,26 +171,36 @@ export function PostCard({
           {body}
         </Text>
 
-        {/* Media — image or video preview */}
+        {/* Media — auto-playing video or image */}
         {imageUrl ? (
-          isVideoUrl(imageUrl) ? (
-            <View style={[styles.videoPreview, { backgroundColor: "#0a0a0a" }]}>
-              <View style={styles.videoPlayCircle}>
-                <Feather name="play" size={26} color="#fff" style={{ marginLeft: 3 }} />
-              </View>
-              <View style={styles.videoBadge}>
-                <Feather name="film" size={10} color="#fff" />
-                <Text style={styles.videoBadgeText}>VIDEO</Text>
-              </View>
-              <Text style={styles.videoHint}>Tap to watch</Text>
-            </View>
+          isVideo ? (
+            Platform.OS === "web" ? (
+              <video
+                src={imageUrl}
+                autoPlay
+                muted
+                loop
+                playsInline
+                style={{ width: "100%", height: 160, objectFit: "cover", display: "block" } as React.CSSProperties}
+              />
+            ) : (
+              <Video
+                source={{ uri: imageUrl }}
+                style={styles.videoPlayer}
+                resizeMode={ResizeMode.COVER}
+                shouldPlay
+                isMuted
+                isLooping
+                useNativeControls={false}
+              />
+            )
           ) : (
             <Image source={{ uri: imageUrl }} style={styles.postImage} resizeMode="cover" />
           )
         ) : null}
       </TouchableOpacity>
 
-      {/* Track + XP */}
+      {/* Track + XP + Multiplier */}
       <View style={styles.metaRow}>
         <View style={[styles.trackChip, { backgroundColor: colors.muted }]}>
           <Text style={[styles.trackText, { color: colors.mutedForeground }]}>
@@ -177,6 +211,11 @@ export function PostCard({
           <Feather name="zap" size={12} color={colors.xpGold} />
           <Text style={[styles.xpText, { color: colors.xpGold }]}>+{xpAwarded} XP</Text>
         </View>
+        {multiplierLabel && (
+          <View style={[styles.multiplierBadge, { backgroundColor: "#D4387C22" }]}>
+            <Text style={[styles.multiplierText, { color: colors.primary }]}>{multiplierLabel} boost</Text>
+          </View>
+        )}
       </View>
 
       {/* Actions */}
@@ -197,6 +236,18 @@ export function PostCard({
             size={18}
             color={isBookmarked ? colors.primary : colors.mutedForeground}
           />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.action} onPress={handleProof} activeOpacity={0.7}>
+          <Feather
+            name="check-circle"
+            size={18}
+            color={isProofClicked ? "#10B981" : colors.mutedForeground}
+          />
+          {proofClickCount > 0 && (
+            <Text style={[styles.actionText, { color: isProofClicked ? "#10B981" : colors.mutedForeground }]}>
+              {proofClickCount}
+            </Text>
+          )}
         </TouchableOpacity>
       </View>
     </View>
@@ -285,47 +336,10 @@ const styles = StyleSheet.create({
     height: 160,
     marginBottom: 8,
   },
-  videoPreview: {
+  videoPlayer: {
     width: "100%",
     height: 160,
     marginBottom: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 0,
-    gap: 8,
-  },
-  videoPlayCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "rgba(255,255,255,0.15)",
-    borderWidth: 2,
-    borderColor: "rgba(255,255,255,0.4)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  videoBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "rgba(255,255,255,0.12)",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-    position: "absolute",
-    top: 10,
-    right: 10,
-  },
-  videoBadgeText: {
-    color: "#fff",
-    fontSize: 9,
-    fontWeight: "800",
-    letterSpacing: 0.6,
-  },
-  videoHint: {
-    color: "rgba(255,255,255,0.5)",
-    fontSize: 11,
-    fontWeight: "500",
   },
   metaRow: {
     flexDirection: "row",
@@ -333,6 +347,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingBottom: 10,
     gap: 8,
+    flexWrap: "wrap",
   },
   trackChip: {
     paddingHorizontal: 8,
@@ -349,6 +364,15 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   xpText: {
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  multiplierBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  multiplierText: {
     fontSize: 11,
     fontWeight: "700",
   },

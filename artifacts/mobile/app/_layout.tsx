@@ -97,7 +97,7 @@ function RootLayoutNav() {
   return (
     <AuthGate>
       <NotificationRegistrar />
-      <Stack screenOptions={{ headerShown: false }}>
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "#0D0D0D" } }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="splash" options={{ headerShown: false, animation: "none" }} />
         <Stack.Screen name="login" options={{ headerShown: false, animation: "fade" }} />
@@ -113,6 +113,7 @@ function RootLayoutNav() {
         <Stack.Screen name="post/[id]" options={{ headerShown: false, animation: "none" }} />
         <Stack.Screen name="bootcamp-hub/[id]" options={{ headerShown: false, animation: "none" }} />
         <Stack.Screen name="notifications" options={{ headerShown: false, animation: "none" }} />
+        <Stack.Screen name="zero-proof" options={{ headerShown: false, animation: "none" }} />
       </Stack>
     </AuthGate>
   );

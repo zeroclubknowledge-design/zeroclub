@@ -130,11 +130,11 @@ export default function ProfileScreen() {
       accent: "#D4387C",
     },
     {
-      icon: "zap" as const,
-      label: "Zero Wallet",
-      subtitle: `${xpBalance.toLocaleString()} XP`,
-      onPress: () => router.push("/(tabs)/wallet" as never),
-      accent: "#F59E0B",
+      icon: "check-circle" as const,
+      label: "Zero Proof",
+      subtitle: "How proof multipliers work",
+      onPress: () => router.push("/zero-proof" as never),
+      accent: "#10B981",
     },
     {
       icon: "book" as const,
