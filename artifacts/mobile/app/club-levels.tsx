@@ -311,6 +311,15 @@ export default function ClubLevelsScreen() {
               Level 8+ earns you ambassador status + monthly stipend
             </Text>
           </View>
+          <View style={[styles.infoRow, styles.infoRowLast, { backgroundColor: "#F59E0B12", borderColor: "#F59E0B40" }]}>
+            <View style={[styles.infoIcon, { backgroundColor: "#F59E0B25" }]}>
+              <Feather name="refresh-cw" size={14} color="#F59E0B" />
+            </View>
+            <Text style={[styles.infoText, { color: colors.mutedForeground }]}>
+              <Text style={{ color: "#F59E0B", fontWeight: "700" }}>Monthly requirement: </Text>
+              Ambassadors must refer the same number of new students every month to keep collecting their stipend — regardless of whether referred students buy a bootcamp.
+            </Text>
+          </View>
         </View>
 
         {/* Level cards */}
@@ -339,20 +348,25 @@ export default function ClubLevelsScreen() {
             >
               {/* Ambassador header band */}
               {tier.isAmbassador && (
-                <View
-                  style={[
-                    styles.ambassadorBand,
-                    { backgroundColor: tier.color + "22" },
-                  ]}
-                >
-                  <Feather name="star" size={11} color={tier.color} />
-                  <Text style={[styles.ambassadorBandText, { color: tier.color }]}>
-                    {tier.ambassadorTitle}
-                  </Text>
-                  <View style={styles.ambassadorBandSpacer} />
-                  <Text style={[styles.ambassadorBandStipend, { color: tier.color }]}>
-                    {tier.monthlyStipend}/month
-                  </Text>
+                <View style={[styles.ambassadorBand, { backgroundColor: tier.color + "22" }]}>
+                  <View style={styles.ambassadorBandLeft}>
+                    <View style={styles.ambassadorBandTop}>
+                      <Feather name="star" size={11} color={tier.color} />
+                      <Text style={[styles.ambassadorBandText, { color: tier.color }]}>
+                        {tier.ambassadorTitle}
+                      </Text>
+                      <View style={styles.ambassadorBandSpacer} />
+                      <Text style={[styles.ambassadorBandStipend, { color: tier.color }]}>
+                        {tier.monthlyStipend}/month
+                      </Text>
+                    </View>
+                    <View style={styles.ambassadorBandBottom}>
+                      <Feather name="refresh-cw" size={10} color={tier.color + "BB"} />
+                      <Text style={[styles.ambassadorBandNote, { color: tier.color + "BB" }]}>
+                        Refer {tier.referrals} new students/month to keep stipend
+                      </Text>
+                    </View>
+                  </View>
                 </View>
               )}
 
@@ -509,7 +523,7 @@ export default function ClubLevelsScreen() {
                   onPress={() => router.push("/referral" as never)}
                   activeOpacity={0.85}
                 >
-                  <Feather name="users" size={14} color="#fff" />
+                  <Feather name="user-plus" size={14} color="#fff" />
                   <Text style={styles.ctaBtnText}>Refer students to unlock</Text>
                   <Feather name="arrow-right" size={14} color="#fff" />
                 </TouchableOpacity>
@@ -578,8 +592,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   infoTitle: { fontSize: 14, fontWeight: "700", marginBottom: 2 },
-  infoRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  infoIcon: { width: 30, height: 30, borderRadius: 8, alignItems: "center", justifyContent: "center" },
+  infoRow: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
+  infoRowLast: { borderRadius: 10, borderWidth: 1, padding: 10 },
+  infoIcon: { width: 30, height: 30, borderRadius: 8, alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 },
   infoText: { flex: 1, fontSize: 13, lineHeight: 18 },
 
   tierCard: {
@@ -588,15 +603,16 @@ const styles = StyleSheet.create({
     gap: 0,
   },
   ambassadorBand: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
+  ambassadorBandLeft: { flex: 1, gap: 3 },
+  ambassadorBandTop: { flexDirection: "row", alignItems: "center", gap: 6 },
+  ambassadorBandBottom: { flexDirection: "row", alignItems: "center", gap: 5 },
   ambassadorBandText: { fontSize: 11, fontWeight: "800", letterSpacing: 0.3 },
   ambassadorBandSpacer: { flex: 1 },
   ambassadorBandStipend: { fontSize: 12, fontWeight: "900" },
+  ambassadorBandNote: { fontSize: 10, fontWeight: "500" },
 
   tierHeader: {
     flexDirection: "row",
@@ -677,7 +693,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
   },
-  ctaBtnText: { color: "#fff", fontSize: 14, fontWeight: "700", flex: 1, textAlign: "center" },
+  ctaBtnText: { color: "#fff", fontSize: 14, fontWeight: "700" },
 
   bottomNote: {
     borderRadius: 16,
