@@ -126,6 +126,12 @@ export default function BootcampsScreen() {
                 ]}
                 activeOpacity={0.8}
               >
+                <View
+                  style={[
+                    styles.difficultyDot,
+                    { backgroundColor: isActive ? "#fff" : accentColor },
+                  ]}
+                />
                 <Text
                   style={[
                     styles.filterPillText,
@@ -219,12 +225,19 @@ const styles = StyleSheet.create({
   filterRow: { flexDirection: "row", gap: 6 },
   filterPill: {
     flex: 1,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: 5,
     paddingHorizontal: 6,
     paddingVertical: 5,
     borderRadius: 20,
     borderWidth: 1,
+  },
+  difficultyDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
   },
   filterPillText: { fontSize: 11, fontWeight: "600" },
   list: { paddingTop: 12, paddingBottom: 100 },

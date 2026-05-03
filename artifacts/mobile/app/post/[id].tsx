@@ -339,7 +339,10 @@ export default function PostDetailScreen() {
                   {/* @ts-ignore — web-only video element */}
                   <video
                     src={mediaUrl}
+                    autoPlay
+                    muted
                     controls
+                    loop
                     playsInline
                     style={{ width: "100%", height: 280, objectFit: "contain", backgroundColor: "#000" }}
                   />
@@ -351,8 +354,9 @@ export default function PostDetailScreen() {
                   style={styles.video}
                   useNativeControls
                   resizeMode={ResizeMode.CONTAIN}
-                  shouldPlay={false}
-                  isLooping={false}
+                  shouldPlay
+                  isMuted
+                  isLooping
                 />
               )
             ) : (
