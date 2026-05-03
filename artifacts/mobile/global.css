@@ -1,0 +1,19 @@
+/* Remove browser focus outlines on all interactive elements */
+*,
+*::before,
+*::after {
+  -webkit-tap-highlight-color: transparent;
+}
+
+input,
+input:focus,
+input:active,
+textarea,
+textarea:focus,
+textarea:active,
+select,
+select:focus,
+button:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
