@@ -94,6 +94,9 @@ export default function ShareBootcampScreen() {
       contentContainerStyle={[styles.content, { paddingTop: topPad, paddingBottom: bottomPad }]}
       showsVerticalScrollIndicator={false}
     >
+      <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
+        <Feather name="arrow-left" size={22} color={colors.foreground} />
+      </TouchableOpacity>
       {/* Brand header */}
       <View style={styles.brand}>
         <Image source={LOGO} style={styles.logo} />
@@ -202,6 +205,7 @@ export default function ShareBootcampScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { paddingHorizontal: 24, gap: 20, alignItems: "stretch" },
+  backBtn: { alignSelf: "flex-start", width: 36, height: 36, alignItems: "center", justifyContent: "center" },
   brand: { alignItems: "center", gap: 8 },
   logo: { width: 64, height: 64, borderRadius: 18 },
   brandName: { fontSize: 26, fontWeight: "800", fontFamily: "Inter_700Bold" },
