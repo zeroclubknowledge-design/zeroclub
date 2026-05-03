@@ -5,7 +5,7 @@ import { ArrowLeft, Plus, Edit2, Trash2, Clock, Zap, GripVertical, Check } from 
 
 interface ModuleFormProps {
   initial?: Partial<ModuleFormData>;
-  onSave: (data: ModuleFormData) => Promise<void>;
+  onSave: (data: ModuleFormData) => Promise<unknown>;
   onCancel: () => void;
   saving: boolean;
 }

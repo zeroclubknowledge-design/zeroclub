@@ -36,6 +36,8 @@ export const bootcampsTable = pgTable("bootcamps", {
   modulesCount: integer("modules_count").notNull().default(0),
   xpReward: integer("xp_reward").notNull().default(0),
   priceCents: integer("price_cents").notNull().default(0),
+  tutorId: text("tutor_id").references(() => profilesTable.id, { onDelete: "set null" }),
+  adminReviewed: boolean("admin_reviewed").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

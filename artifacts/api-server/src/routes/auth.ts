@@ -34,7 +34,7 @@ function computeLevel(xp: number): number {
 
 // POST /auth/register
 router.post("/register", async (req, res) => {
-  const { email, password, username, displayName, track, school, referralCode } =
+  const { email, password, username, displayName, track, school, referralCode, isTutor, bio } =
     req.body as {
       email: string;
       password: string;
@@ -43,6 +43,8 @@ router.post("/register", async (req, res) => {
       track: string;
       school?: string;
       referralCode?: string;
+      isTutor?: boolean;
+      bio?: string;
     };
 
   if (!email || !password || !username || !displayName || !track) {
@@ -88,10 +90,12 @@ router.post("/register", async (req, res) => {
       email,
       username,
       displayName,
+      bio: bio ?? null,
       track: track as "product_design" | "frontend" | "growth" | "branding" | "mentorship",
       school: school ?? null,
       referralCode: newReferralCode,
       xpBalance: welcomeXp,
+      tutorVerified: isTutor ? 1 : 0,
     });
 
     if (referrerProfile) {

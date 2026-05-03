@@ -6,7 +6,7 @@ import { Plus, Edit2, Trash2, ChevronRight, BookOpen, Users, Layers, Star, Video
 
 interface BootcampFormProps {
   initial?: Partial<BootcampFormData>;
-  onSave: (data: BootcampFormData) => Promise<void>;
+  onSave: (data: BootcampFormData) => Promise<unknown>;
   onCancel: () => void;
   saving: boolean;
 }
@@ -197,7 +197,7 @@ export default function BootcampsPage({ onSelectBootcamp }: BootcampsPageProps) 
                 <div className="p-5">
                   <h3 className="font-semibold text-foreground mb-4">Edit: {b.title}</h3>
                   <BootcampForm
-                    initial={b}
+                    initial={{ ...b, coverUrl: b.coverUrl ?? undefined }}
                     onSave={(d) => update.mutateAsync({ id: b.id, data: d })}
                     onCancel={() => setEditingId(null)}
                     saving={update.isPending}

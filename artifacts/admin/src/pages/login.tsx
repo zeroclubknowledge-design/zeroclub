@@ -14,11 +14,9 @@ const inputClass =
 export default function LoginPage({ onLogin }: LoginProps) {
   const [mode, setMode] = useState<Mode>("signin");
 
-  // Sign-in state
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  // Tutor registration state
   const [regDisplayName, setRegDisplayName] = useState("");
   const [regUsername, setRegUsername] = useState("");
   const [regEmail, setRegEmail] = useState("");
@@ -30,7 +28,6 @@ export default function LoginPage({ onLogin }: LoginProps) {
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [registered, setRegistered] = useState(false);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,7 +38,7 @@ export default function LoginPage({ onLogin }: LoginProps) {
       setToken(token);
       const me = await api.me();
       if (!me.tutorVerified) {
-        setError("Your account is pending tutor verification. An admin will review your application shortly.");
+        setError("This account does not have tutor access.");
         setLoading(false);
         return;
       }
@@ -61,7 +58,7 @@ export default function LoginPage({ onLogin }: LoginProps) {
       const bioWithQual = regQualification
         ? `${regBio}\n\nQualification: ${regQualification}`
         : regBio;
-      await api.registerTutor({
+      const { token } = await api.registerTutor({
         email: regEmail,
         password: regPassword,
         username: regUsername,
@@ -70,7 +67,8 @@ export default function LoginPage({ onLogin }: LoginProps) {
         school: regSchool,
         bio: bioWithQual,
       });
-      setRegistered(true);
+      setToken(token);
+      onLogin();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed");
     } finally {
@@ -83,35 +81,9 @@ export default function LoginPage({ onLogin }: LoginProps) {
     setError("");
   };
 
-  if (registered) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background px-4">
-        <div className="w-full max-w-sm text-center space-y-4">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emerald-500/15 mb-2">
-            <svg className="w-8 h-8 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <h2 className="text-xl font-bold text-foreground">Application Submitted!</h2>
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            Your tutor application has been received. An admin will review your qualifications
-            and grant you access to the Zero Club Admin panel once verified.
-          </p>
-          <button
-            onClick={() => { setRegistered(false); setMode("signin"); }}
-            className="text-sm text-primary hover:opacity-80"
-          >
-            Back to sign in
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4 py-10">
       <div className="w-full max-w-sm">
-        {/* Logo */}
         <div className="mb-7 text-center">
           <div className="inline-flex items-center justify-center w-13 h-13 rounded-2xl bg-primary/15 mb-4">
             <span className="text-2xl font-black text-primary">Z</span>
@@ -120,7 +92,6 @@ export default function LoginPage({ onLogin }: LoginProps) {
           <p className="text-sm text-muted-foreground mt-1">Tutor & Bootcamp Management</p>
         </div>
 
-        {/* Tab switcher */}
         <div className="flex bg-muted rounded-xl p-1 mb-6">
           <button
             onClick={() => switchMode("signin")}
@@ -285,11 +256,11 @@ export default function LoginPage({ onLogin }: LoginProps) {
               disabled={loading}
               className="w-full py-2.5 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-60 mt-1"
             >
-              {loading ? "Submitting application..." : "Submit Tutor Application"}
+              {loading ? "Creating account..." : "Create Tutor Account"}
             </button>
 
             <p className="text-xs text-muted-foreground text-center pt-1">
-              Your application will be reviewed by a Zero Club admin before access is granted.
+              You'll get immediate access. Admins will reach out when you publish your first bootcamp.
             </p>
           </form>
         )}

@@ -7,7 +7,7 @@ import {
   profilesTable,
   deliveryMediumEnum,
 } from "@workspace/db";
-import { eq, sql, asc } from "drizzle-orm";
+import { eq, sql, asc, isNull, or } from "drizzle-orm";
 import { requireAuth, type AuthRequest } from "../lib/auth";
 import { generateId } from "../lib/ids";
 
@@ -82,10 +82,50 @@ router.post("/bootcamps", requireAuth, requireTutor, async (req: AuthRequest, re
       xpReward: xpReward ?? 100,
       priceCents: priceCents ?? 0,
       modulesCount: 0,
+      tutorId: req.userId ?? null,
+      adminReviewed: false,
     }).returning();
     res.status(201).json(bootcamp);
   } catch (err) {
     req.log.error({ err }, "admin create bootcamp error");
+    res.status(500).json({ error: "internal_error" });
+  }
+});
+
+// GET /admin/bootcamp-alerts — bootcamps not yet reviewed, with tutor info
+router.get("/bootcamp-alerts", requireAuth, requireTutor, async (req: AuthRequest, res) => {
+  try {
+    const bootcamps = await db
+      .select()
+      .from(bootcampsTable)
+      .where(eq(bootcampsTable.adminReviewed, false))
+      .orderBy(asc(bootcampsTable.createdAt));
+
+    const enriched = await Promise.all(bootcamps.map(async (b) => {
+      let tutor = null;
+      if (b.tutorId) {
+        const profiles = await db.select().from(profilesTable).where(eq(profilesTable.id, b.tutorId)).limit(1);
+        tutor = profiles[0] ?? null;
+      }
+      return { ...b, tutor };
+    }));
+
+    res.json(enriched);
+  } catch (err) {
+    req.log.error({ err }, "admin bootcamp alerts error");
+    res.status(500).json({ error: "internal_error" });
+  }
+});
+
+// PUT /admin/bootcamps/:id/mark-reviewed
+router.put("/bootcamps/:id/mark-reviewed", requireAuth, requireTutor, async (req: AuthRequest, res) => {
+  const { id } = req.params as { id: string };
+  try {
+    const [updated] = await db.update(bootcampsTable).set({ adminReviewed: true }).where(eq(bootcampsTable.id, id)).returning();
+    if (!updated) { res.status(404).json({ error: "not_found" }); return; }
+    res.json(updated);
+  } catch (err) {
+    req.log.error({ err }, "admin mark reviewed error");
     res.status(500).json({ error: "internal_error" });
   }
 });

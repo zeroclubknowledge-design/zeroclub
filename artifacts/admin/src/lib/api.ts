@@ -47,13 +47,10 @@ export const api = {
     school?: string;
     bio?: string;
   }) =>
-    request<{ token: string }>("/auth/register", {
+    request<{ token: string; user: Profile }>("/auth/register", {
       method: "POST",
-      body: JSON.stringify(data),
+      body: JSON.stringify({ ...data, isTutor: true }),
     }),
-
-  makeAdmin: (userId: string) =>
-    request<Profile>(`/admin/profiles/${userId}/make-admin`, { method: "PUT" }),
 
   stats: () => request<AdminStats>("/admin/stats"),
 
@@ -93,6 +90,11 @@ export const api = {
 
   verifyTutor: (userId: string) =>
     request<Profile>(`/admin/profiles/${userId}/verify-tutor`, { method: "PUT" }),
+
+  listBootcampAlerts: () => request<BootcampAlert[]>("/admin/bootcamp-alerts"),
+
+  markBootcampReviewed: (id: string) =>
+    request<AdminBootcamp>(`/admin/bootcamps/${id}/mark-reviewed`, { method: "PUT" }),
 };
 
 export interface Profile {
@@ -140,9 +142,23 @@ export interface AdminBootcamp {
   modulesCount: number;
   xpReward: number;
   priceCents: number;
+  tutorId: string | null;
+  adminReviewed: boolean;
   enrollmentCount: number;
   modules: AdminModule[];
   createdAt: string;
+}
+
+export interface BootcampAlert {
+  id: string;
+  title: string;
+  track: string;
+  difficulty: string;
+  deliveryMedium: string;
+  tutorId: string | null;
+  adminReviewed: boolean;
+  createdAt: string;
+  tutor: Profile | null;
 }
 
 export interface BootcampFormData {
