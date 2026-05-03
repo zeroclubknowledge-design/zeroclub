@@ -22,6 +22,7 @@ import { useCreatePost, getListPostsQueryKey } from "@workspace/api-client-react
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
+import { useBreakpoint } from "@/hooks/useBreakpoint";
 
 const TRACKS = [
   { key: "product_design", label: "Product Design" },
@@ -71,8 +72,9 @@ export default function CreateScreen() {
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
   const { token, user } = useAuth();
-  const topPadding = Platform.OS === "web" ? 67 : insets.top;
-  const bottomPadding = Platform.OS === "web" ? 34 + 84 : insets.bottom + 60;
+  const { isDesktop } = useBreakpoint();
+  const topPadding = Platform.OS === "web" ? (isDesktop ? 0 : 67) : insets.top;
+  const bottomPadding = Platform.OS === "web" ? (isDesktop ? 40 : 34 + 84) : insets.bottom + 60;
 
   const [body, setBody] = useState("");
   const [track, setTrack] = useState("frontend");
@@ -198,6 +200,233 @@ export default function CreateScreen() {
 
   const isPending = uploading || createPost.isPending;
 
+  const formContent = (
+    <>
+        {submitted && (
+          <View style={[styles.successBanner, { backgroundColor: colors.success + "22" }]}>
+            <Feather name="check-circle" size={16} color={colors.success} />
+            <Text style={[styles.successText, { color: colors.success }]}>Posted! +15 XP earned 🎉</Text>
+          </View>
+        )}
+
+        {/* Text area */}
+        <View style={[styles.inputCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <TextInput
+            style={[styles.textInput, { color: colors.foreground }]}
+            placeholder="What are you building? Share your progress..."
+            placeholderTextColor={colors.mutedForeground}
+            value={body}
+            onChangeText={setBody}
+            multiline
+            maxLength={maxChars}
+            textAlignVertical="top"
+          />
+          <Text style={[styles.charCount, { color: charCount > maxChars * 0.9 ? colors.destructive : colors.mutedForeground }]}>
+            {charCount}/{maxChars}
+          </Text>
+        </View>
+
+        {/* Media preview */}
+        {media && (
+          <View style={[styles.mediaPreviewWrap, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            {media.type === "image" ? (
+              <Image source={{ uri: media.uri }} style={styles.mediaPreview} resizeMode="cover" />
+            ) : (
+              <View style={[styles.videoPlaceholder, { backgroundColor: colors.muted }]}>
+                <Feather name="film" size={32} color={colors.primary} />
+                <Text style={[styles.videoLabel, { color: colors.mutedForeground }]}>Video selected</Text>
+              </View>
+            )}
+            <TouchableOpacity style={[styles.removeMedia, { backgroundColor: colors.card }]} onPress={() => setMedia(null)}>
+              <Feather name="x" size={16} color={colors.foreground} />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Media attach buttons */}
+        {!media && (
+          <View style={styles.mediaRow}>
+            <TouchableOpacity style={[styles.mediaBtn, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={() => handlePickMedia("image")} activeOpacity={0.7}>
+              <Feather name="image" size={18} color={colors.primary} />
+              <Text style={[styles.mediaBtnText, { color: colors.mutedForeground }]}>Photo</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.mediaBtn, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={() => handlePickMedia("video")} activeOpacity={0.7}>
+              <Feather name="video" size={18} color={colors.primary} />
+              <Text style={[styles.mediaBtnText, { color: colors.mutedForeground }]}>Video</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Track selector */}
+        <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>Track</Text>
+        <View style={styles.trackGrid}>
+          {TRACKS.map((t) => (
+            <TouchableOpacity
+              key={t.key}
+              onPress={() => setTrack(t.key)}
+              style={[styles.trackOption, { backgroundColor: track === t.key ? colors.primary : colors.card, borderColor: track === t.key ? colors.primary : colors.border }]}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.trackOptionText, { color: track === t.key ? "#fff" : colors.mutedForeground }]}>{t.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Tag People */}
+        <View style={[styles.tagCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={styles.tagCardHeader}>
+            <View style={styles.tagLabelRow}>
+              <Feather name="at-sign" size={16} color={colors.primary} />
+              <Text style={[styles.tagLabel, { color: colors.foreground }]}>Tag People</Text>
+            </View>
+            <Text style={[styles.tagDesc, { color: colors.mutedForeground }]}>Tag builders who helped or inspired this build</Text>
+          </View>
+          {taggedUsers.length > 0 && (
+            <View style={styles.tagChips}>
+              {taggedUsers.map((u) => (
+                <View key={u.id} style={[styles.tagChip, { backgroundColor: colors.primary + "20", borderColor: colors.primary + "40" }]}>
+                  <View style={[styles.tagAvatar, { backgroundColor: colors.primary }]}>
+                    {u.avatarUrl ? (
+                      <Image source={{ uri: u.avatarUrl }} style={StyleSheet.absoluteFillObject} borderRadius={10} />
+                    ) : (
+                      <Text style={styles.tagAvatarText}>{u.displayName.slice(0, 1).toUpperCase()}</Text>
+                    )}
+                  </View>
+                  <Text style={[styles.tagChipText, { color: colors.primary }]}>@{u.username}</Text>
+                  <TouchableOpacity onPress={() => handleRemoveTag(u.id)} activeOpacity={0.7}>
+                    <Feather name="x" size={13} color={colors.primary} />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
+          <TouchableOpacity style={[styles.addTagBtn, { backgroundColor: colors.muted, borderColor: colors.border }]} onPress={() => setTagModal(true)} activeOpacity={0.8}>
+            <Feather name="plus" size={14} color={colors.primary} />
+            <Text style={[styles.addTagText, { color: colors.primary }]}>{taggedUsers.length > 0 ? "Add more people" : "Tag a builder"}</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Submit */}
+        <TouchableOpacity
+          style={[styles.submitBtn, { backgroundColor: isPending ? colors.muted : colors.primary, opacity: isPending ? 0.7 : 1 }]}
+          onPress={handleSubmit}
+          disabled={isPending}
+          activeOpacity={0.85}
+        >
+          {isPending ? (
+            <><ActivityIndicator size="small" color="#fff" /><Text style={styles.submitText}>{uploading ? "Uploading..." : "Posting..."}</Text></>
+          ) : (
+            <><Feather name="send" size={16} color="#fff" /><Text style={styles.submitText}>Post to Feed</Text></>
+          )}
+        </TouchableOpacity>
+    </>
+  );
+
+  const tagModal_ = (
+      <Modal visible={tagModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalSheet, { backgroundColor: colors.card }]}>
+            <View style={styles.modalHandle} />
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.foreground }]}>Tag People</Text>
+              <TouchableOpacity onPress={() => { setTagModal(false); setTagSearch(""); setTagResults([]); }}>
+                <Feather name="x" size={20} color={colors.mutedForeground} />
+              </TouchableOpacity>
+            </View>
+            <View style={[styles.modalSearch, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+              <Feather name="search" size={15} color={colors.mutedForeground} />
+              <TextInput style={[styles.modalSearchInput, { color: colors.foreground }]} placeholder="Search by name or @username..." placeholderTextColor={colors.mutedForeground} value={tagSearch} onChangeText={handleTagSearch} autoFocus />
+              {tagSearching && <ActivityIndicator size="small" color={colors.primary} />}
+            </View>
+            <FlatList
+              data={tagResults}
+              keyExtractor={(u) => u.id}
+              style={styles.tagResultList}
+              keyboardShouldPersistTaps="handled"
+              ListEmptyComponent={
+                tagSearch.trim() && !tagSearching ? (
+                  <View style={styles.tagEmptyBox}><Text style={[styles.tagEmptyText, { color: colors.mutedForeground }]}>No users found</Text></View>
+                ) : !tagSearch.trim() ? (
+                  <View style={styles.tagEmptyBox}><Text style={[styles.tagEmptyText, { color: colors.mutedForeground }]}>Type to search builders</Text></View>
+                ) : null
+              }
+              renderItem={({ item }: { item: TaggedUser }) => (
+                <TouchableOpacity style={[styles.tagResultRow, { borderBottomColor: colors.border }]} onPress={() => handleTagUser(item)} activeOpacity={0.8}>
+                  <View style={[styles.tagResultAvatar, { backgroundColor: colors.primary }]}>
+                    {item.avatarUrl ? <Image source={{ uri: item.avatarUrl }} style={StyleSheet.absoluteFillObject} borderRadius={18} /> : <Text style={styles.tagAvatarText}>{item.displayName.slice(0, 1).toUpperCase()}</Text>}
+                  </View>
+                  <View style={styles.tagResultInfo}>
+                    <Text style={[styles.tagResultName, { color: colors.foreground }]}>{item.displayName}</Text>
+                    <Text style={[styles.tagResultUsername, { color: colors.mutedForeground }]}>@{item.username}</Text>
+                  </View>
+                  <View style={[styles.levelBadge, { backgroundColor: colors.muted }]}>
+                    <Text style={[styles.levelText, { color: colors.primary }]}>Lv{item.level}</Text>
+                  </View>
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        </View>
+      </Modal>
+  );
+
+  // ── Desktop Layout ──
+  if (isDesktop) {
+    return (
+      <KeyboardAvoidingView style={[styles.container, { backgroundColor: colors.background }]} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+        <View style={[styles.desktopTopBar, { borderBottomColor: colors.border, backgroundColor: colors.background }]}>
+          <View>
+            <Text style={[styles.desktopPageTitle, { color: colors.foreground }]}>New Post</Text>
+            <Text style={[styles.desktopPageSub, { color: colors.mutedForeground }]}>Share your build with the community</Text>
+          </View>
+          <View style={[styles.xpBadge, { backgroundColor: colors.xpGold + "22" }]}>
+            <Feather name="zap" size={14} color={colors.xpGold} />
+            <Text style={[styles.xpHint, { color: colors.xpGold }]}>+15 XP when you post</Text>
+          </View>
+        </View>
+        <View style={styles.desktopBody}>
+          <ScrollView style={styles.desktopFormCol} contentContainerStyle={[styles.content, { paddingBottom: bottomPadding }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+            {formContent}
+          </ScrollView>
+          <View style={[styles.desktopTipsCol, { borderLeftColor: colors.border }]}>
+            <View style={[styles.tipsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Text style={[styles.tipsTitle, { color: colors.foreground }]}>Tips for a great post</Text>
+              {[
+                { icon: "zap" as const, color: colors.xpGold, text: "Show your progress, not just the end result" },
+                { icon: "users" as const, color: colors.primary, text: "Tag builders who inspired or helped you" },
+                { icon: "image" as const, color: "#10B981", text: "Add a screenshot or demo video" },
+                { icon: "award" as const, color: "#8B5CF6", text: "Pick the right track so the right people see it" },
+              ].map((tip) => (
+                <View key={tip.text} style={styles.tipRow}>
+                  <View style={[styles.tipIcon, { backgroundColor: tip.color + "20" }]}>
+                    <Feather name={tip.icon} size={13} color={tip.color} />
+                  </View>
+                  <Text style={[styles.tipText, { color: colors.mutedForeground }]}>{tip.text}</Text>
+                </View>
+              ))}
+            </View>
+            <View style={[styles.tipsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Text style={[styles.tipsTitle, { color: colors.foreground }]}>XP Rewards</Text>
+              {[
+                { label: "Post a build", xp: "+15 XP" },
+                { label: "Someone likes it", xp: "+2 XP" },
+                { label: "Mark as proof project", xp: "+10 XP" },
+                { label: "10 proof clicks", xp: "2× boost" },
+              ].map((r) => (
+                <View key={r.label} style={styles.xpRow}>
+                  <Text style={[styles.xpRowLabel, { color: colors.mutedForeground }]}>{r.label}</Text>
+                  <Text style={[styles.xpRowValue, { color: colors.xpGold }]}>{r.xp}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        </View>
+        {tagModal_}
+      </KeyboardAvoidingView>
+    );
+  }
+
+  // ── Mobile Layout ──
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.background }]}
@@ -225,270 +454,9 @@ export default function CreateScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {submitted && (
-          <View style={[styles.successBanner, { backgroundColor: colors.success + "22" }]}>
-            <Feather name="check-circle" size={16} color={colors.success} />
-            <Text style={[styles.successText, { color: colors.success }]}>
-              Posted! +15 XP earned 🎉
-            </Text>
-          </View>
-        )}
-
-        {/* Text area */}
-        <View style={[styles.inputCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <TextInput
-            style={[styles.textInput, { color: colors.foreground }]}
-            placeholder="What are you building? Share your progress..."
-            placeholderTextColor={colors.mutedForeground}
-            value={body}
-            onChangeText={setBody}
-            multiline
-            maxLength={maxChars}
-            textAlignVertical="top"
-          />
-          <Text
-            style={[
-              styles.charCount,
-              { color: charCount > maxChars * 0.9 ? colors.destructive : colors.mutedForeground },
-            ]}
-          >
-            {charCount}/{maxChars}
-          </Text>
-        </View>
-
-        {/* Media preview */}
-        {media && (
-          <View style={[styles.mediaPreviewWrap, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            {media.type === "image" ? (
-              <Image source={{ uri: media.uri }} style={styles.mediaPreview} resizeMode="cover" />
-            ) : (
-              <View style={[styles.videoPlaceholder, { backgroundColor: colors.muted }]}>
-                <Feather name="film" size={32} color={colors.primary} />
-                <Text style={[styles.videoLabel, { color: colors.mutedForeground }]}>Video selected</Text>
-              </View>
-            )}
-            <TouchableOpacity
-              style={[styles.removeMedia, { backgroundColor: colors.card }]}
-              onPress={() => setMedia(null)}
-            >
-              <Feather name="x" size={16} color={colors.foreground} />
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Media attach buttons */}
-        {!media && (
-          <View style={styles.mediaRow}>
-            <TouchableOpacity
-              style={[styles.mediaBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
-              onPress={() => handlePickMedia("image")}
-              activeOpacity={0.7}
-            >
-              <Feather name="image" size={18} color={colors.primary} />
-              <Text style={[styles.mediaBtnText, { color: colors.mutedForeground }]}>Photo</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.mediaBtn, { backgroundColor: colors.card, borderColor: colors.border }]}
-              onPress={() => handlePickMedia("video")}
-              activeOpacity={0.7}
-            >
-              <Feather name="video" size={18} color={colors.primary} />
-              <Text style={[styles.mediaBtnText, { color: colors.mutedForeground }]}>Video</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Track selector */}
-        <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>Track</Text>
-        <View style={styles.trackGrid}>
-          {TRACKS.map((t) => (
-            <TouchableOpacity
-              key={t.key}
-              onPress={() => setTrack(t.key)}
-              style={[
-                styles.trackOption,
-                {
-                  backgroundColor: track === t.key ? colors.primary : colors.card,
-                  borderColor: track === t.key ? colors.primary : colors.border,
-                },
-              ]}
-              activeOpacity={0.8}
-            >
-              <Text
-                style={[
-                  styles.trackOptionText,
-                  { color: track === t.key ? "#fff" : colors.mutedForeground },
-                ]}
-              >
-                {t.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Tag People card */}
-        <View style={[styles.tagCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <View style={styles.tagCardHeader}>
-            <View style={styles.tagLabelRow}>
-              <Feather name="at-sign" size={16} color={colors.primary} />
-              <Text style={[styles.tagLabel, { color: colors.foreground }]}>Tag People</Text>
-            </View>
-            <Text style={[styles.tagDesc, { color: colors.mutedForeground }]}>
-              Tag builders who helped or inspired this build
-            </Text>
-          </View>
-
-          {/* Tagged chips */}
-          {taggedUsers.length > 0 && (
-            <View style={styles.tagChips}>
-              {taggedUsers.map((u) => (
-                <View
-                  key={u.id}
-                  style={[styles.tagChip, { backgroundColor: colors.primary + "20", borderColor: colors.primary + "40" }]}
-                >
-                  <View style={[styles.tagAvatar, { backgroundColor: colors.primary }]}>
-                    {u.avatarUrl ? (
-                      <Image
-                        source={{ uri: u.avatarUrl }}
-                        style={StyleSheet.absoluteFillObject}
-                        borderRadius={10}
-                      />
-                    ) : (
-                      <Text style={styles.tagAvatarText}>
-                        {u.displayName.slice(0, 1).toUpperCase()}
-                      </Text>
-                    )}
-                  </View>
-                  <Text style={[styles.tagChipText, { color: colors.primary }]}>
-                    @{u.username}
-                  </Text>
-                  <TouchableOpacity onPress={() => handleRemoveTag(u.id)} activeOpacity={0.7}>
-                    <Feather name="x" size={13} color={colors.primary} />
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </View>
-          )}
-
-          <TouchableOpacity
-            style={[styles.addTagBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
-            onPress={() => setTagModal(true)}
-            activeOpacity={0.8}
-          >
-            <Feather name="plus" size={14} color={colors.primary} />
-            <Text style={[styles.addTagText, { color: colors.primary }]}>
-              {taggedUsers.length > 0 ? "Add more people" : "Tag a builder"}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Submit */}
-        <TouchableOpacity
-          style={[
-            styles.submitBtn,
-            { backgroundColor: isPending ? colors.muted : colors.primary, opacity: isPending ? 0.7 : 1 },
-          ]}
-          onPress={handleSubmit}
-          disabled={isPending}
-          activeOpacity={0.85}
-        >
-          {isPending ? (
-            <>
-              <ActivityIndicator size="small" color="#fff" />
-              <Text style={styles.submitText}>{uploading ? "Uploading..." : "Posting..."}</Text>
-            </>
-          ) : (
-            <>
-              <Feather name="send" size={16} color="#fff" />
-              <Text style={styles.submitText}>Post to Feed</Text>
-            </>
-          )}
-        </TouchableOpacity>
+        {formContent}
       </ScrollView>
-
-      {/* Tag People Modal */}
-      <Modal visible={tagModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalSheet, { backgroundColor: colors.card }]}>
-            <View style={styles.modalHandle} />
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: colors.foreground }]}>Tag People</Text>
-              <TouchableOpacity onPress={() => { setTagModal(false); setTagSearch(""); setTagResults([]); }}>
-                <Feather name="x" size={20} color={colors.mutedForeground} />
-              </TouchableOpacity>
-            </View>
-
-            <View style={[styles.modalSearch, { backgroundColor: colors.muted, borderColor: colors.border }]}>
-              <Feather name="search" size={15} color={colors.mutedForeground} />
-              <TextInput
-                style={[styles.modalSearchInput, { color: colors.foreground }]}
-                placeholder="Search by name or @username..."
-                placeholderTextColor={colors.mutedForeground}
-                value={tagSearch}
-                onChangeText={handleTagSearch}
-                autoFocus
-              />
-              {tagSearching && <ActivityIndicator size="small" color={colors.primary} />}
-            </View>
-
-            <FlatList
-              data={tagResults}
-              keyExtractor={(u) => u.id}
-              style={styles.tagResultList}
-              keyboardShouldPersistTaps="handled"
-              ListEmptyComponent={
-                tagSearch.trim() && !tagSearching ? (
-                  <View style={styles.tagEmptyBox}>
-                    <Text style={[styles.tagEmptyText, { color: colors.mutedForeground }]}>
-                      No users found
-                    </Text>
-                  </View>
-                ) : !tagSearch.trim() ? (
-                  <View style={styles.tagEmptyBox}>
-                    <Text style={[styles.tagEmptyText, { color: colors.mutedForeground }]}>
-                      Type to search builders
-                    </Text>
-                  </View>
-                ) : null
-              }
-              renderItem={({ item }: { item: TaggedUser }) => (
-                <TouchableOpacity
-                  style={[styles.tagResultRow, { borderBottomColor: colors.border }]}
-                  onPress={() => handleTagUser(item)}
-                  activeOpacity={0.8}
-                >
-                  <View style={[styles.tagResultAvatar, { backgroundColor: colors.primary }]}>
-                    {item.avatarUrl ? (
-                      <Image
-                        source={{ uri: item.avatarUrl }}
-                        style={StyleSheet.absoluteFillObject}
-                        borderRadius={18}
-                      />
-                    ) : (
-                      <Text style={styles.tagAvatarText}>
-                        {item.displayName.slice(0, 1).toUpperCase()}
-                      </Text>
-                    )}
-                  </View>
-                  <View style={styles.tagResultInfo}>
-                    <Text style={[styles.tagResultName, { color: colors.foreground }]}>
-                      {item.displayName}
-                    </Text>
-                    <Text style={[styles.tagResultUsername, { color: colors.mutedForeground }]}>
-                      @{item.username}
-                    </Text>
-                  </View>
-                  <View style={[styles.levelBadge, { backgroundColor: colors.muted }]}>
-                    <Text style={[styles.levelText, { color: colors.primary }]}>
-                      Lv{item.level}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              )}
-            />
-          </View>
-        </View>
-      </Modal>
+      {tagModal_}
     </KeyboardAvoidingView>
   );
 }
@@ -513,6 +481,29 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   xpHint: { fontSize: 13, fontWeight: "700" },
+
+  // Desktop
+  desktopTopBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 32,
+    paddingVertical: 18,
+    borderBottomWidth: 1,
+  },
+  desktopPageTitle: { fontSize: 22, fontWeight: "800", fontFamily: "Inter_700Bold" },
+  desktopPageSub: { fontSize: 13, marginTop: 2 },
+  desktopBody: { flex: 1, flexDirection: "row" },
+  desktopFormCol: { flex: 1, maxWidth: 680 },
+  desktopTipsCol: { width: 280, borderLeftWidth: 1, padding: 20, gap: 16 },
+  tipsCard: { borderRadius: 16, borderWidth: 1, padding: 16, gap: 10 },
+  tipsTitle: { fontSize: 14, fontWeight: "700", marginBottom: 2 },
+  tipRow: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
+  tipIcon: { width: 28, height: 28, borderRadius: 8, alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  tipText: { flex: 1, fontSize: 13, lineHeight: 18 },
+  xpRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 4 },
+  xpRowLabel: { fontSize: 13 },
+  xpRowValue: { fontSize: 13, fontWeight: "700" },
   content: { padding: 16, gap: 14 },
   successBanner: {
     flexDirection: "row",

@@ -13,6 +13,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
+import { useBreakpoint } from "@/hooks/useBreakpoint";
+import { DesktopSidebar } from "@/components/DesktopSidebar";
 
 function NativeTabLayout() {
   return (
@@ -82,6 +84,9 @@ function FloatingTabBar({
   const insets = useSafeAreaInsets();
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
+  const { isDesktop } = useBreakpoint();
+
+  if (isDesktop) return null;
 
   return (
     <View
@@ -172,8 +177,20 @@ function FloatingTabBar({
   );
 }
 
-function ClassicTabLayout() {
+function DesktopTabsWrapper({ children }: { children: React.ReactNode }) {
+  const colors = useColors();
   return (
+    <View style={[styles.desktopShell, { backgroundColor: colors.background }]}>
+      <DesktopSidebar />
+      <View style={styles.desktopContent}>{children}</View>
+    </View>
+  );
+}
+
+function ClassicTabLayout() {
+  const { isDesktop } = useBreakpoint();
+
+  const tabs = (
     <Tabs
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       tabBar={(props: any) => <FloatingTabBar state={props.state} navigation={props.navigation} />}
@@ -186,6 +203,12 @@ function ClassicTabLayout() {
       <Tabs.Screen name="wallet" />
     </Tabs>
   );
+
+  if (isDesktop) {
+    return <DesktopTabsWrapper>{tabs}</DesktopTabsWrapper>;
+  }
+
+  return tabs;
 }
 
 export default function TabLayout() {
@@ -196,6 +219,14 @@ export default function TabLayout() {
 }
 
 const styles = StyleSheet.create({
+  desktopShell: {
+    flex: 1,
+    flexDirection: "row",
+  },
+  desktopContent: {
+    flex: 1,
+    overflow: "hidden",
+  },
   tabBarOuter: {
     position: "absolute",
     left: 16,

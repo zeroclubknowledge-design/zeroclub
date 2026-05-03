@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Platform,
   TextInput,
+  FlatList,
 } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -15,6 +16,7 @@ import { Feather } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { getListChannelsQueryOptions } from "@workspace/api-client-react";
 import { useColors } from "@/hooks/useColors";
+import { useBreakpoint } from "@/hooks/useBreakpoint";
 import type { Channel } from "@workspace/api-client-react";
 
 type ExtChannel = Channel & {
@@ -57,7 +59,8 @@ interface Section {
 export default function ChatScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const topPadding = Platform.OS === "web" ? 67 : insets.top;
+  const { isDesktop } = useBreakpoint();
+  const topPadding = Platform.OS === "web" ? (isDesktop ? 0 : 67) : insets.top;
   const [search, setSearch] = useState("");
 
   const { data: channels, isLoading } = useQuery(getListChannelsQueryOptions());
@@ -187,6 +190,159 @@ export default function ChatScreen() {
     );
   };
 
+  const searchBar = (
+    <View style={[styles.searchBar, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+      <Feather name="search" size={16} color={colors.mutedForeground} />
+      <TextInput
+        style={[styles.searchInput, { color: colors.foreground }]}
+        placeholder="Search channels..."
+        placeholderTextColor={colors.mutedForeground}
+        value={search}
+        onChangeText={setSearch}
+        returnKeyType="search"
+        clearButtonMode="while-editing"
+      />
+      {search.length > 0 && (
+        <TouchableOpacity onPress={() => setSearch("")} activeOpacity={0.7}>
+          <Feather name="x" size={15} color={colors.mutedForeground} />
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+
+  const sectionListEl = (
+    <SectionList
+      sections={sections}
+      keyExtractor={(c) => c.id}
+      contentContainerStyle={styles.list}
+      showsVerticalScrollIndicator={false}
+      stickySectionHeadersEnabled={false}
+      ListEmptyComponent={
+        <View style={styles.empty}>
+          <Feather name="message-circle" size={40} color={colors.mutedForeground} />
+          <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
+            {search ? "No channels found" : "No channels yet"}
+          </Text>
+          {search && (
+            <Text style={[styles.emptySub, { color: colors.mutedForeground }]}>
+              Try a different search term
+            </Text>
+          )}
+        </View>
+      }
+      renderSectionHeader={({ section }) => (
+        <View style={styles.sectionHeader}>
+          <Feather name={section.icon} size={14} color={colors.mutedForeground} />
+          <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>
+            {section.title.toUpperCase()}
+          </Text>
+          <View style={[styles.sectionCount, { backgroundColor: colors.muted }]}>
+            <Text style={[styles.sectionCountText, { color: colors.mutedForeground }]}>
+              {section.data.length}
+            </Text>
+          </View>
+        </View>
+      )}
+      renderItem={({ item, section }) =>
+        section.title === "Bootcamp Rooms"
+          ? renderBootcampRow(item)
+          : renderCommunityRow(item)
+      }
+      SectionSeparatorComponent={() => <View style={{ height: 8 }} />}
+    />
+  );
+
+  // ── Desktop Layout ──
+  if (isDesktop) {
+    const communitySection = sections.find((s) => s.title === "Community");
+    const bootcampSection = sections.find((s) => s.title === "Bootcamp Rooms");
+
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={[styles.desktopTopBar, { borderBottomColor: colors.border, backgroundColor: colors.background }]}>
+          <View>
+            <Text style={[styles.desktopPageTitle, { color: colors.foreground }]}>Chat</Text>
+            <Text style={[styles.desktopPageSub, { color: colors.mutedForeground }]}>
+              {(channels?.length ?? 0)} channels · Club community
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.desktopBody}>
+          {/* Left: community channels */}
+          <View style={[styles.desktopCommunityCol, { borderRightColor: colors.border }]}>
+            <View style={styles.desktopColHeader}>
+              <Text style={[styles.desktopColTitle, { color: colors.mutedForeground }]}>COMMUNITY</Text>
+              {communitySection && (
+                <View style={[styles.countBadge, { backgroundColor: colors.muted }]}>
+                  <Text style={[styles.countBadgeText, { color: colors.mutedForeground }]}>{communitySection.data.length}</Text>
+                </View>
+              )}
+            </View>
+            {isLoading ? (
+              <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>
+            ) : (
+              <FlatList
+                data={communitySection?.data ?? []}
+                keyExtractor={(c) => c.id}
+                contentContainerStyle={styles.desktopColList}
+                showsVerticalScrollIndicator={false}
+                ListEmptyComponent={
+                  <View style={styles.colEmpty}>
+                    <Feather name="hash" size={24} color={colors.mutedForeground} />
+                    <Text style={[styles.colEmptyText, { color: colors.mutedForeground }]}>No channels</Text>
+                  </View>
+                }
+                renderItem={({ item }) => renderCommunityRow(item)}
+              />
+            )}
+          </View>
+
+          {/* Right: bootcamp rooms + search */}
+          <View style={styles.desktopBootcampCol}>
+            <View style={styles.desktopColHeader}>
+              <Text style={[styles.desktopColTitle, { color: colors.mutedForeground }]}>BOOTCAMP ROOMS</Text>
+              {bootcampSection && (
+                <View style={[styles.countBadge, { backgroundColor: colors.muted }]}>
+                  <Text style={[styles.countBadgeText, { color: colors.mutedForeground }]}>{bootcampSection.data.length}</Text>
+                </View>
+              )}
+              <View style={{ flex: 1 }} />
+              <View style={[styles.desktopSearch, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+                <Feather name="search" size={13} color={colors.mutedForeground} />
+                <TextInput
+                  style={[styles.desktopSearchInput, { color: colors.foreground }]}
+                  placeholder="Search..."
+                  placeholderTextColor={colors.mutedForeground}
+                  value={search}
+                  onChangeText={setSearch}
+                />
+              </View>
+            </View>
+            {isLoading ? (
+              <View style={styles.center}><ActivityIndicator color={colors.primary} /></View>
+            ) : (
+              <FlatList
+                data={bootcampSection?.data ?? []}
+                keyExtractor={(c) => c.id}
+                contentContainerStyle={styles.desktopColList}
+                showsVerticalScrollIndicator={false}
+                ListEmptyComponent={
+                  <View style={styles.colEmpty}>
+                    <Feather name="book-open" size={24} color={colors.mutedForeground} />
+                    <Text style={[styles.colEmptyText, { color: colors.mutedForeground }]}>No bootcamp rooms</Text>
+                  </View>
+                }
+                renderItem={({ item }) => renderBootcampRow(item)}
+              />
+            )}
+          </View>
+        </View>
+      </View>
+    );
+  }
+
+  // ── Mobile Layout ──
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View
@@ -205,76 +361,14 @@ export default function ChatScreen() {
             Club channels
           </Text>
         </View>
-
-        <View
-          style={[
-            styles.searchBar,
-            { backgroundColor: colors.muted, borderColor: colors.border },
-          ]}
-        >
-          <Feather name="search" size={16} color={colors.mutedForeground} />
-          <TextInput
-            style={[styles.searchInput, { color: colors.foreground }]}
-            placeholder="Search channels..."
-            placeholderTextColor={colors.mutedForeground}
-            value={search}
-            onChangeText={setSearch}
-            returnKeyType="search"
-            clearButtonMode="while-editing"
-          />
-          {search.length > 0 && (
-            <TouchableOpacity onPress={() => setSearch("")} activeOpacity={0.7}>
-              <Feather name="x" size={15} color={colors.mutedForeground} />
-            </TouchableOpacity>
-          )}
-        </View>
+        {searchBar}
       </View>
 
       {isLoading ? (
         <View style={styles.center}>
           <ActivityIndicator color={colors.primary} />
         </View>
-      ) : (
-        <SectionList
-          sections={sections}
-          keyExtractor={(c) => c.id}
-          contentContainerStyle={styles.list}
-          showsVerticalScrollIndicator={false}
-          stickySectionHeadersEnabled={false}
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <Feather name="message-circle" size={40} color={colors.mutedForeground} />
-              <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
-                {search ? "No channels found" : "No channels yet"}
-              </Text>
-              {search && (
-                <Text style={[styles.emptySub, { color: colors.mutedForeground }]}>
-                  Try a different search term
-                </Text>
-              )}
-            </View>
-          }
-          renderSectionHeader={({ section }) => (
-            <View style={styles.sectionHeader}>
-              <Feather name={section.icon} size={14} color={colors.mutedForeground} />
-              <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>
-                {section.title.toUpperCase()}
-              </Text>
-              <View style={[styles.sectionCount, { backgroundColor: colors.muted }]}>
-                <Text style={[styles.sectionCountText, { color: colors.mutedForeground }]}>
-                  {section.data.length}
-                </Text>
-              </View>
-            </View>
-          )}
-          renderItem={({ item, section }) =>
-            section.title === "Bootcamp Rooms"
-              ? renderBootcampRow(item)
-              : renderCommunityRow(item)
-          }
-          SectionSeparatorComponent={() => <View style={{ height: 8 }} />}
-        />
-      )}
+      ) : sectionListEl}
     </View>
   );
 }
@@ -297,6 +391,46 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, fontSize: 14 },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   list: { paddingTop: 8, paddingHorizontal: 16, paddingBottom: 100 },
+
+  // Desktop
+  desktopTopBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 32,
+    paddingVertical: 18,
+    borderBottomWidth: 1,
+  },
+  desktopPageTitle: { fontSize: 22, fontWeight: "800", fontFamily: "Inter_700Bold" },
+  desktopPageSub: { fontSize: 13, marginTop: 2 },
+  desktopBody: { flex: 1, flexDirection: "row" },
+  desktopCommunityCol: { width: 320, borderRightWidth: 1 },
+  desktopBootcampCol: { flex: 1 },
+  desktopColHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "transparent",
+  },
+  desktopColTitle: { fontSize: 10, fontWeight: "700", letterSpacing: 0.8 },
+  countBadge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 10 },
+  countBadgeText: { fontSize: 10, fontWeight: "700" },
+  desktopSearch: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  desktopSearchInput: { fontSize: 13, width: 120 },
+  desktopColList: { paddingHorizontal: 16, paddingBottom: 60, paddingTop: 4 },
+  colEmpty: { alignItems: "center", paddingTop: 48, gap: 8 },
+  colEmptyText: { fontSize: 13 },
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",

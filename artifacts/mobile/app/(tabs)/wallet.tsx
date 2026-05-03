@@ -26,6 +26,7 @@ import {
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
+import { useBreakpoint } from "@/hooks/useBreakpoint";
 import type { XpEvent, BankAccount } from "@workspace/api-client-react";
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -88,7 +89,8 @@ export default function WalletScreen() {
   const insets = useSafeAreaInsets();
   const { user, token } = useAuth();
   const qc = useQueryClient();
-  const topPadding = Platform.OS === "web" ? 67 : insets.top;
+  const { isDesktop } = useBreakpoint();
+  const topPadding = Platform.OS === "web" ? (isDesktop ? 0 : 67) : insets.top;
   const bottomPadding = Platform.OS === "web" ? 0 : insets.bottom;
 
   const [activeTab, setActiveTab] = useState<ActiveTab>("activity");
@@ -262,6 +264,219 @@ export default function WalletScreen() {
     </View>
   );
 
+  const modals = (
+    <>
+      {/* ── Add Funds Modal ── */}
+      <Modal visible={addModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalSheet, { backgroundColor: colors.card }]}>
+            <View style={styles.modalHandle} />
+            <Text style={[styles.modalTitle, { color: colors.foreground }]}>Add Funds</Text>
+            <Text style={[styles.modalSub, { color: colors.mutedForeground }]}>Top up your Zero Wallet cash balance</Text>
+            <View style={styles.presetRow}>
+              {PRESET_AMOUNTS.map((p) => (
+                <TouchableOpacity key={p.kobo} style={[styles.presetBtn, { backgroundColor: colors.muted, borderColor: colors.border }]} onPress={() => setAddAmount(String(p.kobo / 100))} activeOpacity={0.8}>
+                  <Text style={[styles.presetText, { color: colors.foreground }]}>{p.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Custom amount (₦)</Text>
+            <View style={[styles.inputWrap, { backgroundColor: colors.muted }]}>
+              <Text style={[styles.currencySymbol, { color: colors.mutedForeground }]}>₦</Text>
+              <TextInput style={[styles.input, { color: colors.foreground }]} placeholder="0.00" placeholderTextColor={colors.mutedForeground} keyboardType="decimal-pad" value={addAmount} onChangeText={setAddAmount} />
+            </View>
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={[styles.modalCancelBtn, { backgroundColor: colors.muted }]} onPress={() => { setAddModal(false); setAddAmount(""); }}>
+                <Text style={[styles.modalCancelText, { color: colors.mutedForeground }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.modalSubmitBtn, { backgroundColor: addLoading ? colors.muted : "#10B981" }]} onPress={handleAddSubmit} disabled={addLoading}>
+                {addLoading ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.modalSubmitText}>Add Funds</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Withdraw Modal ── */}
+      <Modal visible={withdrawModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalSheet, { backgroundColor: colors.card }]}>
+            <View style={styles.modalHandle} />
+            <Text style={[styles.modalTitle, { color: colors.foreground }]}>Withdraw XP</Text>
+            <Text style={[styles.modalSub, { color: colors.mutedForeground }]}>1,000 XP = {formatNaira(10000)} · Min {(wallet?.minWithdrawalXp ?? 2000).toLocaleString()} XP</Text>
+            {!canWithdraw && (
+              <View style={[styles.warnBox, { backgroundColor: "#F59E0B18", borderColor: "#F59E0B44" }]}>
+                <Feather name="alert-triangle" size={14} color="#F59E0B" />
+                <Text style={[styles.warnText, { color: "#F59E0B" }]}>You need {(minXp - (wallet?.xpBalance ?? 0)).toLocaleString()} more XP to withdraw.</Text>
+              </View>
+            )}
+            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>XP to withdraw</Text>
+            <View style={[styles.inputWrap, { backgroundColor: colors.muted }]}>
+              <Feather name="zap" size={16} color={colors.xpGold} />
+              <TextInput style={[styles.input, { color: colors.foreground }]} placeholder={`Min ${wallet?.minWithdrawalXp ?? 2000}`} placeholderTextColor={colors.mutedForeground} keyboardType="number-pad" value={withdrawXp} onChangeText={setWithdrawXp} />
+              {withdrawXp && !isNaN(parseInt(withdrawXp, 10)) && (
+                <Text style={[styles.convertedAmt, { color: "#10B981" }]}>= {formatNaira(parseInt(withdrawXp, 10) * 10)}</Text>
+              )}
+            </View>
+            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Bank account</Text>
+            {!bankAccounts?.length ? (
+              <View style={[styles.noAccountBox, { backgroundColor: colors.muted }]}>
+                <Feather name="alert-circle" size={15} color={colors.mutedForeground} />
+                <Text style={[styles.noAccountText, { color: colors.mutedForeground }]}>No bank account added. Go to Settings to add one.</Text>
+              </View>
+            ) : (
+              <ScrollView style={styles.accountList} showsVerticalScrollIndicator={false}>
+                {bankAccounts.map((acct) => (
+                  <TouchableOpacity key={acct.id} style={[styles.accountOption, { backgroundColor: selectedAccount?.id === acct.id ? colors.primary + "22" : colors.muted, borderColor: selectedAccount?.id === acct.id ? colors.primary : colors.border }]} onPress={() => setSelectedAccount(acct)} activeOpacity={0.8}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.accountBank, { color: colors.foreground }]}>{acct.bankName}</Text>
+                      <Text style={[styles.accountDetail, { color: colors.mutedForeground }]}>{acct.accountNumber} · {acct.accountName}</Text>
+                    </View>
+                    {selectedAccount?.id === acct.id && <Feather name="check-circle" size={18} color={colors.primary} />}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            )}
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={[styles.modalCancelBtn, { backgroundColor: colors.muted }]} onPress={() => setWithdrawModal(false)}>
+                <Text style={[styles.modalCancelText, { color: colors.mutedForeground }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.modalSubmitBtn, { backgroundColor: createWithdrawal.isPending ? colors.muted : colors.primary }]} onPress={handleWithdrawSubmit} disabled={createWithdrawal.isPending}>
+                {createWithdrawal.isPending ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.modalSubmitText}>Request Withdrawal</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </>
+  );
+
+  const activityList = (
+    <SectionList
+      sections={sections}
+      keyExtractor={(item) => item.id}
+      contentContainerStyle={[styles.listContent, { paddingBottom: bottomPadding + 100 }]}
+      showsVerticalScrollIndicator={false}
+      stickySectionHeadersEnabled={false}
+      ListHeaderComponent={
+        canWithdraw ? (
+          <TouchableOpacity style={[styles.featureCard, { backgroundColor: colors.card, borderColor: colors.primary + "50" }]} onPress={() => setWithdrawModal(true)} activeOpacity={0.85}>
+            <View style={[styles.featureCardIcon, { backgroundColor: colors.primary + "22" }]}>
+              <Feather name="arrow-up-right" size={20} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.featureCardTitle, { color: colors.foreground }]}>Withdraw Your XP</Text>
+              <Text style={[styles.featureCardSub, { color: colors.mutedForeground }]}>Convert {wallet?.xpBalance.toLocaleString()} XP → {formatNaira((wallet?.xpBalance ?? 0) * 10)}. Arrives in 1–3 days.</Text>
+            </View>
+            <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
+          </TouchableOpacity>
+        ) : null
+      }
+      ListEmptyComponent={
+        <View style={styles.empty}>
+          <View style={[styles.emptyIcon, { backgroundColor: colors.card }]}>
+            <Feather name="zap" size={28} color={colors.mutedForeground} />
+          </View>
+          <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No activity yet</Text>
+          <Text style={[styles.emptySub, { color: colors.mutedForeground }]}>Complete modules, post builds, or earn referral bonuses to see your XP history here.</Text>
+        </View>
+      }
+      renderSectionHeader={({ section }) => (
+        <Text style={[styles.sectionDate, { color: colors.mutedForeground }]}>{section.title}</Text>
+      )}
+      renderItem={({ item }: { item: XpEvent }) => {
+        const icon = SOURCE_ICONS[item.source] ?? "zap";
+        const iconColor = SOURCE_COLORS[item.source] ?? colors.primary;
+        return (
+          <View style={[styles.txRow, { borderBottomColor: colors.border }]}>
+            <View style={[styles.txIcon, { backgroundColor: iconColor + "20" }]}>
+              <Feather name={icon} size={15} color={iconColor} />
+            </View>
+            <View style={styles.txInfo}>
+              <Text style={[styles.txLabel, { color: colors.foreground }]}>{SOURCE_LABELS[item.source] ?? item.source}</Text>
+              {item.detail && <Text style={[styles.txDetail, { color: colors.mutedForeground }]} numberOfLines={1}>{item.detail}</Text>}
+            </View>
+            {item.amount > 0 && <Text style={[styles.txAmount, { color: colors.xpGold }]}>+{item.amount} XP</Text>}
+          </View>
+        );
+      }}
+    />
+  );
+
+  // ── Desktop Layout ──
+  if (isDesktop) {
+    return (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        {/* Desktop top bar with hero info inline */}
+        <LinearGradient
+          colors={["#4F52D3", "#6366F1", "#818CF8"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.desktopHero}
+        >
+          <View style={styles.deco1} />
+          <View style={styles.deco2} />
+          <View style={styles.desktopHeroLeft}>
+            <Text style={styles.heroLabel}>Zero Wallet</Text>
+            <Text style={styles.desktopHeroBalance}>
+              {walletLoading ? "—" : (wallet?.xpBalance ?? 0).toLocaleString()}
+              <Text style={styles.desktopHeroUnit}> XP</Text>
+            </Text>
+            <View style={styles.heroBadgeRow}>
+              <View style={styles.heroBadge}>
+                <Feather name="zap" size={11} color="#6366F1" />
+                <Text style={styles.heroBadgeText}>{canWithdraw ? "Withdrawals Unlocked" : `${minXp.toLocaleString()} XP to withdraw`}</Text>
+              </View>
+              <View style={[styles.heroBadge, { backgroundColor: "rgba(255,255,255,0.18)" }]}>
+                <Feather name="credit-card" size={11} color="#fff" />
+                <Text style={[styles.heroBadgeText, { color: "#fff" }]}>{walletLoading ? "—" : formatNaira(wallet?.fundsBalance ?? 0)} Cash</Text>
+              </View>
+            </View>
+          </View>
+          <View style={styles.desktopHeroActions}>
+            <TouchableOpacity style={[styles.desktopActionBtn, { backgroundColor: "#fff" }]} onPress={() => setAddModal(true)} activeOpacity={0.85}>
+              <Feather name="plus" size={15} color="#6366F1" />
+              <Text style={[styles.desktopActionText, { color: "#6366F1" }]}>Add Funds</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.desktopActionBtn, { backgroundColor: canWithdraw ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.08)", opacity: canWithdraw ? 1 : 0.6 }]}
+              onPress={() => setWithdrawModal(true)}
+              activeOpacity={canWithdraw ? 0.85 : 0.5}
+            >
+              <Feather name="arrow-up-right" size={15} color="#fff" />
+              <Text style={[styles.desktopActionText, { color: "#fff" }]}>Withdraw</Text>
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
+
+        {/* Desktop body: activity + stats side by side */}
+        <View style={styles.desktopBody}>
+          {/* Activity column */}
+          <View style={styles.desktopActivityCol}>
+            <View style={[styles.desktopColHeader2, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.desktopColTitle, { color: colors.foreground }]}>XP Activity</Text>
+              <Text style={[styles.desktopColSub, { color: colors.mutedForeground }]}>Your earn history</Text>
+            </View>
+            {activityList}
+          </View>
+
+          {/* Stats column */}
+          <View style={[styles.desktopStatsCol, { borderLeftColor: colors.border }]}>
+            <View style={[styles.desktopColHeader2, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.desktopColTitle, { color: colors.foreground }]}>Stats</Text>
+              <Text style={[styles.desktopColSub, { color: colors.mutedForeground }]}>Your progress</Text>
+            </View>
+            <ScrollView contentContainerStyle={[styles.statsScroll, { paddingBottom: 60 }]} showsVerticalScrollIndicator={false}>
+              {statsContent}
+            </ScrollView>
+          </View>
+        </View>
+        {modals}
+      </View>
+    );
+  }
+
+  // ── Mobile Layout ──
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
 
@@ -348,244 +563,11 @@ export default function WalletScreen() {
 
       {/* ── Content ── */}
       {activeTab === "stats" ? (
-        <ScrollView
-          contentContainerStyle={[styles.statsScroll, { paddingBottom: bottomPadding + 100 }]}
-          showsVerticalScrollIndicator={false}
-        >
+        <ScrollView contentContainerStyle={[styles.statsScroll, { paddingBottom: bottomPadding + 100 }]} showsVerticalScrollIndicator={false}>
           {statsContent}
         </ScrollView>
-      ) : (
-        <SectionList
-          sections={sections}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={[styles.listContent, { paddingBottom: bottomPadding + 100 }]}
-          showsVerticalScrollIndicator={false}
-          stickySectionHeadersEnabled={false}
-          ListHeaderComponent={
-            canWithdraw ? (
-              <TouchableOpacity
-                style={[styles.featureCard, { backgroundColor: colors.card, borderColor: colors.primary + "50" }]}
-                onPress={() => setWithdrawModal(true)}
-                activeOpacity={0.85}
-              >
-                <View style={[styles.featureCardIcon, { backgroundColor: colors.primary + "22" }]}>
-                  <Feather name="arrow-up-right" size={20} color={colors.primary} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.featureCardTitle, { color: colors.foreground }]}>
-                    Withdraw Your XP
-                  </Text>
-                  <Text style={[styles.featureCardSub, { color: colors.mutedForeground }]}>
-                    Convert {wallet?.xpBalance.toLocaleString()} XP → {formatNaira((wallet?.xpBalance ?? 0) * 10)}. Arrives in 1–3 days.
-                  </Text>
-                </View>
-                <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
-              </TouchableOpacity>
-            ) : null
-          }
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <View style={[styles.emptyIcon, { backgroundColor: colors.card }]}>
-                <Feather name="zap" size={28} color={colors.mutedForeground} />
-              </View>
-              <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No activity yet</Text>
-              <Text style={[styles.emptySub, { color: colors.mutedForeground }]}>
-                Complete modules, post builds, or earn referral bonuses to see your XP history here.
-              </Text>
-            </View>
-          }
-          renderSectionHeader={({ section }) => (
-            <Text style={[styles.sectionDate, { color: colors.mutedForeground }]}>
-              {section.title}
-            </Text>
-          )}
-          renderItem={({ item }: { item: XpEvent }) => {
-            const icon = SOURCE_ICONS[item.source] ?? "zap";
-            const iconColor = SOURCE_COLORS[item.source] ?? colors.primary;
-            return (
-              <View style={[styles.txRow, { borderBottomColor: colors.border }]}>
-                <View style={[styles.txIcon, { backgroundColor: iconColor + "20" }]}>
-                  <Feather name={icon} size={15} color={iconColor} />
-                </View>
-                <View style={styles.txInfo}>
-                  <Text style={[styles.txLabel, { color: colors.foreground }]}>
-                    {SOURCE_LABELS[item.source] ?? item.source}
-                  </Text>
-                  {item.detail && (
-                    <Text style={[styles.txDetail, { color: colors.mutedForeground }]} numberOfLines={1}>
-                      {item.detail}
-                    </Text>
-                  )}
-                </View>
-                {item.amount > 0 && (
-                  <Text style={[styles.txAmount, { color: colors.xpGold }]}>
-                    +{item.amount} XP
-                  </Text>
-                )}
-              </View>
-            );
-          }}
-        />
-      )}
-
-      {/* ── Add Funds Modal ── */}
-      <Modal visible={addModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalSheet, { backgroundColor: colors.card }]}>
-            <View style={styles.modalHandle} />
-            <Text style={[styles.modalTitle, { color: colors.foreground }]}>Add Funds</Text>
-            <Text style={[styles.modalSub, { color: colors.mutedForeground }]}>
-              Top up your Zero Wallet cash balance
-            </Text>
-
-            <View style={styles.presetRow}>
-              {PRESET_AMOUNTS.map((p) => (
-                <TouchableOpacity
-                  key={p.kobo}
-                  style={[styles.presetBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
-                  onPress={() => setAddAmount(String(p.kobo / 100))}
-                  activeOpacity={0.8}
-                >
-                  <Text style={[styles.presetText, { color: colors.foreground }]}>{p.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Custom amount (₦)</Text>
-            <View style={[styles.inputWrap, { backgroundColor: colors.muted }]}>
-              <Text style={[styles.currencySymbol, { color: colors.mutedForeground }]}>₦</Text>
-              <TextInput
-                style={[styles.input, { color: colors.foreground }]}
-                placeholder="0.00"
-                placeholderTextColor={colors.mutedForeground}
-                keyboardType="decimal-pad"
-                value={addAmount}
-                onChangeText={setAddAmount}
-              />
-            </View>
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[styles.modalCancelBtn, { backgroundColor: colors.muted }]}
-                onPress={() => { setAddModal(false); setAddAmount(""); }}
-              >
-                <Text style={[styles.modalCancelText, { color: colors.mutedForeground }]}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalSubmitBtn, { backgroundColor: addLoading ? colors.muted : "#10B981" }]}
-                onPress={handleAddSubmit}
-                disabled={addLoading}
-              >
-                {addLoading ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Text style={styles.modalSubmitText}>Add Funds</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* ── Withdraw Modal ── */}
-      <Modal visible={withdrawModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalSheet, { backgroundColor: colors.card }]}>
-            <View style={styles.modalHandle} />
-            <Text style={[styles.modalTitle, { color: colors.foreground }]}>Withdraw XP</Text>
-            <Text style={[styles.modalSub, { color: colors.mutedForeground }]}>
-              1,000 XP = {formatNaira(10000)} · Min {(wallet?.minWithdrawalXp ?? 2000).toLocaleString()} XP
-            </Text>
-
-            {!canWithdraw && (
-              <View style={[styles.warnBox, { backgroundColor: "#F59E0B18", borderColor: "#F59E0B44" }]}>
-                <Feather name="alert-triangle" size={14} color="#F59E0B" />
-                <Text style={[styles.warnText, { color: "#F59E0B" }]}>
-                  You need {(minXp - (wallet?.xpBalance ?? 0)).toLocaleString()} more XP to withdraw.
-                </Text>
-              </View>
-            )}
-
-            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>XP to withdraw</Text>
-            <View style={[styles.inputWrap, { backgroundColor: colors.muted }]}>
-              <Feather name="zap" size={16} color={colors.xpGold} />
-              <TextInput
-                style={[styles.input, { color: colors.foreground }]}
-                placeholder={`Min ${wallet?.minWithdrawalXp ?? 2000}`}
-                placeholderTextColor={colors.mutedForeground}
-                keyboardType="number-pad"
-                value={withdrawXp}
-                onChangeText={setWithdrawXp}
-              />
-              {withdrawXp && !isNaN(parseInt(withdrawXp, 10)) && (
-                <Text style={[styles.convertedAmt, { color: "#10B981" }]}>
-                  = {formatNaira(parseInt(withdrawXp, 10) * 10)}
-                </Text>
-              )}
-            </View>
-
-            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Bank account</Text>
-            {!bankAccounts?.length ? (
-              <View style={[styles.noAccountBox, { backgroundColor: colors.muted }]}>
-                <Feather name="alert-circle" size={15} color={colors.mutedForeground} />
-                <Text style={[styles.noAccountText, { color: colors.mutedForeground }]}>
-                  No bank account added. Go to Settings to add one.
-                </Text>
-              </View>
-            ) : (
-              <ScrollView style={styles.accountList} showsVerticalScrollIndicator={false}>
-                {bankAccounts.map((acct) => (
-                  <TouchableOpacity
-                    key={acct.id}
-                    style={[
-                      styles.accountOption,
-                      {
-                        backgroundColor: selectedAccount?.id === acct.id ? colors.primary + "22" : colors.muted,
-                        borderColor: selectedAccount?.id === acct.id ? colors.primary : colors.border,
-                      },
-                    ]}
-                    onPress={() => setSelectedAccount(acct)}
-                    activeOpacity={0.8}
-                  >
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.accountBank, { color: colors.foreground }]}>{acct.bankName}</Text>
-                      <Text style={[styles.accountDetail, { color: colors.mutedForeground }]}>
-                        {acct.accountNumber} · {acct.accountName}
-                      </Text>
-                    </View>
-                    {selectedAccount?.id === acct.id && (
-                      <Feather name="check-circle" size={18} color={colors.primary} />
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            )}
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[styles.modalCancelBtn, { backgroundColor: colors.muted }]}
-                onPress={() => setWithdrawModal(false)}
-              >
-                <Text style={[styles.modalCancelText, { color: colors.mutedForeground }]}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.modalSubmitBtn,
-                  { backgroundColor: createWithdrawal.isPending ? colors.muted : colors.primary },
-                ]}
-                onPress={handleWithdrawSubmit}
-                disabled={createWithdrawal.isPending}
-              >
-                {createWithdrawal.isPending ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <Text style={styles.modalSubmitText}>Request Withdrawal</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      ) : activityList}
+      {modals}
     </View>
   );
 }
@@ -593,7 +575,50 @@ export default function WalletScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
 
-  // Hero
+  // Desktop
+  desktopHero: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 32,
+    paddingVertical: 28,
+    overflow: "hidden",
+    gap: 24,
+  },
+  desktopHeroLeft: { flex: 1, gap: 6 },
+  desktopHeroBalance: {
+    color: "#fff",
+    fontSize: 44,
+    fontWeight: "900",
+    fontFamily: "Inter_700Bold",
+    letterSpacing: -1,
+  },
+  desktopHeroUnit: {
+    color: "rgba(255,255,255,0.7)",
+    fontSize: 22,
+    fontWeight: "400",
+  },
+  desktopHeroActions: { flexDirection: "row", gap: 10, flexShrink: 0 },
+  desktopActionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  desktopActionText: { fontSize: 14, fontWeight: "700" },
+  desktopBody: { flex: 1, flexDirection: "row" },
+  desktopActivityCol: { flex: 1 },
+  desktopStatsCol: { width: 340, borderLeftWidth: 1 },
+  desktopColHeader2: {
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+  },
+  desktopColTitle: { fontSize: 16, fontWeight: "700" },
+  desktopColSub: { fontSize: 12, marginTop: 2 },
+
+  // Hero (mobile)
   hero: {
     paddingHorizontal: 24,
     paddingBottom: 28,
