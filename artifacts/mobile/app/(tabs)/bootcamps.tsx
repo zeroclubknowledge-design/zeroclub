@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Platform } from "react-native";
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Platform, TextInput } from "react-native";
 import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -14,8 +14,13 @@ export default function BootcampsScreen() {
   const insets = useSafeAreaInsets();
   const topPadding = Platform.OS === "web" ? 16 : insets.top;
   const { data: bootcamps, isLoading } = useQuery(getListBootcampsQueryOptions());
+  const [search, setSearch] = React.useState("");
 
-  const list = bootcamps ?? [];
+  const list = (bootcamps ?? []).filter((item) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return [item.title, item.subtitle, item.track].some((v) => v?.toLowerCase().includes(q));
+  });
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -23,8 +28,21 @@ export default function BootcampsScreen() {
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
           <Feather name="arrow-left" size={22} color={colors.foreground} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.foreground }]}>Bootcamps</Text>
+        <View style={styles.headerTextWrap}>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>Bootcamps</Text>
+          <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>Explore learning tracks and join the right one for you.</Text>
+        </View>
         <View style={styles.backBtn} />
+      </View>
+      <View style={[styles.searchWrap, { borderBottomColor: colors.border }]}>
+        <Feather name="search" size={16} color={colors.mutedForeground} />
+        <TextInput
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Search bootcamps"
+          placeholderTextColor={colors.mutedForeground}
+          style={[styles.searchInput, { color: colors.foreground }]}
+        />
       </View>
 
       {isLoading ? (
@@ -70,7 +88,11 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingBottom: 14, borderBottomWidth: 1 },
   backBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
-  headerTitle: { flex: 1, textAlign: "center", fontSize: 17, fontWeight: "700" },
+  headerTextWrap: { flex: 1, gap: 2, paddingHorizontal: 8 },
+  headerTitle: { fontSize: 17, fontWeight: "700" },
+  headerSub: { fontSize: 12, lineHeight: 16 },
+  searchWrap: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1 },
+  searchInput: { flex: 1, fontSize: 14, paddingVertical: 0 },
   list: { padding: 16, paddingBottom: 32 },
   center: { flex: 1, alignItems: "center", justifyContent: "center", paddingHorizontal: 32, gap: 10 },
   emptyTitle: { fontSize: 18, fontWeight: "700", textAlign: "center" },

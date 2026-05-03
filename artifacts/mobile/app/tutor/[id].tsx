@@ -20,19 +20,6 @@ export default function TutorBootcampScreen() {
         <Text style={[styles.cardTitle, { color: colors.foreground }]}>Bootcamp ID</Text>
         <Text style={[styles.cardValue, { color: colors.mutedForeground }]}>{id}</Text>
       </View>
-
-      <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-        <Text style={[styles.cardTitle, { color: colors.foreground }]}>What you can manage</Text>
-        <Text style={[styles.cardValue, { color: colors.mutedForeground }]}>• Modules and lessons</Text>
-        <Text style={[styles.cardValue, { color: colors.mutedForeground }]}>• Students and progress</Text>
-        <Text style={[styles.cardValue, { color: colors.mutedForeground }]}>• Pricing and fee settings</Text>
-        <Text style={[styles.cardValue, { color: colors.mutedForeground }]}>• Bootcamp room setup</Text>
-      </View>
-
-      <TouchableOpacity style={[styles.button, { backgroundColor: colors.primary }]} onPress={() => router.push("/tutor/create")}>
-        <Feather name="plus" size={16} color="#fff" />
-        <Text style={styles.buttonText}>Create another bootcamp</Text>
-      </TouchableOpacity>
     </ScrollView>
   );
 }
