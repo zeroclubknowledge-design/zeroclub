@@ -4,14 +4,13 @@ import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
 import { useQuery } from "@tanstack/react-query";
-import { getListTutorBootcampsQueryOptions, getTutorStatsQueryOptions } from "@workspace/api-client-react";
+import { getListBootcampsQueryOptions } from "@workspace/api-client-react";
 
 export default function StudioScreen() {
   const colors = useColors();
   const router = useRouter();
-  const { data: bootcamps, isLoading } = useQuery(getListTutorBootcampsQueryOptions());
-  const { data: stats } = useQuery(getTutorStatsQueryOptions());
-  const myBootcamps = bootcamps ?? [];
+  const { data: bootcamps, isLoading } = useQuery(getListBootcampsQueryOptions());
+  const myBootcamps = (bootcamps ?? []).filter((b) => b.tutorId);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -24,16 +23,6 @@ export default function StudioScreen() {
         </TouchableOpacity>
       </View>
       <View style={styles.body}>
-        <View style={styles.statsRow}>
-          <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.statValue, { color: colors.foreground }]}>{stats?.bootcamps ?? 0}</Text>
-            <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Bootcamps</Text>
-          </View>
-          <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.statValue, { color: colors.foreground }]}>{stats?.students ?? 0}</Text>
-            <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Students</Text>
-          </View>
-        </View>
         <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Your bootcamps</Text>
         {isLoading ? (
           <ActivityIndicator color={colors.primary} />
@@ -60,15 +49,11 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   header: { padding: 20, gap: 10, borderBottomWidth: 1 },
   body: { flex: 1, padding: 20, gap: 12 },
-  statsRow: { flexDirection: "row", gap: 12 },
   title: { fontSize: 24, fontWeight: "700" },
   sub: { fontSize: 14 },
   sectionTitle: { fontSize: 16, fontWeight: "700" },
   button: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 12, alignSelf: "flex-start" },
   buttonText: { color: "#fff", fontWeight: "700" },
-  statCard: { flex: 1, borderWidth: 1, borderRadius: 14, padding: 14, gap: 4 },
-  statValue: { fontSize: 20, fontWeight: "800" },
-  statLabel: { fontSize: 12 },
   empty: { fontSize: 14 },
   card: { borderWidth: 1, borderRadius: 14, padding: 14, gap: 4, marginBottom: 10 },
   cardTitle: { fontSize: 15, fontWeight: "700" },
