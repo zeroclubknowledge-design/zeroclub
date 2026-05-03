@@ -11,7 +11,7 @@ import {
   TextInput,
   ScrollView,
 } from "react-native";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import {
@@ -60,16 +60,26 @@ function formatNaira(kobo: number): string {
   return `₦${(kobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 2 })}`;
 }
 
+const PRESET_AMOUNTS = [
+  { label: "₦1,000", kobo: 100_000 },
+  { label: "₦5,000", kobo: 500_000 },
+  { label: "₦10,000", kobo: 1_000_000 },
+  { label: "₦50,000", kobo: 5_000_000 },
+];
+
 export default function WalletScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const qc = useQueryClient();
   const topPadding = Platform.OS === "web" ? 67 : insets.top;
 
   const [withdrawModal, setWithdrawModal] = useState(false);
+  const [addModal, setAddModal] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<BankAccount | null>(null);
   const [withdrawXp, setWithdrawXp] = useState("");
+  const [addAmount, setAddAmount] = useState("");
+  const [addLoading, setAddLoading] = useState(false);
 
   const { data: wallet, isLoading: walletLoading } = useQuery(getGetWalletQueryOptions());
   const { data: events, isLoading: eventsLoading } = useQuery(getListXpEventsQueryOptions());
@@ -92,7 +102,6 @@ export default function WalletScreen() {
         )
       : 0;
 
-  const canWithdraw = wallet && wallet.xpBalance >= (wallet.minWithdrawalXp ?? 2000);
   const minXp = wallet?.minWithdrawalXp ?? 2000;
 
   const handleWithdrawSubmit = () => {
@@ -131,6 +140,55 @@ export default function WalletScreen() {
     );
   };
 
+  const handleAddFunds = async (kobo: number) => {
+    if (!kobo || kobo <= 0) {
+      showToast({ type: "warning", title: "Invalid amount", message: "Enter a valid amount to add." });
+      return;
+    }
+    setAddLoading(true);
+    try {
+      const domain = process.env["EXPO_PUBLIC_DOMAIN"];
+      const baseUrl = domain ? `https://${domain}` : "";
+      const res = await fetch(`${baseUrl}/api/wallet/add-funds`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token ?? ""}`,
+        },
+        body: JSON.stringify({ amountKobo: kobo }),
+      });
+      if (!res.ok) {
+        const err = await res.json() as { message?: string };
+        showToast({ type: "error", title: "Failed", message: err.message ?? "Could not add funds." });
+        return;
+      }
+      const data = await res.json() as { fundsBalance: number };
+      qc.invalidateQueries({ queryKey: getGetWalletQueryKey() });
+      setAddModal(false);
+      setAddAmount("");
+      showToast({
+        type: "success",
+        title: "Funds Added",
+        message: `${formatNaira(kobo)} added. New balance: ${formatNaira(data.fundsBalance)}`,
+        duration: 4000,
+      });
+    } catch {
+      showToast({ type: "error", title: "Network error", message: "Please check your connection." });
+    } finally {
+      setAddLoading(false);
+    }
+  };
+
+  const handleAddSubmit = () => {
+    const naira = parseFloat(addAmount.replace(/,/g, ""));
+    if (isNaN(naira) || naira <= 0) {
+      showToast({ type: "warning", title: "Invalid amount", message: "Enter a valid amount in Naira." });
+      return;
+    }
+    const kobo = Math.round(naira * 100);
+    void handleAddFunds(kobo);
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View
@@ -149,16 +207,24 @@ export default function WalletScreen() {
             Your points & earnings
           </Text>
         </View>
-        {canWithdraw && (
+        <View style={styles.headerBtns}>
           <TouchableOpacity
-            style={[styles.withdrawHeaderBtn, { backgroundColor: colors.primary }]}
+            style={[styles.headerBtn, { backgroundColor: "#10B981" }]}
+            onPress={() => setAddModal(true)}
+            activeOpacity={0.85}
+          >
+            <Feather name="plus" size={14} color="#fff" />
+            <Text style={styles.headerBtnText}>Add</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.headerBtn, { backgroundColor: colors.primary }]}
             onPress={() => setWithdrawModal(true)}
             activeOpacity={0.85}
           >
             <Feather name="arrow-up-right" size={14} color="#fff" />
-            <Text style={styles.withdrawHeaderText}>Withdraw</Text>
+            <Text style={styles.headerBtnText}>Withdraw</Text>
           </TouchableOpacity>
-        )}
+        </View>
       </View>
 
       <FlatList
@@ -189,7 +255,11 @@ export default function WalletScreen() {
                   </View>
 
                   {/* Cash / Funds */}
-                  <View style={[styles.balanceCard, { backgroundColor: "#001A10", borderColor: "#10B981" + "40" }]}>
+                  <TouchableOpacity
+                    style={[styles.balanceCard, { backgroundColor: "#001A10", borderColor: "#10B981" + "40" }]}
+                    onPress={() => setAddModal(true)}
+                    activeOpacity={0.85}
+                  >
                     <View style={[styles.balanceIconWrap, { backgroundColor: "#10B981" + "20" }]}>
                       <Feather name="credit-card" size={18} color="#10B981" />
                     </View>
@@ -198,7 +268,11 @@ export default function WalletScreen() {
                       {formatNaira(wallet.fundsBalance ?? 0)}
                     </Text>
                     <Text style={[styles.balanceUnit, { color: "#10B98188" }]}>NGN</Text>
-                  </View>
+                    <View style={styles.tapToAdd}>
+                      <Feather name="plus-circle" size={10} color="#10B981" />
+                      <Text style={[styles.tapToAddText, { color: "#10B981" }]}>Tap to add</Text>
+                    </View>
+                  </TouchableOpacity>
                 </View>
 
                 {/* Level Card */}
@@ -234,12 +308,12 @@ export default function WalletScreen() {
                   </View>
                 </View>
 
-                {/* Withdrawal hint */}
-                {!canWithdraw && (
+                {/* Withdrawal hint if below minimum */}
+                {wallet.xpBalance < minXp && (
                   <View style={[styles.hintCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                     <Feather name="info" size={14} color={colors.mutedForeground} />
                     <Text style={[styles.hintText, { color: colors.mutedForeground }]}>
-                      Earn {(minXp - wallet.xpBalance).toLocaleString()} more XP to unlock cash withdrawal (min {minXp.toLocaleString()} XP = {formatNaira(minXp * 10)})
+                      Earn {(minXp - wallet.xpBalance).toLocaleString()} more XP to unlock XP→cash withdrawal (min {minXp.toLocaleString()} XP = {formatNaira(minXp * 10)})
                     </Text>
                   </View>
                 )}
@@ -302,16 +376,81 @@ export default function WalletScreen() {
                   {timeAgo(new Date(item.createdAt as string))}
                 </Text>
               </View>
-              <View style={styles.eventXp}>
-                <Feather name="zap" size={12} color={colors.xpGold} />
-                <Text style={[styles.eventAmount, { color: colors.xpGold }]}>+{item.amount}</Text>
-              </View>
+              {item.amount > 0 && (
+                <View style={styles.eventXp}>
+                  <Feather name="zap" size={12} color={colors.xpGold} />
+                  <Text style={[styles.eventAmount, { color: colors.xpGold }]}>+{item.amount}</Text>
+                </View>
+              )}
             </View>
           );
         }}
       />
 
-      {/* Withdraw Modal */}
+      {/* ── Add Funds Modal ── */}
+      <Modal visible={addModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalSheet, { backgroundColor: colors.card }]}>
+            <View style={styles.modalHandle} />
+            <Text style={[styles.modalTitle, { color: colors.foreground }]}>Add Funds</Text>
+            <Text style={[styles.modalSub, { color: colors.mutedForeground }]}>
+              Add Naira to your Zero Wallet cash balance
+            </Text>
+
+            {/* Preset amounts */}
+            <View style={styles.presetRow}>
+              {PRESET_AMOUNTS.map((p) => (
+                <TouchableOpacity
+                  key={p.kobo}
+                  style={[styles.presetBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
+                  onPress={() => setAddAmount(String(p.kobo / 100))}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.presetText, { color: colors.foreground }]}>{p.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Custom amount (₦)</Text>
+            <View style={[styles.inputWrap, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+              <Text style={[styles.currencySymbol, { color: colors.mutedForeground }]}>₦</Text>
+              <TextInput
+                style={[styles.input, { color: colors.foreground }]}
+                placeholder="0.00"
+                placeholderTextColor={colors.mutedForeground}
+                keyboardType="decimal-pad"
+                value={addAmount}
+                onChangeText={setAddAmount}
+              />
+            </View>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalCancelBtn, { backgroundColor: colors.muted }]}
+                onPress={() => { setAddModal(false); setAddAmount(""); }}
+              >
+                <Text style={[styles.modalCancelText, { color: colors.mutedForeground }]}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.modalSubmitBtn,
+                  { backgroundColor: addLoading ? colors.muted : "#10B981" },
+                ]}
+                onPress={handleAddSubmit}
+                disabled={addLoading}
+              >
+                {addLoading ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.modalSubmitText}>Add Funds</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Withdraw Modal ── */}
       <Modal visible={withdrawModal} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={[styles.modalSheet, { backgroundColor: colors.card }]}>
@@ -320,6 +459,15 @@ export default function WalletScreen() {
             <Text style={[styles.modalSub, { color: colors.mutedForeground }]}>
               1,000 XP = {formatNaira(10000)} · Min {(wallet?.minWithdrawalXp ?? 2000).toLocaleString()} XP
             </Text>
+
+            {wallet && wallet.xpBalance < minXp && (
+              <View style={[styles.warnBox, { backgroundColor: "#F59E0B18", borderColor: "#F59E0B44" }]}>
+                <Feather name="alert-triangle" size={14} color="#F59E0B" />
+                <Text style={[styles.warnText, { color: "#F59E0B" }]}>
+                  You need {(minXp - wallet.xpBalance).toLocaleString()} more XP to withdraw.
+                </Text>
+              </View>
+            )}
 
             <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>XP to withdraw</Text>
             <View style={[styles.inputWrap, { backgroundColor: colors.muted, borderColor: colors.border }]}>
@@ -419,7 +567,8 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 26, fontWeight: "800", fontFamily: "Inter_700Bold" },
   headerSub: { fontSize: 12, marginTop: 1 },
-  withdrawHeaderBtn: {
+  headerBtns: { flexDirection: "row", gap: 8 },
+  headerBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
@@ -427,7 +576,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 10,
   },
-  withdrawHeaderText: { color: "#fff", fontSize: 13, fontWeight: "700" },
+  headerBtnText: { color: "#fff", fontSize: 13, fontWeight: "700" },
   content: { padding: 16, gap: 12, paddingBottom: 120 },
   headerCards: { gap: 16 },
   balanceRow: { flexDirection: "row", gap: 10 },
@@ -449,6 +598,8 @@ const styles = StyleSheet.create({
   balanceLabel: { fontSize: 11, fontWeight: "600", letterSpacing: 0.3 },
   balanceAmount: { fontSize: 26, fontWeight: "800", fontFamily: "Inter_700Bold" },
   balanceUnit: { fontSize: 11, fontWeight: "600" },
+  tapToAdd: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 4 },
+  tapToAddText: { fontSize: 10, fontWeight: "600" },
   levelCard: {
     borderRadius: 18,
     borderWidth: 1,
@@ -537,6 +688,23 @@ const styles = StyleSheet.create({
   },
   modalTitle: { fontSize: 20, fontWeight: "800", fontFamily: "Inter_700Bold" },
   modalSub: { fontSize: 13, marginTop: -6 },
+  warnBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  warnText: { flex: 1, fontSize: 13, fontWeight: "500" },
+  presetRow: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
+  presetBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  presetText: { fontSize: 13, fontWeight: "600" },
   fieldLabel: {
     fontSize: 11,
     fontWeight: "600",
@@ -544,6 +712,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
     marginBottom: -4,
   },
+  currencySymbol: { fontSize: 16, fontWeight: "700" },
   inputWrap: {
     flexDirection: "row",
     alignItems: "center",

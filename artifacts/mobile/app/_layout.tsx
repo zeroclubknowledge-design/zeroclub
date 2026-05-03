@@ -5,6 +5,7 @@ import {
   Inter_700Bold,
   useFonts,
 } from "@expo-google-fonts/inter";
+import { DarkTheme, ThemeProvider } from "@react-navigation/native";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack, usePathname, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
@@ -18,6 +19,19 @@ import { ToastProvider } from "@/context/ToastContext";
 import { DialogProvider } from "@/context/DialogContext";
 import { setBaseUrl, setAuthTokenGetter } from "@workspace/api-client-react";
 import { registerForPushNotifications } from "@/services/notifications";
+
+const ZERO_THEME = {
+  ...DarkTheme,
+  colors: {
+    ...DarkTheme.colors,
+    background: "#0D0D0D",
+    card: "#1A1A1A",
+    text: "#FFFFFF",
+    border: "#2A2A2A",
+    primary: "#D4387C",
+    notification: "#D4387C",
+  },
+};
 
 SplashScreen.preventAutoHideAsync();
 
@@ -136,22 +150,24 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) return null;
 
   return (
-    <SafeAreaProvider>
-      <ErrorBoundary>
-        <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <GestureHandlerRootView style={{ flex: 1 }}>
-              <KeyboardProvider>
-                <ToastProvider>
-                  <DialogProvider>
-                    <RootLayoutNav />
-                  </DialogProvider>
-                </ToastProvider>
-              </KeyboardProvider>
-            </GestureHandlerRootView>
-          </AuthProvider>
-        </QueryClientProvider>
-      </ErrorBoundary>
-    </SafeAreaProvider>
+    <ThemeProvider value={ZERO_THEME}>
+      <SafeAreaProvider>
+        <ErrorBoundary>
+          <QueryClientProvider client={queryClient}>
+            <AuthProvider>
+              <GestureHandlerRootView style={{ flex: 1, backgroundColor: "#0D0D0D" }}>
+                <KeyboardProvider>
+                  <ToastProvider>
+                    <DialogProvider>
+                      <RootLayoutNav />
+                    </DialogProvider>
+                  </ToastProvider>
+                </KeyboardProvider>
+              </GestureHandlerRootView>
+            </AuthProvider>
+          </QueryClientProvider>
+        </ErrorBoundary>
+      </SafeAreaProvider>
+    </ThemeProvider>
   );
 }

@@ -177,7 +177,7 @@ function ClassicTabLayout() {
     <Tabs
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       tabBar={(props: any) => <FloatingTabBar state={props.state} navigation={props.navigation} />}
-      screenOptions={{ headerShown: false }}
+      screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: "#0D0D0D" } }}
     >
       <Tabs.Screen name="index" />
       <Tabs.Screen name="bootcamps" />

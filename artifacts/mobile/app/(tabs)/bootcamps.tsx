@@ -23,7 +23,6 @@ import { useColors } from "@/hooks/useColors";
 import { BootcampCard } from "@/components/BootcampCard";
 
 const DIFFICULTY_LABELS: Record<string, string> = {
-  all: "All",
   beginner: "Beginner",
   intermediate: "Intermediate",
   advanced: "Advanced",
@@ -35,7 +34,7 @@ const DIFFICULTY_COLORS: Record<string, string> = {
   advanced: "#EF4444",
 };
 
-const DIFFICULTY_FILTERS = ["all", "beginner", "intermediate", "advanced"];
+const DIFFICULTY_FILTERS = ["beginner", "intermediate", "advanced"];
 
 export default function BootcampsScreen() {
   const colors = useColors();
@@ -44,7 +43,7 @@ export default function BootcampsScreen() {
   const topPadding = Platform.OS === "web" ? 67 : insets.top;
 
   const [search, setSearch] = useState("");
-  const [difficulty, setDifficulty] = useState("all");
+  const [difficulty, setDifficulty] = useState("");
 
   const { data: bootcamps, isLoading, refetch, isRefetching } = useQuery(
     getListBootcampsQueryOptions(),
@@ -58,7 +57,7 @@ export default function BootcampsScreen() {
         b.title.toLowerCase().includes(search.toLowerCase()) ||
         b.subtitle?.toLowerCase().includes(search.toLowerCase());
       const matchDifficulty =
-        difficulty === "all" || b.difficulty === difficulty;
+        !difficulty || b.difficulty === difficulty;
       return matchSearch && matchDifficulty;
     });
   }, [bootcamps, search, difficulty]);
