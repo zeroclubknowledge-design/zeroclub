@@ -1,5 +1,5 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
 
@@ -9,6 +9,11 @@ const TRACK_LABELS: Record<string, string> = {
   growth: "Growth",
   branding: "Branding",
   mentorship: "Mentorship",
+  backend: "Backend",
+  full_stack: "Full Stack",
+  vibe_coding: "Vibe Coding",
+  video_editing: "Video Editing",
+  motion_design: "Motion Design",
 };
 
 const DIFFICULTY_COLORS: Record<string, string> = {
@@ -17,12 +22,28 @@ const DIFFICULTY_COLORS: Record<string, string> = {
   advanced: "#EF4444",
 };
 
+const DELIVERY_ICONS: Record<string, string> = {
+  video: "play-circle",
+  live: "radio",
+  text: "book-open",
+  hybrid: "layers",
+};
+
+const DELIVERY_LABELS: Record<string, string> = {
+  video: "Video",
+  live: "Live",
+  text: "Text",
+  hybrid: "Hybrid",
+};
+
 interface BootcampCardProps {
   id: string;
   title: string;
   subtitle: string;
   track: string;
   difficulty: string;
+  deliveryMedium?: string;
+  coverUrl?: string | null;
   modulesCount: number;
   xpReward: number;
   priceCents?: number;
@@ -42,6 +63,8 @@ export function BootcampCard({
   subtitle,
   track,
   difficulty,
+  deliveryMedium,
+  coverUrl,
   modulesCount,
   xpReward,
   priceCents = 0,
@@ -53,6 +76,8 @@ export function BootcampCard({
   const colors = useColors();
   const diffColor = DIFFICULTY_COLORS[difficulty] ?? colors.mutedForeground;
   const isPaid = priceCents > 0;
+  const deliveryIcon = (DELIVERY_ICONS[deliveryMedium ?? ""] ?? "play-circle") as "play-circle" | "radio" | "book-open" | "layers";
+  const deliveryLabel = DELIVERY_LABELS[deliveryMedium ?? ""] ?? "Video";
 
   return (
     <TouchableOpacity
@@ -60,6 +85,15 @@ export function BootcampCard({
       onPress={onPress}
       activeOpacity={0.8}
     >
+      {/* Cover Image */}
+      {coverUrl ? (
+        <Image source={{ uri: coverUrl }} style={styles.coverImage} resizeMode="cover" />
+      ) : (
+        <View style={[styles.coverPlaceholder, { backgroundColor: colors.muted }]}>
+          <Feather name="book" size={32} color={colors.mutedForeground} />
+        </View>
+      )}
+
       <View style={[styles.accentBar, { backgroundColor: colors.primary }]} />
 
       <View style={styles.content}>
@@ -74,6 +108,10 @@ export function BootcampCard({
             <Text style={[styles.tagText, { color: diffColor }]}>
               {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
             </Text>
+          </View>
+          <View style={[styles.tag, { backgroundColor: colors.primary + "22" }]}>
+            <Feather name={deliveryIcon} size={10} color={colors.primary} />
+            <Text style={[styles.tagText, { color: colors.primary }]}>{deliveryLabel}</Text>
           </View>
           {isPaid ? (
             <View style={[styles.tag, { backgroundColor: "#F59E0B22" }]}>
@@ -166,6 +204,16 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginBottom: 12,
     overflow: "hidden",
+  },
+  coverImage: {
+    width: "100%",
+    height: 160,
+  },
+  coverPlaceholder: {
+    width: "100%",
+    height: 120,
+    alignItems: "center",
+    justifyContent: "center",
   },
   accentBar: { height: 3 },
   content: { padding: 16, gap: 8 },

@@ -17,6 +17,13 @@ export const difficultyEnum = pgEnum("difficulty", [
   "advanced",
 ]);
 
+export const deliveryMediumEnum = pgEnum("delivery_medium", [
+  "video",
+  "live",
+  "text",
+  "hybrid",
+]);
+
 export const bootcampsTable = pgTable("bootcamps", {
   id: text("id").primaryKey(),
   title: text("title").notNull(),
@@ -25,6 +32,7 @@ export const bootcampsTable = pgTable("bootcamps", {
   coverUrl: text("cover_url"),
   track: trackEnum("track").notNull(),
   difficulty: difficultyEnum("difficulty").notNull().default("beginner"),
+  deliveryMedium: deliveryMediumEnum("delivery_medium").notNull().default("video"),
   modulesCount: integer("modules_count").notNull().default(0),
   xpReward: integer("xp_reward").notNull().default(0),
   priceCents: integer("price_cents").notNull().default(0),
