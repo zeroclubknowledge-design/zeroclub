@@ -2,12 +2,12 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import { postsTable, profilesTable } from "@workspace/db";
 import { sql, gte } from "drizzle-orm";
-import { requireAuth, type AuthRequest } from "../lib/auth";
+import { optionalAuth, type AuthRequest } from "../lib/auth";
 
 const router = Router();
 
-// GET /feed/summary
-router.get("/summary", requireAuth, async (req: AuthRequest, res) => {
+// GET /feed/summary — public
+router.get("/summary", optionalAuth, async (req: AuthRequest, res) => {
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);

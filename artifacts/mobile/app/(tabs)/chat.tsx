@@ -60,7 +60,7 @@ export default function ChatScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { isDesktop } = useBreakpoint();
-  const topPadding = Platform.OS === "web" ? (isDesktop ? 0 : 67) : insets.top;
+  const topPadding = Platform.OS === "web" ? (isDesktop ? 0 : 16) : insets.top;
   const [search, setSearch] = useState("");
 
   const { data: channels, isLoading } = useQuery(getListChannelsQueryOptions());

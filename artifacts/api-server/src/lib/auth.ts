@@ -30,3 +30,16 @@ export function requireAuth(req: AuthRequest, res: Response, next: NextFunction)
     res.status(401).json({ error: "unauthorized", message: "Invalid or expired token" });
   }
 }
+
+export function optionalAuth(req: AuthRequest, _res: Response, next: NextFunction): void {
+  const auth = req.headers.authorization;
+  if (auth?.startsWith("Bearer ")) {
+    try {
+      const payload = verifyToken(auth.slice(7));
+      req.userId = payload.sub;
+    } catch {
+      // invalid token — continue unauthenticated
+    }
+  }
+  next();
+}

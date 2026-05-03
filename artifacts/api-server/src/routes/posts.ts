@@ -10,7 +10,7 @@ import {
   proofClicksTable,
 } from "@workspace/db";
 import { eq, desc, sql, and } from "drizzle-orm";
-import { requireAuth, type AuthRequest } from "../lib/auth";
+import { requireAuth, optionalAuth, type AuthRequest } from "../lib/auth";
 import { generateId } from "../lib/ids";
 import { computeLevel } from "./auth";
 
@@ -72,8 +72,8 @@ async function enrichPost(post: typeof postsTable.$inferSelect, userId?: string)
   };
 }
 
-// GET /posts
-router.get("/", requireAuth, async (req: AuthRequest, res) => {
+// GET /posts — public with optional auth enrichment
+router.get("/", optionalAuth, async (req: AuthRequest, res) => {
   const limit = Math.min(Number(req.query["limit"] ?? 20), 50);
   const offset = Number(req.query["offset"] ?? 0);
   const track = req.query["track"] as string | undefined;

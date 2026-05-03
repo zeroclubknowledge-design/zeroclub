@@ -90,7 +90,7 @@ export default function WalletScreen() {
   const { user, token } = useAuth();
   const qc = useQueryClient();
   const { isDesktop } = useBreakpoint();
-  const topPadding = Platform.OS === "web" ? (isDesktop ? 0 : 67) : insets.top;
+  const topPadding = Platform.OS === "web" ? (isDesktop ? 0 : 16) : insets.top;
   const bottomPadding = Platform.OS === "web" ? 0 : insets.bottom;
 
   const [activeTab, setActiveTab] = useState<ActiveTab>("activity");

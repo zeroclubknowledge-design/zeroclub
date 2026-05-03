@@ -117,7 +117,7 @@ export default function FeedScreen() {
     [token, qc, params, showToast],
   );
 
-  const topPadding = Platform.OS === "web" ? (isDesktop ? 0 : 67) : insets.top;
+  const topPadding = Platform.OS === "web" ? (isDesktop ? 0 : 16) : insets.top;
   const posts = data?.posts ?? [];
 
   // ── Desktop Layout ──

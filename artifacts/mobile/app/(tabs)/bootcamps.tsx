@@ -41,7 +41,7 @@ export default function BootcampsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { isDesktop } = useBreakpoint();
-  const topPadding = Platform.OS === "web" ? (isDesktop ? 0 : 67) : insets.top;
+  const topPadding = Platform.OS === "web" ? (isDesktop ? 0 : 16) : insets.top;
 
   const [search, setSearch] = useState("");
   const [difficulty, setDifficulty] = useState("");

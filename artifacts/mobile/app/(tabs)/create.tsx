@@ -73,7 +73,7 @@ export default function CreateScreen() {
   const qc = useQueryClient();
   const { token, user } = useAuth();
   const { isDesktop } = useBreakpoint();
-  const topPadding = Platform.OS === "web" ? (isDesktop ? 0 : 67) : insets.top;
+  const topPadding = Platform.OS === "web" ? (isDesktop ? 0 : 16) : insets.top;
   const bottomPadding = Platform.OS === "web" ? (isDesktop ? 40 : 34 + 84) : insets.bottom + 60;
 
   const [body, setBody] = useState("");

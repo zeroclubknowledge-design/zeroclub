@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderRadius: 20,
-    borderWidth: 1,
+    borderWidth: Platform.OS === "web" ? 0 : 1,
     paddingHorizontal: 4,
     paddingVertical: 6,
     width: "100%",
