@@ -23,5 +23,5 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
-  syncBootcampChannels().catch((e) => logger.error({ err: e }, "syncBootcampChannels failed"));
+  syncBootcampChannels().catch((e: unknown) => logger.error({ err: e }, "syncBootcampChannels failed"));
 });

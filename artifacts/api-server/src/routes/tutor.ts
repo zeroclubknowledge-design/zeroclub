@@ -9,7 +9,6 @@ import {
 import { eq, and, asc, sql } from "drizzle-orm";
 import { requireAuth, type AuthRequest } from "../lib/auth";
 import { generateId } from "../lib/ids";
-import { syncBootcampChannels } from "./channels";
 
 const router = Router();
 
@@ -39,7 +38,6 @@ async function requireTutorOwner(
   return bootcamp;
 }
 
-// GET /tutor/my-stats
 router.get("/my-stats", requireAuth, async (req: AuthRequest, res) => {
   try {
     const [bcCount] = await db
@@ -85,7 +83,6 @@ router.get("/my-stats", requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
-// GET /tutor/my-bootcamps
 router.get("/my-bootcamps", requireAuth, async (req: AuthRequest, res) => {
   try {
     const bootcamps = await db
@@ -115,7 +112,6 @@ router.get("/my-bootcamps", requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
-// GET /tutor/bootcamps/:id
 router.get("/bootcamps/:id", requireAuth, async (req: AuthRequest, res) => {
   const { id } = req.params as { id: string };
   const bootcamp = await requireTutorOwner(req, res, id);
@@ -137,7 +133,6 @@ router.get("/bootcamps/:id", requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
-// POST /tutor/bootcamps
 router.post("/bootcamps", requireAuth, async (req: AuthRequest, res) => {
   try {
     const { title, subtitle, description, coverUrl, track, difficulty, deliveryMedium, xpReward, priceCents } =
@@ -165,7 +160,6 @@ router.post("/bootcamps", requireAuth, async (req: AuthRequest, res) => {
         adminReviewed: false,
       })
       .returning();
-    await syncBootcampChannels();
     res.status(201).json(bootcamp);
   } catch (err) {
     req.log.error({ err }, "tutor create bootcamp error");
@@ -173,7 +167,6 @@ router.post("/bootcamps", requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
-// PUT /tutor/bootcamps/:id
 router.put("/bootcamps/:id", requireAuth, async (req: AuthRequest, res) => {
   const { id } = req.params as { id: string };
   const bootcamp = await requireTutorOwner(req, res, id);
@@ -199,7 +192,6 @@ router.put("/bootcamps/:id", requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
-// DELETE /tutor/bootcamps/:id
 router.delete("/bootcamps/:id", requireAuth, async (req: AuthRequest, res) => {
   const { id } = req.params as { id: string };
   const bootcamp = await requireTutorOwner(req, res, id);
@@ -213,7 +205,6 @@ router.delete("/bootcamps/:id", requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
-// GET /tutor/bootcamps/:id/students
 router.get("/bootcamps/:id/students", requireAuth, async (req: AuthRequest, res) => {
   const { id } = req.params as { id: string };
   const bootcamp = await requireTutorOwner(req, res, id);
@@ -233,117 +224,6 @@ router.get("/bootcamps/:id/students", requireAuth, async (req: AuthRequest, res)
     res.json(enriched);
   } catch (err) {
     req.log.error({ err }, "tutor students error");
-    res.status(500).json({ error: "internal_error" });
-  }
-});
-
-// POST /tutor/bootcamps/:id/modules
-router.post("/bootcamps/:id/modules", requireAuth, async (req: AuthRequest, res) => {
-  const { id: bootcampId } = req.params as { id: string };
-  const bootcamp = await requireTutorOwner(req, res, bootcampId);
-  if (!bootcamp) return;
-  try {
-    const { title, description, durationMinutes, xpReward, orderIndex, isPreview } =
-      req.body as Record<string, unknown>;
-    if (!title || !description) {
-      res.status(400).json({ error: "validation_error", message: "Missing required fields" });
-      return;
-    }
-    const existing = await db
-      .select()
-      .from(bootcampModulesTable)
-      .where(eq(bootcampModulesTable.bootcampId, bootcampId))
-      .orderBy(asc(bootcampModulesTable.orderIndex));
-    const nextIndex = (orderIndex as number) ?? existing.length;
-    const moduleId = generateId();
-    const [module] = await db
-      .insert(bootcampModulesTable)
-      .values({
-        id: moduleId,
-        bootcampId,
-        title: title as string,
-        description: description as string,
-        durationMinutes: (durationMinutes as number) ?? 20,
-        xpReward: (xpReward as number) ?? 25,
-        orderIndex: nextIndex,
-        isPreview: Boolean(isPreview),
-      })
-      .returning();
-    await db
-      .update(bootcampsTable)
-      .set({ modulesCount: existing.length + 1 })
-      .where(eq(bootcampsTable.id, bootcampId));
-    res.status(201).json(module);
-  } catch (err) {
-    req.log.error({ err }, "tutor add module error");
-    res.status(500).json({ error: "internal_error" });
-  }
-});
-
-// PUT /tutor/modules/:moduleId
-router.put("/modules/:moduleId", requireAuth, async (req: AuthRequest, res) => {
-  const { moduleId } = req.params as { moduleId: string };
-  try {
-    const mods = await db
-      .select()
-      .from(bootcampModulesTable)
-      .where(eq(bootcampModulesTable.id, moduleId))
-      .limit(1);
-    if (!mods[0]) {
-      res.status(404).json({ error: "not_found" });
-      return;
-    }
-    const bootcamp = await requireTutorOwner(req, res, mods[0].bootcampId);
-    if (!bootcamp) return;
-    const { title, description, durationMinutes, xpReward, orderIndex, isPreview } =
-      req.body as Record<string, unknown>;
-    const update: Partial<typeof bootcampModulesTable.$inferInsert> = {};
-    if (title != null) update.title = title as string;
-    if (description != null) update.description = description as string;
-    if (durationMinutes != null) update.durationMinutes = durationMinutes as number;
-    if (xpReward != null) update.xpReward = xpReward as number;
-    if (orderIndex != null) update.orderIndex = orderIndex as number;
-    if (isPreview != null) update.isPreview = Boolean(isPreview);
-    const [updated] = await db
-      .update(bootcampModulesTable)
-      .set(update)
-      .where(eq(bootcampModulesTable.id, moduleId))
-      .returning();
-    res.json(updated);
-  } catch (err) {
-    req.log.error({ err }, "tutor update module error");
-    res.status(500).json({ error: "internal_error" });
-  }
-});
-
-// DELETE /tutor/modules/:moduleId
-router.delete("/modules/:moduleId", requireAuth, async (req: AuthRequest, res) => {
-  const { moduleId } = req.params as { moduleId: string };
-  try {
-    const mods = await db
-      .select()
-      .from(bootcampModulesTable)
-      .where(eq(bootcampModulesTable.id, moduleId))
-      .limit(1);
-    if (!mods[0]) {
-      res.status(404).json({ error: "not_found" });
-      return;
-    }
-    const bootcampId = mods[0].bootcampId;
-    const bootcamp = await requireTutorOwner(req, res, bootcampId);
-    if (!bootcamp) return;
-    await db.delete(bootcampModulesTable).where(eq(bootcampModulesTable.id, moduleId));
-    const remaining = await db
-      .select()
-      .from(bootcampModulesTable)
-      .where(eq(bootcampModulesTable.bootcampId, bootcampId));
-    await db
-      .update(bootcampsTable)
-      .set({ modulesCount: remaining.length })
-      .where(eq(bootcampsTable.id, bootcampId));
-    res.json({ ok: true });
-  } catch (err) {
-    req.log.error({ err }, "tutor delete module error");
     res.status(500).json({ error: "internal_error" });
   }
 });
