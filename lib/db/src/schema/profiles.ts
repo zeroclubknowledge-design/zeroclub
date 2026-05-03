@@ -28,6 +28,7 @@ export const profilesTable = pgTable("profiles", {
   pushToken: text("push_token"),
   xpBalance: integer("xp_balance").notNull().default(0),
   fundsBalance: integer("funds_balance").notNull().default(0),
+  purchasedLevel: integer("purchased_level").notNull().default(1),
   tutorVerified: integer("tutor_verified").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

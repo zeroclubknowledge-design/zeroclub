@@ -147,10 +147,12 @@ export default function WalletScreen() {
           setWithdrawModal(false);
           setWithdrawXp("");
           setSelectedAccount(null);
+          const gross = xp * 10;
+          const net = Math.floor(gross * 0.9);
           showToast({
             type: "success",
             title: "Withdrawal Requested",
-            message: `${xp} XP → ${formatNaira(xp * 10)} submitted. Processing takes 1–3 business days.`,
+            message: `${xp} XP → ${formatNaira(net)} (after 10% fee) submitted. Arrives in 1–3 days.`,
             duration: 5000,
           });
         },
@@ -303,7 +305,7 @@ export default function WalletScreen() {
           <View style={[styles.modalSheet, { backgroundColor: colors.card }]}>
             <View style={styles.modalHandle} />
             <Text style={[styles.modalTitle, { color: colors.foreground }]}>Withdraw XP</Text>
-            <Text style={[styles.modalSub, { color: colors.mutedForeground }]}>1,000 XP = {formatNaira(10000)} · Min {(wallet?.minWithdrawalXp ?? 2000).toLocaleString()} XP</Text>
+            <Text style={[styles.modalSub, { color: colors.mutedForeground }]}>1,000 XP = {formatNaira(9000)} after 10% fee · Min {(wallet?.minWithdrawalXp ?? 2000).toLocaleString()} XP</Text>
             {!canWithdraw && (
               <View style={[styles.warnBox, { backgroundColor: "#F59E0B18", borderColor: "#F59E0B44" }]}>
                 <Feather name="alert-triangle" size={14} color="#F59E0B" />
@@ -315,7 +317,7 @@ export default function WalletScreen() {
               <Feather name="zap" size={16} color={colors.xpGold} />
               <TextInput style={[styles.input, { color: colors.foreground }]} placeholder={`Min ${wallet?.minWithdrawalXp ?? 2000}`} placeholderTextColor={colors.mutedForeground} keyboardType="number-pad" value={withdrawXp} onChangeText={setWithdrawXp} />
               {withdrawXp && !isNaN(parseInt(withdrawXp, 10)) && (
-                <Text style={[styles.convertedAmt, { color: "#10B981" }]}>= {formatNaira(parseInt(withdrawXp, 10) * 10)}</Text>
+                <Text style={[styles.convertedAmt, { color: "#10B981" }]}>≈ {formatNaira(Math.floor(parseInt(withdrawXp, 10) * 9))} net</Text>
               )}
             </View>
             <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Bank account</Text>
@@ -366,7 +368,7 @@ export default function WalletScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.featureCardTitle, { color: colors.foreground }]}>Withdraw Your XP</Text>
-              <Text style={[styles.featureCardSub, { color: colors.mutedForeground }]}>Convert {wallet?.xpBalance.toLocaleString()} XP → {formatNaira((wallet?.xpBalance ?? 0) * 10)}. Arrives in 1–3 days.</Text>
+              <Text style={[styles.featureCardSub, { color: colors.mutedForeground }]}>Convert {wallet?.xpBalance.toLocaleString()} XP → {formatNaira(Math.floor((wallet?.xpBalance ?? 0) * 9))} after 10% fee. Arrives in 1–3 days.</Text>
             </View>
             <Feather name="chevron-right" size={18} color={colors.mutedForeground} />
           </TouchableOpacity>

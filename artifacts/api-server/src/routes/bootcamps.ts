@@ -146,6 +146,10 @@ router.post("/:bootcampId/enroll", requireAuth, async (req: AuthRequest, res) =>
       }
     }
 
+    const platformFeeCents = bootcamp.priceCents > 0
+      ? Math.floor(bootcamp.priceCents * 0.10)
+      : 0;
+
     await db.insert(enrollmentsTable).values({
       id,
       userId: req.userId!,
@@ -155,6 +159,7 @@ router.post("/:bootcampId/enroll", requireAuth, async (req: AuthRequest, res) =>
       progress: 0,
       paid: bootcamp.priceCents > 0,
       paymentRef: paymentRef ?? null,
+      platformFeeCents,
     });
 
     // Award commission XP to referrer for paid bootcamp enrollments

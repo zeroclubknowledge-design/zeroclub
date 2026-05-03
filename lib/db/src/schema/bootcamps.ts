@@ -54,6 +54,7 @@ export const enrollmentsTable = pgTable("enrollments", {
   progress: integer("progress").notNull().default(0),
   paid: boolean("paid").notNull().default(false),
   paymentRef: text("payment_ref"),
+  platformFeeCents: integer("platform_fee_cents").notNull().default(0),
   completedAt: timestamp("completed_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

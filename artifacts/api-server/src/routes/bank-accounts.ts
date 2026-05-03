@@ -105,22 +105,24 @@ router.post("/withdrawals", requireAuth, async (req: AuthRequest, res) => {
       return;
     }
 
-    const amountKobo = amountXp * XP_TO_KOBO;
+    const grossKobo = amountXp * XP_TO_KOBO;
+    const platformFeeKobo = Math.floor(grossKobo * 0.10); // 10% platform fee
+    const netKobo = grossKobo - platformFeeKobo;          // student receives 90%
 
     const [withdrawal] = await db
       .insert(withdrawalsTable)
-      .values({ id: randomUUID(), userId: req.userId!, bankAccountId, amountXp, amountKobo })
+      .values({ id: randomUUID(), userId: req.userId!, bankAccountId, amountXp, amountKobo: netKobo })
       .returning();
 
     await db
       .update(profilesTable)
       .set({
         xpBalance: profile.xpBalance - amountXp,
-        fundsBalance: (profile.fundsBalance ?? 0) + amountKobo,
+        fundsBalance: (profile.fundsBalance ?? 0) + netKobo,
       })
       .where(eq(profilesTable.id, req.userId!));
 
-    res.status(201).json(withdrawal);
+    res.status(201).json({ ...withdrawal, grossKobo, platformFeeKobo, netKobo });
   } catch (err) {
     req.log.error({ err }, "create withdrawal error");
     res.status(500).json({ error: "internal_error", message: "Failed" });

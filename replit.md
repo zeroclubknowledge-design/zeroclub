@@ -4,6 +4,12 @@
 
 Zero Club is a premium social learning mobile app for senior secondary school students / builders. Members share builds, join bootcamps, earn XP, refer friends, and connect via real-time chat.
 
+## Business Model
+
+- **Platform fee (bootcamps):** Zero Club takes 10% of every paid bootcamp enrollment. Tracked via `platform_fee_cents` on the `enrollments` table. Tutor keeps 90%.
+- **XP conversion fee:** When a student converts XP to cash (via bank withdrawal), Zero Club deducts 10%. Rate: 1 XP = 9 kobo net (was 10 kobo gross). Logic in `POST /api/bank-accounts/withdrawals`.
+- **Level upgrades (pay-to-skip):** Students can pay cash to instantly unlock any Zero Club level. Prices defined in `LEVEL_UPGRADE_PRICES_KOBO` in `artifacts/api-server/src/routes/wallet.ts`. Stored in `profiles.purchased_level`. Route: `POST /api/wallet/upgrade-level`.
+
 ## Architecture
 
 ### Artifacts
