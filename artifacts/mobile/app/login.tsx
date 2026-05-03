@@ -6,7 +6,6 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  Alert,
   Image,
   Platform,
   KeyboardAvoidingView,
@@ -16,6 +15,7 @@ import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/context/ToastContext";
 import type { UserProfile } from "@/context/AuthContext";
 
 const LOGO = require("../assets/images/icon.png");
@@ -24,6 +24,7 @@ export default function LoginScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { login } = useAuth();
+  const { showToast } = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -34,7 +35,7 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert("Missing fields", "Please fill in all fields");
+      showToast({ type: "warning", title: "Missing fields", message: "Please fill in all fields" });
       return;
     }
     setLoading(true);
@@ -48,13 +49,13 @@ export default function LoginScreen() {
       });
       const data = await res.json();
       if (!res.ok) {
-        Alert.alert("Login failed", data.message ?? "Invalid credentials");
+        showToast({ type: "error", title: "Login failed", message: data.message ?? "Invalid credentials" });
         return;
       }
       await login(data.token, data.user as UserProfile);
       router.replace("/(tabs)" as never);
     } catch {
-      Alert.alert("Error", "Network error. Please try again.");
+      showToast({ type: "error", title: "Network error", message: "Please try again." });
     } finally {
       setLoading(false);
     }

@@ -10,7 +10,6 @@ import {
   Platform,
   KeyboardAvoidingView,
   Image,
-  Alert,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Feather } from "@expo/vector-icons";
@@ -24,6 +23,7 @@ import {
 } from "@workspace/api-client-react";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/context/ToastContext";
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -56,6 +56,7 @@ export default function CommentsScreen() {
   const qc = useQueryClient();
   const topPadding = Platform.OS === "web" ? 67 : insets.top;
 
+  const { showToast } = useToast();
   const [text, setText] = useState("");
   const inputRef = useRef<TextInput>(null);
 
@@ -77,7 +78,7 @@ export default function CommentsScreen() {
           qc.invalidateQueries({ queryKey: getListPostsQueryKey({}) });
         },
         onError: () => {
-          Alert.alert("Error", "Could not post comment.");
+          showToast({ type: "error", title: "Could not post comment" });
           setText(body);
         },
       },

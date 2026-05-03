@@ -24,6 +24,7 @@ import {
 } from "@workspace/api-client-react";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/context/ToastContext";
 import { PostCard } from "@/components/PostCard";
 import type { Post } from "@workspace/api-client-react";
 
@@ -48,6 +49,7 @@ export default function FeedScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
+  const { showToast } = useToast();
   const qc = useQueryClient();
   const [selectedTrack, setSelectedTrack] = useState<string>("all");
   const [refreshing, setRefreshing] = useState(false);
@@ -71,10 +73,11 @@ export default function FeedScreen() {
       likePost.mutate({ postId }, {
         onSuccess: () => {
           qc.invalidateQueries({ queryKey: getListPostsQueryKey(params) });
+          showToast({ type: "xp", title: "+2 XP Earned", message: "Thanks for engaging with the community!" });
         },
       });
     },
-    [likePost, qc, params],
+    [likePost, qc, params, showToast],
   );
 
   const handleBookmark = useCallback(
@@ -107,6 +110,13 @@ export default function FeedScreen() {
           <Image source={LOGO} style={styles.logo} />
           <Text style={[styles.headerTitle, { color: colors.foreground }]}>Zero Club</Text>
           <View style={styles.headerRight}>
+            <TouchableOpacity
+              onPress={() => router.push("/notifications" as never)}
+              style={[styles.bellBtn, { backgroundColor: colors.muted }]}
+              activeOpacity={0.7}
+            >
+              <Feather name="bell" size={17} color={colors.mutedForeground} />
+            </TouchableOpacity>
             <TouchableOpacity
               onPress={() => router.push("/profile")}
               style={[styles.avatarBtn, { backgroundColor: colors.primary + "22" }]}
@@ -218,7 +228,14 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: "Inter_700Bold",
   },
-  headerRight: { flexDirection: "row", gap: 8 },
+  headerRight: { flexDirection: "row", gap: 8, alignItems: "center" },
+  bellBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   avatarBtn: {
     width: 34,
     height: 34,

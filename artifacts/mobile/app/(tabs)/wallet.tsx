@@ -7,7 +7,6 @@ import {
   ActivityIndicator,
   Platform,
   TouchableOpacity,
-  Alert,
   Modal,
   TextInput,
   ScrollView,
@@ -25,6 +24,7 @@ import {
 } from "@workspace/api-client-react";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/context/ToastContext";
 import type { XpEvent, BankAccount } from "@workspace/api-client-react";
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -76,6 +76,7 @@ export default function WalletScreen() {
   const { data: bankAccounts } = useQuery(getListBankAccountsQueryOptions());
   const { data: withdrawals } = useQuery(getListWithdrawalsQueryOptions());
 
+  const { showToast } = useToast();
   const createWithdrawal = useCreateWithdrawal();
 
   const xpProgress =
@@ -97,15 +98,15 @@ export default function WalletScreen() {
   const handleWithdrawSubmit = () => {
     const xp = parseInt(withdrawXp, 10);
     if (!selectedAccount) {
-      Alert.alert("Select account", "Please select a bank account");
+      showToast({ type: "warning", title: "Select account", message: "Please select a bank account" });
       return;
     }
     if (isNaN(xp) || xp < minXp) {
-      Alert.alert("Invalid amount", `Minimum withdrawal is ${minXp} XP`);
+      showToast({ type: "warning", title: "Invalid amount", message: `Minimum withdrawal is ${minXp} XP` });
       return;
     }
     if (wallet && xp > wallet.xpBalance) {
-      Alert.alert("Insufficient XP", "You don't have enough XP");
+      showToast({ type: "warning", title: "Insufficient XP", message: "You don't have enough XP" });
       return;
     }
     createWithdrawal.mutate(
@@ -116,13 +117,15 @@ export default function WalletScreen() {
           setWithdrawModal(false);
           setWithdrawXp("");
           setSelectedAccount(null);
-          Alert.alert(
-            "Withdrawal Requested",
-            `Your request for ${xp} XP → ${formatNaira(xp * 10)} has been submitted. Processing takes 1–3 business days.`,
-          );
+          showToast({
+            type: "success",
+            title: "Withdrawal Requested",
+            message: `${xp} XP → ${formatNaira(xp * 10)} submitted. Processing takes 1–3 business days.`,
+            duration: 5000,
+          });
         },
         onError: () => {
-          Alert.alert("Error", "Withdrawal failed. Please try again.");
+          showToast({ type: "error", title: "Withdrawal failed", message: "Please try again." });
         },
       },
     );

@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   Platform,
   TextInput,
   ActivityIndicator,
@@ -27,6 +26,8 @@ import {
 } from "@workspace/api-client-react";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/context/ToastContext";
+import { useDialog } from "@/context/DialogContext";
 
 const TRACK_LABELS: Record<string, string> = {
   product_design: "Product Design",
@@ -62,6 +63,8 @@ export default function SettingsScreen() {
   const [accountNumber, setAccountNumber] = useState("");
   const [accountName, setAccountName] = useState("");
 
+  const { showToast } = useToast();
+  const { showDialog } = useDialog();
   const { data: bankAccounts, isLoading: accountsLoading } = useQuery(getListBankAccountsQueryOptions());
   const createBankAccount = useCreateBankAccount();
   const deleteBankAccount = useDeleteBankAccount();
@@ -81,9 +84,9 @@ export default function SettingsScreen() {
       const updated = await res.json() as typeof user;
       await updateUser({ ...user, ...updated });
       setEditModal(false);
-      Alert.alert("Saved", "Profile updated!");
+      showToast({ type: "success", title: "Profile saved", message: "Your profile has been updated" });
     } catch {
-      Alert.alert("Error", "Could not save profile. Try again.");
+      showToast({ type: "error", title: "Could not save profile", message: "Try again." });
     } finally {
       setSavingProfile(false);
     }
@@ -91,7 +94,7 @@ export default function SettingsScreen() {
 
   const handleAddBankAccount = () => {
     if (!bankName || !accountNumber || !accountName) {
-      Alert.alert("Missing fields", "Please fill in all bank account fields");
+      showToast({ type: "warning", title: "Missing fields", message: "Please fill in all bank account fields" });
       return;
     }
     createBankAccount.mutate(
@@ -103,20 +106,20 @@ export default function SettingsScreen() {
           setBankName("");
           setAccountNumber("");
           setAccountName("");
-          Alert.alert("Added", "Bank account added successfully.");
+          showToast({ type: "success", title: "Bank account added" });
         },
         onError: () => {
-          Alert.alert("Error", "Could not add bank account.");
+          showToast({ type: "error", title: "Could not add bank account" });
         },
       },
     );
   };
 
   const handleDeleteAccount = (id: string, name: string) => {
-    Alert.alert(
-      "Remove Account",
-      `Remove "${name}"?`,
-      [
+    showDialog({
+      title: "Remove Account",
+      message: `Remove "${name}" from your saved accounts?`,
+      buttons: [
         { text: "Cancel", style: "cancel" },
         {
           text: "Remove",
@@ -125,26 +128,31 @@ export default function SettingsScreen() {
             deleteBankAccount.mutate({ id }, {
               onSuccess: () => {
                 qc.invalidateQueries({ queryKey: getListBankAccountsQueryKey() });
+                showToast({ type: "success", title: "Account removed" });
               },
             });
           },
         },
       ],
-    );
+    });
   };
 
   const handleLogout = () => {
-    Alert.alert("Sign Out", "Are you sure?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Sign Out",
-        style: "destructive",
-        onPress: async () => {
-          await logout();
-          router.replace("/login");
+    showDialog({
+      title: "Sign Out",
+      message: "Are you sure you want to sign out?",
+      buttons: [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Sign Out",
+          style: "destructive",
+          onPress: async () => {
+            await logout();
+            router.replace("/login");
+          },
         },
-      },
-    ]);
+      ],
+    });
   };
 
   return (
@@ -246,21 +254,21 @@ export default function SettingsScreen() {
             label="Notifications"
             value="Enabled"
             colors={colors}
-            onPress={() => Alert.alert("Notifications", "Manage notifications in your device settings.")}
+            onPress={() => router.push("/notifications" as never)}
           />
           <Separator colors={colors} />
           <SettingRow
             icon="help-circle"
             label="Help & Support"
             colors={colors}
-            onPress={() => Alert.alert("Support", "Email us at support@zeroclub.io")}
+            onPress={() => showDialog({ title: "Help & Support", message: "Email us at support@zeroclub.io", buttons: [{ text: "Got it" }] })}
           />
           <Separator colors={colors} />
           <SettingRow
             icon="file-text"
             label="Terms & Privacy"
             colors={colors}
-            onPress={() => Alert.alert("Terms", "Visit zeroclubapp.com/terms")}
+            onPress={() => showDialog({ title: "Terms & Privacy", message: "Visit zeroclubapp.com/terms for our full terms of service and privacy policy.", buttons: [{ text: "Got it" }] })}
           />
         </View>
 

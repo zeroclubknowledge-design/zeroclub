@@ -6,7 +6,6 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  Alert,
   Platform,
   KeyboardAvoidingView,
   Image,
@@ -22,6 +21,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useCreatePost, getListPostsQueryKey } from "@workspace/api-client-react";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/context/ToastContext";
 
 const TRACKS = [
   { key: "product_design", label: "Product Design" },
@@ -85,6 +85,7 @@ export default function CreateScreen() {
   const [tagResults, setTagResults] = useState<TaggedUser[]>([]);
   const [tagSearching, setTagSearching] = useState(false);
 
+  const { showToast } = useToast();
   const createPost = useCreatePost();
   const charCount = body.length;
   const maxChars = 500;
@@ -92,7 +93,7 @@ export default function CreateScreen() {
   const handlePickMedia = async (mediaType: "image" | "video") => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert("Permission needed", "Allow access to your photo library to attach media.");
+      showToast({ type: "warning", title: "Permission needed", message: "Allow access to your photo library to attach media." });
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -148,7 +149,7 @@ export default function CreateScreen() {
 
   const handleSubmit = async () => {
     if (!body.trim()) {
-      Alert.alert("Empty post", "Write something first");
+      showToast({ type: "warning", title: "Empty post", message: "Write something first" });
       return;
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -159,7 +160,7 @@ export default function CreateScreen() {
       try {
         mediaUrl = await uploadMedia(media.uri, media.type, token);
       } catch {
-        Alert.alert("Upload failed", "Could not upload media. Try again.");
+        showToast({ type: "error", title: "Upload failed", message: "Could not upload media. Try again." });
         setUploading(false);
         return;
       }
@@ -189,7 +190,7 @@ export default function CreateScreen() {
           setTimeout(() => setSubmitted(false), 3000);
         },
         onError: () => {
-          Alert.alert("Error", "Failed to post. Try again.");
+          showToast({ type: "error", title: "Failed to post", message: "Try again." });
         },
       },
     );

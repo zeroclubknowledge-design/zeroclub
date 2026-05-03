@@ -6,7 +6,6 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  Alert,
   Image,
   Platform,
   KeyboardAvoidingView,
@@ -16,6 +15,7 @@ import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/context/ToastContext";
 import type { UserProfile } from "@/context/AuthContext";
 
 const LOGO = require("../assets/images/icon.png");
@@ -37,6 +37,7 @@ export default function RegisterScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { login } = useAuth();
+  const { showToast } = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
@@ -52,7 +53,7 @@ export default function RegisterScreen() {
 
   const handleRegister = async () => {
     if (!email || !password || !username || !displayName) {
-      Alert.alert("Missing fields", "Please fill in all fields");
+      showToast({ type: "warning", title: "Missing fields", message: "Please fill in all fields" });
       return;
     }
     setLoading(true);
@@ -74,13 +75,13 @@ export default function RegisterScreen() {
       });
       const data = await res.json();
       if (!res.ok) {
-        Alert.alert("Registration failed", data.message ?? "Something went wrong");
+        showToast({ type: "error", title: "Registration failed", message: data.message ?? "Something went wrong" });
         return;
       }
       await login(data.token, data.user as UserProfile);
       router.replace("/(tabs)" as never);
     } catch {
-      Alert.alert("Error", "Network error. Please try again.");
+      showToast({ type: "error", title: "Network error", message: "Please try again." });
     } finally {
       setLoading(false);
     }

@@ -14,6 +14,7 @@ import referralsRouter from "./referrals";
 import paymentsRouter from "./payments";
 import uploadRouter from "./upload";
 import bankAccountsRouter from "./bank-accounts";
+import notificationsRouter from "./notifications";
 
 const router: IRouter = Router();
 
@@ -32,5 +33,6 @@ router.use("/referrals", referralsRouter);
 router.use("/payments", paymentsRouter);
 router.use("/upload", uploadRouter);
 router.use("/bank-accounts", bankAccountsRouter);
+router.use("/notifications", notificationsRouter);
 
 export default router;

@@ -8,7 +8,6 @@ import {
   Platform,
   ActivityIndicator,
   Image,
-  Alert,
 } from "react-native";
 import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
@@ -16,6 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/context/ToastContext";
 
 const TRACK_LABELS: Record<string, string> = {
   product_design: "Product Design",
@@ -43,6 +43,7 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const { user, token, updateUser } = useAuth();
   const topPadding = Platform.OS === "web" ? 67 : insets.top;
+  const { showToast } = useToast();
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [counts, setCounts] = useState<ProfileCounts | null>(null);
 
@@ -70,7 +71,7 @@ export default function ProfileScreen() {
   const handlePickAvatar = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert("Permission needed", "Allow access to your photo library to update your avatar.");
+      showToast({ type: "warning", title: "Permission needed", message: "Allow access to your photo library to update your avatar." });
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -108,7 +109,7 @@ export default function ProfileScreen() {
       const updated = await updateRes.json() as typeof user;
       await updateUser({ ...user, ...updated, avatarUrl });
     } catch {
-      Alert.alert("Error", "Could not update profile photo. Try again.");
+      showToast({ type: "error", title: "Could not update photo", message: "Try again." });
     } finally {
       setAvatarUploading(false);
     }

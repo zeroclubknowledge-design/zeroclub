@@ -14,6 +14,8 @@ import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { ToastProvider } from "@/context/ToastContext";
+import { DialogProvider } from "@/context/DialogContext";
 import { setBaseUrl, setAuthTokenGetter } from "@workspace/api-client-react";
 import { registerForPushNotifications } from "@/services/notifications";
 
@@ -110,6 +112,7 @@ function RootLayoutNav() {
         <Stack.Screen name="comments/[postId]" options={{ headerShown: false, animation: "slide_from_bottom", presentation: "modal" }} />
         <Stack.Screen name="post/[id]" options={{ headerShown: false, animation: "none" }} />
         <Stack.Screen name="bootcamp-hub/[id]" options={{ headerShown: false, animation: "none" }} />
+        <Stack.Screen name="notifications" options={{ headerShown: false, animation: "none" }} />
       </Stack>
     </AuthGate>
   );
@@ -138,7 +141,11 @@ export default function RootLayout() {
           <AuthProvider>
             <GestureHandlerRootView style={{ flex: 1 }}>
               <KeyboardProvider>
-                <RootLayoutNav />
+                <ToastProvider>
+                  <DialogProvider>
+                    <RootLayoutNav />
+                  </DialogProvider>
+                </ToastProvider>
               </KeyboardProvider>
             </GestureHandlerRootView>
           </AuthProvider>

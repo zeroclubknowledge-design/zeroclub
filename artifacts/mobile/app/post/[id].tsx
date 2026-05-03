@@ -8,7 +8,6 @@ import {
   TextInput,
   ActivityIndicator,
   Image,
-  Alert,
   Platform,
   Modal,
   FlatList,
@@ -29,6 +28,8 @@ import {
 } from "@workspace/api-client-react";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/context/ToastContext";
+import { useDialog } from "@/context/DialogContext";
 import * as Haptics from "expo-haptics";
 import { Video, ResizeMode } from "expo-av";
 
@@ -87,6 +88,8 @@ export default function PostDetailScreen() {
   const [editBody, setEditBody] = useState("");
   const [deleting, setDeleting] = useState(false);
 
+  const { showToast } = useToast();
+  const { showDialog } = useDialog();
   const videoRef = useRef<Video>(null);
 
   const { data: post, isLoading } = useQuery(getGetPostQueryOptions(id ?? ""));
@@ -135,7 +138,7 @@ export default function PostDetailScreen() {
           qc.invalidateQueries({ queryKey: getGetPostQueryKey(id) });
         },
         onError: () => {
-          Alert.alert("Error", "Could not post comment.");
+          showToast({ type: "error", title: "Could not post comment" });
           setCommentText(body);
         },
       },
@@ -161,15 +164,15 @@ export default function PostDetailScreen() {
       qc.invalidateQueries({ queryKey: getListPostsQueryKey({}) });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch {
-      Alert.alert("Error", "Could not update post.");
+      showToast({ type: "error", title: "Could not update post" });
     }
   };
 
   const handleDelete = () => {
-    Alert.alert(
-      "Delete Post",
-      "This will remove the post and the XP awarded for it. This cannot be undone.",
-      [
+    showDialog({
+      title: "Delete Post",
+      message: "This will remove the post and the XP awarded for it. This cannot be undone.",
+      buttons: [
         { text: "Cancel", style: "cancel" },
         {
           text: "Delete",
@@ -189,14 +192,14 @@ export default function PostDetailScreen() {
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
               router.back();
             } catch {
-              Alert.alert("Error", "Could not delete post.");
+              showToast({ type: "error", title: "Could not delete post" });
             } finally {
               setDeleting(false);
             }
           },
         },
       ],
-    );
+    });
   };
 
   if (isLoading) {

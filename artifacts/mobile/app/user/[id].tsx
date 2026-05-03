@@ -8,13 +8,13 @@ import {
   Platform,
   ActivityIndicator,
   Image,
-  Alert,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/context/ToastContext";
 
 const TRACK_LABELS: Record<string, string> = {
   product_design: "Product Design",
@@ -51,6 +51,7 @@ export default function UserProfileScreen() {
   const { user, token } = useAuth();
   const topPadding = Platform.OS === "web" ? 67 : insets.top;
 
+  const { showToast } = useToast();
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [followLoading, setFollowLoading] = useState(false);
@@ -69,7 +70,7 @@ export default function UserProfileScreen() {
       const data = await res.json() as PublicProfile;
       setProfile(data);
     } catch {
-      Alert.alert("Error", "Could not load profile.");
+      showToast({ type: "error", title: "Could not load profile" });
     } finally {
       setLoading(false);
     }
@@ -98,7 +99,7 @@ export default function UserProfileScreen() {
           : prev,
       );
     } catch {
-      Alert.alert("Error", "Could not update follow status.");
+      showToast({ type: "error", title: "Could not update follow status" });
     } finally {
       setFollowLoading(false);
     }

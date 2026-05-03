@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   Platform,
   Share,
   ActivityIndicator,
@@ -15,6 +14,8 @@ import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
+import { useToast } from "@/context/ToastContext";
+import { useDialog } from "@/context/DialogContext";
 
 interface ReferralStats {
   referralCode: string | null;
@@ -30,6 +31,8 @@ export default function ReferralScreen() {
   const { token } = useAuth();
   const topPadding = Platform.OS === "web" ? 67 : insets.top;
 
+  const { showToast } = useToast();
+  const { showDialog } = useDialog();
   const [stats, setStats] = useState<ReferralStats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -65,10 +68,10 @@ export default function ReferralScreen() {
     if (Platform.OS === "web") {
       try {
         await navigator.clipboard.writeText(link);
-        Alert.alert("Copied!", "Referral link copied");
+        showToast({ type: "success", title: "Link copied!", message: "Referral link copied to clipboard" });
       } catch {}
     } else {
-      Alert.alert("Your Referral Link", link);
+      showDialog({ title: "Your Referral Link", message: link, buttons: [{ text: "Got it" }] });
     }
   };
 
