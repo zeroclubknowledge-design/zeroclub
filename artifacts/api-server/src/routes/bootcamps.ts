@@ -35,6 +35,34 @@ router.get("/", requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
+// GET /bootcamps/:bootcampId/preview — public, no auth required
+router.get("/:bootcampId/preview", async (req, res) => {
+  const { bootcampId } = req.params as { bootcampId: string };
+  try {
+    const rows = await db
+      .select({
+        id: bootcampsTable.id,
+        title: bootcampsTable.title,
+        subtitle: bootcampsTable.subtitle,
+        coverUrl: bootcampsTable.coverUrl,
+        priceCents: bootcampsTable.priceCents,
+        track: bootcampsTable.track,
+        difficulty: bootcampsTable.difficulty,
+        xpReward: bootcampsTable.xpReward,
+      })
+      .from(bootcampsTable)
+      .where(eq(bootcampsTable.id, bootcampId))
+      .limit(1);
+    if (rows.length === 0) {
+      res.status(404).json({ error: "not_found" });
+      return;
+    }
+    res.json(rows[0]!);
+  } catch (err) {
+    res.status(500).json({ error: "internal_error" });
+  }
+});
+
 // GET /bootcamps/:bootcampId
 router.get("/:bootcampId", requireAuth, async (req: AuthRequest, res) => {
   const { bootcampId } = req.params as { bootcampId: string };
@@ -103,16 +131,54 @@ router.post("/:bootcampId/enroll", requireAuth, async (req: AuthRequest, res) =>
     }
 
     const id = generateId();
-    const { paymentRef } = req.body as { paymentRef?: string };
+    const { paymentRef, referralCode } = req.body as { paymentRef?: string; referralCode?: string };
+
+    // Resolve referrer from referral code
+    let referrerId: string | null = null;
+    if (referralCode) {
+      const referrerRows = await db
+        .select({ id: profilesTable.id })
+        .from(profilesTable)
+        .where(eq(profilesTable.referralCode, referralCode))
+        .limit(1);
+      if (referrerRows.length > 0 && referrerRows[0]!.id !== req.userId) {
+        referrerId = referrerRows[0]!.id;
+      }
+    }
+
     await db.insert(enrollmentsTable).values({
       id,
       userId: req.userId!,
       bootcampId,
+      referrerId,
       modulesCompleted: 0,
       progress: 0,
       paid: bootcamp.priceCents > 0,
       paymentRef: paymentRef ?? null,
     });
+
+    // Award commission XP to referrer for paid bootcamp enrollments
+    if (referrerId && bootcamp.priceCents > 0) {
+      const commissionXp = Math.max(50, Math.floor(bootcamp.priceCents / 100));
+      await db.insert(xpEventsTable).values({
+        id: generateId(),
+        userId: referrerId,
+        source: "bootcamp_commission",
+        detail: `Commission — someone enrolled in "${bootcamp.title}" via your share link`,
+        amount: commissionXp,
+      });
+      await db
+        .update(profilesTable)
+        .set({ xpBalance: sql`${profilesTable.xpBalance} + ${commissionXp}` })
+        .where(eq(profilesTable.id, referrerId));
+      void sendPushToUser(
+        referrerId,
+        "💸 Commission Earned!",
+        `Someone enrolled in "${bootcamp.title}" via your link — +${commissionXp} XP`,
+        { type: "bootcamp_commission", bootcampId },
+      );
+    }
+
     const enrollment = await db
       .select()
       .from(enrollmentsTable)

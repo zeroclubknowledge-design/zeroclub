@@ -164,6 +164,52 @@ router.post("/", requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
+// GET /posts/:postId/preview — public, no auth required
+router.get("/:postId/preview", async (req, res) => {
+  const { postId } = req.params as { postId: string };
+  try {
+    const posts = await db.select().from(postsTable).where(eq(postsTable.id, postId)).limit(1);
+    if (posts.length === 0) {
+      res.status(404).json({ error: "not_found" });
+      return;
+    }
+    const post = posts[0]!;
+    const authorRows = await db
+      .select({
+        id: profilesTable.id,
+        displayName: profilesTable.displayName,
+        username: profilesTable.username,
+        avatarUrl: profilesTable.avatarUrl,
+        xpBalance: profilesTable.xpBalance,
+      })
+      .from(profilesTable)
+      .where(eq(profilesTable.id, post.authorId))
+      .limit(1);
+    const author = authorRows[0];
+    if (!author) {
+      res.status(404).json({ error: "not_found" });
+      return;
+    }
+    res.json({
+      id: post.id,
+      body: post.body,
+      imageUrl: post.imageUrl,
+      track: post.track,
+      xpAwarded: post.xpAwarded,
+      isProofProject: post.isProofProject,
+      author: {
+        id: author.id,
+        displayName: author.displayName,
+        username: author.username,
+        avatarUrl: author.avatarUrl,
+        level: computeLevel(author.xpBalance),
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ error: "internal_error" });
+  }
+});
+
 // GET /posts/:postId
 router.get("/:postId", requireAuth, async (req: AuthRequest, res) => {
   const { postId } = req.params as { postId: string };

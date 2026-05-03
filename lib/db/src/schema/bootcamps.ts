@@ -49,6 +49,7 @@ export const enrollmentsTable = pgTable("enrollments", {
   bootcampId: text("bootcamp_id")
     .notNull()
     .references(() => bootcampsTable.id, { onDelete: "cascade" }),
+  referrerId: text("referrer_id").references(() => profilesTable.id, { onDelete: "set null" }),
   modulesCompleted: integer("modules_completed").notNull().default(0),
   progress: integer("progress").notNull().default(0),
   paid: boolean("paid").notNull().default(false),

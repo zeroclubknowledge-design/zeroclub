@@ -66,6 +66,7 @@ interface PostCardProps {
   onBookmark?: () => void;
   onComment?: () => void;
   onProof?: () => void;
+  onShare?: () => void;
   onPress?: () => void;
 }
 
@@ -98,6 +99,7 @@ export function PostCard({
   onBookmark,
   onComment,
   onProof,
+  onShare,
   onPress,
 }: PostCardProps) {
   const colors = useColors();
@@ -249,6 +251,9 @@ export function PostCard({
             </Text>
           )}
         </TouchableOpacity>
+        <TouchableOpacity style={[styles.action, styles.shareAction]} onPress={onShare} activeOpacity={0.7}>
+          <Feather name="share-2" size={18} color={colors.mutedForeground} />
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -382,11 +387,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     gap: 20,
+    alignItems: "center",
   },
   action: {
     flexDirection: "row",
     alignItems: "center",
     gap: 5,
+  },
+  shareAction: {
+    marginLeft: "auto" as unknown as number,
   },
   actionText: {
     fontSize: 13,

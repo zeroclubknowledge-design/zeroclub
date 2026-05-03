@@ -13,6 +13,7 @@ import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
+import { useShare } from "@/hooks/useShare";
 
 interface SubChannel {
   id: string;
@@ -49,6 +50,7 @@ export default function BootcampHubScreen() {
     bootcampTitle?: string;
   }>();
   const { token } = useAuth();
+  const { shareBootcamp } = useShare();
   const topPadding = Platform.OS === "web" ? 16 : insets.top;
 
   const [subs, setSubs] = React.useState<SubChannel[]>([]);
@@ -90,9 +92,13 @@ export default function BootcampHubScreen() {
             {subs.length} channel{subs.length !== 1 ? "s" : ""}
           </Text>
         </View>
-        <View style={[styles.bootcampBadge, { backgroundColor: colors.primary + "22" }]}>
-          <Feather name="book-open" size={14} color={colors.primary} />
-        </View>
+        <TouchableOpacity
+          style={[styles.bootcampBadge, { backgroundColor: colors.primary + "22" }]}
+          onPress={() => void shareBootcamp(id ?? "", bootcampTitle ?? "this Bootcamp")}
+          activeOpacity={0.75}
+        >
+          <Feather name="share-2" size={15} color={colors.primary} />
+        </TouchableOpacity>
       </View>
 
       {loading ? (

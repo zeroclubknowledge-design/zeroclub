@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import type { UserProfile } from "@/context/AuthContext";
+import { consumePendingRef, consumePendingRedirect } from "@/hooks/useShare";
 
 const LOGO = require("../assets/images/icon.png");
 
@@ -124,6 +125,12 @@ export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    consumePendingRef().then((ref) => {
+      if (ref) setReferralCode(ref);
+    }).catch(() => {});
+  }, []);
+
   const topPadding = Platform.OS === "web" ? 16 : insets.top;
   const bottomPadding = Platform.OS === "web" ? 34 : insets.bottom;
 
@@ -168,9 +175,18 @@ export default function RegisterScreen() {
         return;
       }
       await login(data.token!, data.user as UserProfile);
+
+      const pending = await consumePendingRedirect();
+
       if (role === "tutor") {
         showToast({ type: "success", title: "Welcome, Tutor!", message: "Your Tutor Studio is ready." });
         router.replace("/(tabs)/studio" as never);
+      } else if (pending?.type === "bootcamp") {
+        showToast({ type: "success", title: "Welcome to Zero Club!", message: "Opening your bootcamp…" });
+        router.replace("/(tabs)/bootcamps" as never);
+      } else if (pending?.type === "post") {
+        showToast({ type: "success", title: "Welcome to Zero Club!", message: "Opening the post…" });
+        router.replace({ pathname: "/post/[id]", params: { id: pending.id } } as never);
       } else {
         showToast({ type: "success", title: "Welcome to Zero Club!", message: "Your builder journey starts now." });
         router.replace("/(tabs)" as never);

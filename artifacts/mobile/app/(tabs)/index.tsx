@@ -28,6 +28,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import { PostCard } from "@/components/PostCard";
 import { useBreakpoint } from "@/hooks/useBreakpoint";
+import { useShare } from "@/hooks/useShare";
 import type { Post } from "@workspace/api-client-react";
 
 const LOGO = require("../../assets/images/icon.png");
@@ -64,6 +65,7 @@ export default function FeedScreen() {
 
   const likePost = useLikePost();
   const bookmarkPost = useBookmarkPost();
+  const { sharePost } = useShare();
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -92,6 +94,13 @@ export default function FeedScreen() {
       });
     },
     [bookmarkPost, qc, params],
+  );
+
+  const handleShare = useCallback(
+    (postId: string, body: string) => {
+      void sharePost(postId, body);
+    },
+    [sharePost],
   );
 
   const handleProof = useCallback(
@@ -189,6 +198,7 @@ export default function FeedScreen() {
                     onBookmark={() => handleBookmark(item.id)}
                     onProof={() => { void handleProof(item.id); }}
                     onComment={() => router.push({ pathname: "/comments/[postId]", params: { postId: item.id } } as never)}
+                    onShare={() => handleShare(item.id, item.body)}
                   />
                 )}
               />
@@ -311,6 +321,7 @@ export default function FeedScreen() {
               onBookmark={() => handleBookmark(item.id)}
               onProof={() => { void handleProof(item.id); }}
               onComment={() => router.push({ pathname: "/comments/[postId]", params: { postId: item.id } } as never)}
+              onShare={() => handleShare(item.id, item.body)}
             />
           )}
         />

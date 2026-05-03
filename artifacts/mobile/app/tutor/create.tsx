@@ -386,4 +386,5 @@ const styles = StyleSheet.create({
   switchLabel: { fontSize: 14, fontWeight: "600" },
   switchSub: { fontSize: 12, marginTop: 1 },
   priceHint: { fontSize: 11, marginTop: 6 },
+  content: { paddingBottom: 40 },
 });

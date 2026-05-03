@@ -92,7 +92,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (isLoading) return;
     const isSplash = pathname === "/splash";
-    const isAuthScreen = pathname === "/login" || pathname === "/register" || isSplash;
+    const isAuthScreen = pathname === "/login" || pathname === "/register" || isSplash || pathname.startsWith("/share/");
 
     if (!token && !isAuthScreen) {
       if (!_splashComplete) {
@@ -128,6 +128,8 @@ function RootLayoutNav() {
         <Stack.Screen name="post/[id]" options={{ headerShown: false, animation: "none" }} />
         <Stack.Screen name="bootcamp-hub/[id]" options={{ headerShown: false, animation: "none" }} />
         <Stack.Screen name="notifications" options={{ headerShown: false, animation: "none" }} />
+        <Stack.Screen name="share/bootcamp/[id]" options={{ headerShown: false, animation: "fade" }} />
+        <Stack.Screen name="share/post/[id]" options={{ headerShown: false, animation: "fade" }} />
         <Stack.Screen name="zero-proof" options={{ headerShown: false, animation: "none" }} />
         <Stack.Screen name="tutor/create" options={{ headerShown: false, animation: "slide_from_bottom" }} />
         <Stack.Screen name="tutor/[id]" options={{ headerShown: false, animation: "none" }} />
