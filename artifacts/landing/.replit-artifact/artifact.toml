@@ -1,0 +1,25 @@
+kind = "web"
+previewPath = "/landing"
+title = "Zero Club — Home"
+version = "1.0.0"
+id = "artifacts/landing"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/landing" ]
+localPort = 3002
+
+[services.development]
+run = "pnpm --filter @workspace/landing run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/landing", "run", "build" ]
+serve = "static"
+
+[services.env]
+PORT = "3002"
+BASE_PATH = "/landing"

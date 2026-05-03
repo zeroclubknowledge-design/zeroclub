@@ -38,6 +38,20 @@ export const api = {
 
   me: () => request<Profile>("/auth/me"),
 
+  registerTutor: (data: {
+    email: string;
+    password: string;
+    username: string;
+    displayName: string;
+    track: string;
+    school?: string;
+    bio?: string;
+  }) =>
+    request<{ token: string }>("/auth/register", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+
   makeAdmin: (userId: string) =>
     request<Profile>(`/admin/profiles/${userId}/make-admin`, { method: "PUT" }),
 
