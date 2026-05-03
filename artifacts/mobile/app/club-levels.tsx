@@ -225,7 +225,7 @@ export default function ClubLevelsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const topPadding = Platform.OS === "web" ? 67 : insets.top;
+  const topPadding = Platform.OS === "web" ? 16 : insets.top;
 
   const currentLevel = computeClubLevel(
     (user as any)?.referralCount ?? 0,

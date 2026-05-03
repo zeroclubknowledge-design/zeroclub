@@ -49,7 +49,7 @@ export default function BootcampHubScreen() {
     bootcampTitle?: string;
   }>();
   const { token } = useAuth();
-  const topPadding = Platform.OS === "web" ? 67 : insets.top;
+  const topPadding = Platform.OS === "web" ? 16 : insets.top;
 
   const [subs, setSubs] = React.useState<SubChannel[]>([]);
   const [loading, setLoading] = React.useState(true);

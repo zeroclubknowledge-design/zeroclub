@@ -29,7 +29,7 @@ export default function ReferralScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { token } = useAuth();
-  const topPadding = Platform.OS === "web" ? 67 : insets.top;
+  const topPadding = Platform.OS === "web" ? 16 : insets.top;
 
   const { showToast } = useToast();
   const { showDialog } = useDialog();

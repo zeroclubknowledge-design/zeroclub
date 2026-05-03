@@ -42,7 +42,7 @@ export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { user, token, updateUser } = useAuth();
-  const topPadding = Platform.OS === "web" ? 67 : insets.top;
+  const topPadding = Platform.OS === "web" ? 16 : insets.top;
   const { showToast } = useToast();
   const [avatarUploading, setAvatarUploading] = useState(false);
   const [counts, setCounts] = useState<ProfileCounts | null>(null);

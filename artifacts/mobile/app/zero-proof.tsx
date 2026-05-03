@@ -63,7 +63,7 @@ const TIERS = [
 export default function ZeroProofScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const topPadding = Platform.OS === "web" ? 67 : insets.top;
+  const topPadding = Platform.OS === "web" ? 16 : insets.top;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>

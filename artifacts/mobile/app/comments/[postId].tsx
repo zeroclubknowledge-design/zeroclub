@@ -54,7 +54,7 @@ export default function CommentsScreen() {
   const { postId } = useLocalSearchParams<{ postId: string }>();
   const { user } = useAuth();
   const qc = useQueryClient();
-  const topPadding = Platform.OS === "web" ? 67 : insets.top;
+  const topPadding = Platform.OS === "web" ? 16 : insets.top;
 
   const { showToast } = useToast();
   const [text, setText] = useState("");

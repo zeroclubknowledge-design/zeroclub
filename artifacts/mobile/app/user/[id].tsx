@@ -49,7 +49,7 @@ export default function UserProfileScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user, token } = useAuth();
-  const topPadding = Platform.OS === "web" ? 67 : insets.top;
+  const topPadding = Platform.OS === "web" ? 16 : insets.top;
 
   const { showToast } = useToast();
   const [profile, setProfile] = useState<PublicProfile | null>(null);

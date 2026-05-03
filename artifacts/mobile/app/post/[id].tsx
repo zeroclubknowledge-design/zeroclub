@@ -81,7 +81,7 @@ export default function PostDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user, token } = useAuth();
   const qc = useQueryClient();
-  const topPadding = Platform.OS === "web" ? 67 : insets.top;
+  const topPadding = Platform.OS === "web" ? 16 : insets.top;
 
   const [commentText, setCommentText] = useState("");
   const [editModal, setEditModal] = useState(false);

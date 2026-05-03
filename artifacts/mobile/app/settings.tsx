@@ -49,7 +49,7 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const { user, token, logout, updateUser } = useAuth();
   const qc = useQueryClient();
-  const topPadding = Platform.OS === "web" ? 67 : insets.top;
+  const topPadding = Platform.OS === "web" ? 16 : insets.top;
 
   const [editModal, setEditModal] = useState(false);
   const [displayName, setDisplayName] = useState(user?.displayName ?? "");

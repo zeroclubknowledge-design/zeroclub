@@ -30,7 +30,7 @@ type FilterId = (typeof FILTER_OPTIONS)[number]["id"];
 export default function MyBootcampsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const topPadding = Platform.OS === "web" ? 67 : insets.top;
+  const topPadding = Platform.OS === "web" ? 16 : insets.top;
 
   const [filter, setFilter] = React.useState<FilterId>("all");
 

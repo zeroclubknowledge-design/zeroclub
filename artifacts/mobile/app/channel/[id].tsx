@@ -40,7 +40,7 @@ export default function ChannelScreen() {
   const [messageText, setMessageText] = useState("");
   const listRef = useRef<FlatList>(null);
 
-  const topPadding = Platform.OS === "web" ? 67 : insets.top;
+  const topPadding = Platform.OS === "web" ? 16 : insets.top;
   const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
 
   const channelId = id ?? "";
