@@ -6,8 +6,8 @@ export default function BootcampHubScreen() {
   const colors = useColors();
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}> 
-      <Text style={[styles.title, { color: colors.foreground }]}>No bootcamp rooms</Text>
-      <Text style={[styles.sub, { color: colors.mutedForeground }]}>This bootcamp has no tutor admin, so there are no rooms to show.</Text>
+      <Text style={[styles.title, { color: colors.foreground }]}>Bootcamp Room</Text>
+      <Text style={[styles.sub, { color: colors.mutedForeground }]}>Only tutor-created rooms appear here.</Text>
     </View>
   );
 }
