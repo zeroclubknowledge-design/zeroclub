@@ -129,6 +129,8 @@ function RootLayoutNav() {
         <Stack.Screen name="bootcamp-hub/[id]" options={{ headerShown: false, animation: "none" }} />
         <Stack.Screen name="notifications" options={{ headerShown: false, animation: "none" }} />
         <Stack.Screen name="zero-proof" options={{ headerShown: false, animation: "none" }} />
+        <Stack.Screen name="tutor/create" options={{ headerShown: false, animation: "slide_from_bottom" }} />
+        <Stack.Screen name="tutor/[id]" options={{ headerShown: false, animation: "none" }} />
       </Stack>
     </AuthGate>
   );

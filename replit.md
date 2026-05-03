@@ -32,11 +32,40 @@ Zero Club is a premium social learning mobile app for senior secondary school st
 
 Fonts: Inter (400, 500, 600, 700 via `@expo-google-fonts/inter`)
 
+## Tutor Studio (Mobile — verified tutors only)
+
+Users with `tutorVerified >= 1` see a **Studio** tab in the mobile app. All others see a "Become a Tutor" placeholder.
+
+### Studio Tab Sections
+- **Overview** — stat cards (bootcamps, students, modules, XP distributed) + quick actions
+- **Bootcamps** — list of tutor's own bootcamps, create button, link to detail
+- **Community** — per-bootcamp channel list (admin view)
+
+### Stack Screens
+- `/tutor/create` — full bootcamp creation form (title, subtitle, description, track, difficulty, delivery medium, XP reward, pricing, cover image/video upload)
+- `/tutor/[id]` — bootcamp detail with 4 tabs: Info (edit), Modules (CRUD with per-module `isPreview` free/paid toggle), Students (enrolled list with progress bar), Community (channels)
+
+### Tutor API (`/api/tutor/*`)
+All routes require `Authorization: Bearer <token>`. All bootcamp mutations require the tutor to own the resource.
+- `GET /tutor/my-stats` — aggregate stats
+- `GET /tutor/my-bootcamps` — list with enrollment counts + modules
+- `GET /tutor/bootcamps/:id` — single bootcamp detail
+- `POST /tutor/bootcamps` — create bootcamp
+- `PUT /tutor/bootcamps/:id` — update bootcamp
+- `DELETE /tutor/bootcamps/:id` — delete bootcamp
+- `GET /tutor/bootcamps/:id/students` — enrolled students
+- `POST /tutor/bootcamps/:id/modules` — add module with `isPreview`
+- `PUT /tutor/modules/:id` — edit module (title, duration, XP, `isPreview`)
+- `DELETE /tutor/modules/:id` — delete module
+
+### DB Schema Update
+- `bootcamp_modules.is_preview` (boolean, default false) — marks a module as free preview for non-enrolled students
+
 ## Database (PostgreSQL via Drizzle ORM)
 
 ### Tables
 - `users` — auth credentials (id, email, password_hash)
-- `profiles` — user profile (username, display_name, avatar_url, bio, track, xp_balance, school, referral_code, push_token)
+- `profiles` — user profile (username, display_name, avatar_url, bio, track, xp_balance, school, referral_code, push_token, tutor_verified)
 - `posts` — community feed posts (body, image_url, track, is_proof_project, xp_awarded)
 - `likes` — post likes (composite PK: user_id + post_id)
 - `bookmarks` — saved posts (composite PK: user_id + post_id)

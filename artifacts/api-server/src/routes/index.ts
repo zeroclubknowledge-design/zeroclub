@@ -16,6 +16,7 @@ import uploadRouter from "./upload";
 import bankAccountsRouter from "./bank-accounts";
 import notificationsRouter from "./notifications";
 import adminRouter from "./admin";
+import tutorRouter from "./tutor";
 
 const router: IRouter = Router();
 
@@ -36,5 +37,6 @@ router.use("/upload", uploadRouter);
 router.use("/bank-accounts", bankAccountsRouter);
 router.use("/notifications", notificationsRouter);
 router.use("/admin", adminRouter);
+router.use("/tutor", tutorRouter);
 
 export default router;

@@ -19,12 +19,14 @@ const NAV_ITEMS: {
   label: string;
   icon: keyof typeof Feather.glyphMap;
   iconActive: keyof typeof Feather.glyphMap;
+  tutorOnly?: boolean;
 }[] = [
   { route: "/(tabs)/", label: "Feed", icon: "home", iconActive: "home" },
   { route: "/(tabs)/bootcamps", label: "Learn", icon: "book-open", iconActive: "book-open" },
   { route: "/(tabs)/create", label: "New Post", icon: "plus-circle", iconActive: "plus-circle" },
   { route: "/(tabs)/chat", label: "Chat", icon: "message-circle", iconActive: "message-circle" },
   { route: "/(tabs)/wallet", label: "Wallet", icon: "credit-card", iconActive: "credit-card" },
+  { route: "/(tabs)/studio", label: "Studio", icon: "tv", iconActive: "tv", tutorOnly: true },
 ];
 
 const SECONDARY_ITEMS: {
@@ -64,7 +66,7 @@ export function DesktopSidebar() {
 
       {/* Main nav */}
       <View style={styles.navSection}>
-        {NAV_ITEMS.map((item) => {
+        {NAV_ITEMS.filter((item) => !item.tutorOnly || (user?.tutorVerified ?? 0) >= 1).map((item) => {
           const active = isActive(item.route);
           return (
             <TouchableOpacity

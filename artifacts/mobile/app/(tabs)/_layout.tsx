@@ -15,8 +15,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { useBreakpoint } from "@/hooks/useBreakpoint";
 import { DesktopSidebar } from "@/components/DesktopSidebar";
+import { useAuth } from "@/context/AuthContext";
 
 function NativeTabLayout() {
+  const { user } = useAuth();
+  const isTutor = (user?.tutorVerified ?? 0) >= 1;
   return (
     <NativeTabs>
       <NativeTabs.Trigger name="index">
@@ -39,21 +42,29 @@ function NativeTabLayout() {
         <Icon sf={{ default: "wallet.pass", selected: "wallet.pass.fill" }} />
         <Label>Wallet</Label>
       </NativeTabs.Trigger>
+      {isTutor && (
+        <NativeTabs.Trigger name="studio">
+          <Icon sf={{ default: "tv", selected: "tv.fill" }} />
+          <Label>Studio</Label>
+        </NativeTabs.Trigger>
+      )}
     </NativeTabs>
   );
 }
 
-const TAB_ITEMS: {
+const BASE_TAB_ITEMS: {
   name: string;
   label: string;
   icon: keyof typeof Feather.glyphMap;
   sfSymbol?: string;
+  tutorOnly?: boolean;
 }[] = [
   { name: "index", label: "Feed", icon: "home", sfSymbol: "house" },
   { name: "bootcamps", label: "Learn", icon: "book", sfSymbol: "book" },
   { name: "create", label: "Post", icon: "plus" },
   { name: "chat", label: "Chat", icon: "message-circle", sfSymbol: "message" },
   { name: "wallet", label: "Wallet", icon: "credit-card", sfSymbol: "creditcard" },
+  { name: "studio", label: "Studio", icon: "tv", sfSymbol: "tv", tutorOnly: true },
 ];
 
 interface TabBarRoute {
@@ -85,6 +96,10 @@ function FloatingTabBar({
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
   const { isDesktop } = useBreakpoint();
+  const { user } = useAuth();
+  const isTutor = (user?.tutorVerified ?? 0) >= 1;
+
+  const TAB_ITEMS = BASE_TAB_ITEMS.filter((t) => !t.tutorOnly || isTutor);
 
   if (isDesktop) return null;
 
@@ -100,7 +115,7 @@ function FloatingTabBar({
         ]}
       >
         {state.routes.map((route: TabBarRoute, index: number) => {
-          const tab = TAB_ITEMS[index];
+          const tab = TAB_ITEMS.find((t) => t.name === route.name);
           if (!tab) return null;
           const isFocused = state.index === index;
           const isCreate = tab.name === "create";
@@ -201,6 +216,7 @@ function ClassicTabLayout() {
       <Tabs.Screen name="create" />
       <Tabs.Screen name="chat" />
       <Tabs.Screen name="wallet" />
+      <Tabs.Screen name="studio" />
     </Tabs>
   );
 

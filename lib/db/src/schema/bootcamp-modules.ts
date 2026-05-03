@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, integer, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { bootcampsTable } from "./bootcamps";
@@ -13,6 +13,7 @@ export const bootcampModulesTable = pgTable("bootcamp_modules", {
   durationMinutes: integer("duration_minutes").notNull().default(20),
   xpReward: integer("xp_reward").notNull().default(25),
   orderIndex: integer("order_index").notNull(),
+  isPreview: boolean("is_preview").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

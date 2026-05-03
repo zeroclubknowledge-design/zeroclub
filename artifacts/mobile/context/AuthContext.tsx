@@ -27,6 +27,7 @@ export interface UserProfile {
   fundsBalance?: number;
   followerCount?: number;
   followingCount?: number;
+  tutorVerified?: number;
   createdAt: string;
 }
 
