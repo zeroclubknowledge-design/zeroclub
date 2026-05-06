@@ -19,6 +19,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import type { UserProfile } from "@/context/AuthContext";
 import { consumePendingRef, consumePendingRedirect } from "@/hooks/useShare";
+import { supabase } from "@workspace/supabase";
 
 const LOGO = require("../assets/images/icon.png");
 
@@ -153,28 +154,79 @@ export default function RegisterScreen() {
     }
     setLoading(true);
     try {
-      const domain = process.env["EXPO_PUBLIC_DOMAIN"];
-      const baseUrl = domain ? `https://${domain}` : "";
-      const res = await fetch(`${baseUrl}/api/auth/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          password,
-          username,
-          displayName,
-          track,
-          school: school.trim() || undefined,
-          referralCode: referralCode.trim().toUpperCase() || undefined,
-          isTutor: role === "tutor",
-        }),
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            username,
+            displayName,
+            track,
+            school: school.trim() || undefined,
+            referralCode: referralCode.trim().toUpperCase() || undefined,
+            isTutor: role === "tutor",
+          },
+        },
       });
-      const data = await res.json() as { token?: string; user?: UserProfile; message?: string };
-      if (!res.ok) {
-        showToast({ type: "error", title: "Registration failed", message: data.message ?? "Something went wrong" });
+
+      if (error) {
+        showToast({ type: "error", title: "Registration failed", message: error.message });
         return;
       }
-      await login(data.token!, data.user as UserProfile);
+
+      // The trigger on Supabase should create the profile, but we add a fallback
+      // and map the snake_case fields to camelCase.
+      let { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", data.user?.id)
+        .single();
+
+      if (profileError && data.user) {
+        // Try manual creation if trigger failed/is missing
+        const { data: newProfile, error: createError } = await supabase
+          .from("profiles")
+          .insert({
+            id: data.user.id,
+            email: data.user.email,
+            username,
+            display_name: displayName,
+            track,
+            school: school.trim() || undefined,
+            referral_code: referralCode.trim().toUpperCase() || undefined,
+          })
+          .select()
+          .single();
+
+        if (!createError) {
+          profile = newProfile;
+          profileError = null;
+        }
+      }
+
+      if (profileError || !profile) {
+        showToast({ type: "error", title: "Profile error", message: "Account created, but profile could not be loaded." });
+        return;
+      }
+
+      const userProfile: UserProfile = {
+        id: profile.id,
+        email: profile.email,
+        username: profile.username,
+        displayName: profile.display_name,
+        avatarUrl: profile.avatar_url,
+        bio: profile.bio,
+        track: profile.track,
+        school: profile.school,
+        referralCode: profile.referral_code,
+        level: profile.purchased_level ?? 1,
+        xpBalance: profile.xp_balance ?? 0,
+        fundsBalance: profile.funds_balance ?? 0,
+        tutorVerified: profile.tutor_verified ?? 0,
+        createdAt: profile.created_at,
+      };
+
+      await login(data.session?.access_token || "", userProfile);
 
       const pending = await consumePendingRedirect();
 
@@ -191,7 +243,8 @@ export default function RegisterScreen() {
         showToast({ type: "success", title: "Welcome to Zero Club!", message: "Your builder journey starts now." });
         router.replace("/(tabs)" as never);
       }
-    } catch {
+    } catch (err) {
+      console.error(err);
       showToast({ type: "error", title: "Network error", message: "Please try again." });
     } finally {
       setLoading(false);

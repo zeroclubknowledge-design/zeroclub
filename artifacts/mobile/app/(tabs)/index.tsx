@@ -15,21 +15,33 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
-import {
-  getListPostsQueryOptions,
-  getListPostsQueryKey,
-  useLikePost,
-  useBookmarkPost,
-  getGetFeedSummaryQueryOptions,
-  getGetFeedSummaryQueryKey,
-} from "@workspace/api-client-react";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import { PostCard } from "@/components/PostCard";
 import { useBreakpoint } from "@/hooks/useBreakpoint";
 import { useShare } from "@/hooks/useShare";
-import type { Post } from "@workspace/api-client-react";
+import { supabase } from "@workspace/supabase";
+
+export interface Post {
+  id: string;
+  author_id: string;
+  body: string;
+  image_url?: string | null;
+  track: string;
+  is_proof_project: boolean;
+  xp_awarded: number;
+  proof_click_count: number;
+  created_at: string;
+  author?: {
+    display_name: string;
+    username: string;
+    avatar_url?: string | null;
+  };
+  like_count?: number;
+  is_liked?: boolean;
+  is_bookmarked?: boolean;
+}
 
 const LOGO = require("../../assets/images/icon.png");
 
@@ -60,11 +72,99 @@ export default function FeedScreen() {
 
   const params = selectedTrack !== "all" ? { track: selectedTrack } : {};
 
-  const { data, isLoading, refetch } = useQuery(getListPostsQueryOptions(params));
-  const { data: summary } = useQuery(getGetFeedSummaryQueryOptions());
+  const { data: posts, isLoading, refetch } = useQuery({
+    queryKey: ["posts", selectedTrack],
+    queryFn: async () => {
+      let query = supabase
+        .from("posts")
+        .select(`
+          *,
+          author:profiles (
+            id,
+            display_name,
+            username,
+            avatar_url,
+            purchased_level,
+            track
+          )
+        `)
+        .order("created_at", { ascending: false });
 
-  const likePost = useLikePost();
-  const bookmarkPost = useBookmarkPost();
+      if (selectedTrack !== "all") {
+        query = query.eq("track", selectedTrack);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      // Map Supabase response to expected Post type if necessary
+      return (data || []) as Post[];
+    },
+  });
+
+  const { data: summary } = useQuery({
+    queryKey: ["feed-summary"],
+    queryFn: async () => {
+      // Basic summary logic for now
+      const { count: totalMembers } = await supabase.from("profiles").select("*", { count: "exact", head: true });
+      const { count: postsToday } = await supabase
+        .from("posts")
+        .select("*", { count: "exact", head: true })
+        .gte("created_at", new Date(new Date().setHours(0,0,0,0)).toISOString());
+      
+      return { totalMembers: totalMembers || 0, postsToday: postsToday || 0, activeMembersToday: 0 };
+    }
+  });
+
+  const handleLike = useCallback(
+    async (postId: string) => {
+      if (!user) return;
+      try {
+        const { data: existing } = await supabase
+          .from("likes")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("post_id", postId)
+          .single();
+
+        if (existing) {
+          await supabase.from("likes").delete().eq("user_id", user.id).eq("post_id", postId);
+        } else {
+          await supabase.from("likes").insert({ user_id: user.id, post_id: postId });
+          showToast({ type: "xp", title: "+2 XP Earned", message: "Thanks for engaging!" });
+        }
+        qc.invalidateQueries({ queryKey: ["posts"] });
+      } catch (err) {
+        console.error(err);
+      }
+    },
+    [user, qc, showToast],
+  );
+
+  const handleBookmark = useCallback(
+    async (postId: string) => {
+      if (!user) return;
+      try {
+        const { data: existing } = await supabase
+          .from("bookmarks")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("post_id", postId)
+          .single();
+
+        if (existing) {
+          await supabase.from("bookmarks").delete().eq("user_id", user.id).eq("post_id", postId);
+        } else {
+          await supabase.from("bookmarks").insert({ user_id: user.id, post_id: postId });
+        }
+        qc.invalidateQueries({ queryKey: ["posts"] });
+      } catch (err) {
+        console.error(err);
+      }
+    },
+    [user, qc],
+  );
+
   const { sharePost } = useShare();
 
   const onRefresh = useCallback(async () => {
@@ -72,29 +172,6 @@ export default function FeedScreen() {
     await refetch();
     setRefreshing(false);
   }, [refetch]);
-
-  const handleLike = useCallback(
-    (postId: string) => {
-      likePost.mutate({ postId }, {
-        onSuccess: () => {
-          qc.invalidateQueries({ queryKey: getListPostsQueryKey(params) });
-          showToast({ type: "xp", title: "+2 XP Earned", message: "Thanks for engaging with the community!" });
-        },
-      });
-    },
-    [likePost, qc, params, showToast],
-  );
-
-  const handleBookmark = useCallback(
-    (postId: string) => {
-      bookmarkPost.mutate({ postId }, {
-        onSuccess: () => {
-          qc.invalidateQueries({ queryKey: getListPostsQueryKey(params) });
-        },
-      });
-    },
-    [bookmarkPost, qc, params],
-  );
 
   const handleShare = useCallback(
     (postId: string, body: string) => {
@@ -105,29 +182,25 @@ export default function FeedScreen() {
 
   const handleProof = useCallback(
     async (postId: string) => {
-      const domain = process.env["EXPO_PUBLIC_DOMAIN"];
-      const baseUrl = domain ? `https://${domain}` : "";
+      if (!user) return;
       try {
-        const res = await fetch(`${baseUrl}/api/posts/${postId}/proof`, {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token ?? ""}` },
-        });
-        if (res.ok) {
-          const json = await res.json() as { proofed: boolean };
-          qc.invalidateQueries({ queryKey: getListPostsQueryKey(params) });
-          if (json.proofed) {
-            showToast({ type: "success", title: "Proof recorded", message: "You tested this build. The author gets +5 XP!" });
-          }
-        }
-      } catch {
-        // silent
+        // Increment proof count
+        const { data: post } = await supabase.from("posts").select("proof_click_count").eq("id", postId).single();
+        await supabase
+          .from("posts")
+          .update({ proof_click_count: (post?.proof_click_count || 0) + 1 })
+          .eq("id", postId);
+
+        qc.invalidateQueries({ queryKey: ["posts"] });
+        showToast({ type: "success", title: "Proof recorded", message: "You tested this build!" });
+      } catch (err) {
+        console.error(err);
       }
     },
-    [token, qc, params, showToast],
+    [user, qc, showToast],
   );
 
   const topPadding = Platform.OS === "web" ? (isDesktop ? 0 : 16) : insets.top;
-  const posts = data?.posts ?? [];
 
   // ── Desktop Layout ──
   if (isDesktop) {
@@ -191,9 +264,27 @@ export default function FeedScreen() {
                 }
                 renderItem={({ item }: { item: Post }) => (
                   <PostCard
-                    {...item}
-                    proofClickCount={(item as unknown as { proofClickCount?: number }).proofClickCount ?? 0}
-                    isProofClicked={(item as unknown as { isProofClicked?: boolean }).isProofClicked ?? false}
+                    id={item.id}
+                    body={item.body}
+                    imageUrl={item.image_url}
+                    track={item.track}
+                    isProofProject={item.is_proof_project}
+                    xpAwarded={item.xp_awarded}
+                    likeCount={item.like_count || 0}
+                    commentCount={0}
+                    isLiked={item.is_liked || false}
+                    isBookmarked={item.is_bookmarked || false}
+                    proofClickCount={item.proof_click_count}
+                    isProofClicked={false}
+                    createdAt={item.created_at}
+                    author={{
+                      id: (item.author as any)?.id || item.author_id,
+                      displayName: item.author?.display_name || "Unknown",
+                      username: item.author?.username || "unknown",
+                      avatarUrl: item.author?.avatar_url,
+                      level: (item.author as any)?.purchased_level || 1,
+                      track: (item.author as any)?.track || "frontend"
+                    }}
                     onLike={() => handleLike(item.id)}
                     onBookmark={() => handleBookmark(item.id)}
                     onProof={() => { void handleProof(item.id); }}
@@ -314,9 +405,27 @@ export default function FeedScreen() {
           }
           renderItem={({ item }: { item: Post }) => (
             <PostCard
-              {...item}
-              proofClickCount={(item as unknown as { proofClickCount?: number }).proofClickCount ?? 0}
-              isProofClicked={(item as unknown as { isProofClicked?: boolean }).isProofClicked ?? false}
+              id={item.id}
+              body={item.body}
+              imageUrl={item.image_url}
+              track={item.track}
+              isProofProject={item.is_proof_project}
+              xpAwarded={item.xp_awarded}
+              likeCount={item.like_count || 0}
+              commentCount={0}
+              isLiked={item.is_liked || false}
+              isBookmarked={item.is_bookmarked || false}
+              proofClickCount={item.proof_click_count}
+              isProofClicked={false}
+              createdAt={item.created_at}
+              author={{
+                id: (item.author as any)?.id || item.author_id,
+                displayName: item.author?.display_name || "Unknown",
+                username: item.author?.username || "unknown",
+                avatarUrl: item.author?.avatar_url,
+                level: (item.author as any)?.purchased_level || 1,
+                track: (item.author as any)?.track || "frontend"
+              }}
               onLike={() => handleLike(item.id)}
               onBookmark={() => handleBookmark(item.id)}
               onProof={() => { void handleProof(item.id); }}
@@ -326,6 +435,15 @@ export default function FeedScreen() {
           )}
         />
       )}
+      
+      {/* Floating Action Button (Mobile) */}
+      <TouchableOpacity 
+        style={[styles.fab, { backgroundColor: colors.primary, bottom: insets.bottom + 80 }]} 
+        activeOpacity={0.8}
+        onPress={() => router.push("/create" as never)}
+      >
+        <Feather name="plus" size={24} color="#fff" />
+      </TouchableOpacity>
     </View>
   );
 }
@@ -343,7 +461,21 @@ const styles = StyleSheet.create({
   avatarBtn: { width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center", overflow: "hidden" },
   avatarImg: { width: 34, height: 34, borderRadius: 17 },
   avatarInitials: { fontSize: 14, fontWeight: "700" },
-  list: { paddingTop: 12, paddingBottom: 100 },
+  list: { paddingTop: 12, paddingBottom: 120 },
+  fab: {
+    position: "absolute",
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
 
   // Shared
   trackFilters: { paddingHorizontal: 16, gap: 8 },

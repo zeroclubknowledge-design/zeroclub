@@ -15,19 +15,26 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import {
-  getGetWalletQueryOptions,
-  getListXpEventsQueryOptions,
-  getListBankAccountsQueryOptions,
-  getListWithdrawalsQueryOptions,
-  useCreateWithdrawal,
-  getGetWalletQueryKey,
-} from "@workspace/api-client-react";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import { useBreakpoint } from "@/hooks/useBreakpoint";
-import type { XpEvent, BankAccount } from "@workspace/api-client-react";
+import { supabase } from "@workspace/supabase";
+
+type XpEvent = {
+  id: string;
+  source: string;
+  amount: number;
+  detail?: string | null;
+  createdAt: string;
+};
+
+type BankAccount = {
+  id: string;
+  bankName: string;
+  accountNumber: string;
+  accountName: string;
+};
 
 const SOURCE_LABELS: Record<string, string> = {
   build_posted: "Build Posted",
@@ -87,7 +94,7 @@ type ActiveTab = "activity" | "stats";
 export default function WalletScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user, token } = useAuth();
+  const { user, updateUser } = useAuth();
   const qc = useQueryClient();
   const { isDesktop } = useBreakpoint();
   const topPadding = Platform.OS === "web" ? (isDesktop ? 0 : 16) : insets.top;
@@ -100,14 +107,90 @@ export default function WalletScreen() {
   const [withdrawXp, setWithdrawXp] = useState("");
   const [addAmount, setAddAmount] = useState("");
   const [addLoading, setAddLoading] = useState(false);
+  const [withdrawLoading, setWithdrawLoading] = useState(false);
 
-  const { data: wallet, isLoading: walletLoading } = useQuery(getGetWalletQueryOptions());
-  const { data: events } = useQuery(getListXpEventsQueryOptions());
-  const { data: bankAccounts } = useQuery(getListBankAccountsQueryOptions());
-  const { data: withdrawals } = useQuery(getListWithdrawalsQueryOptions());
+  const { data: wallet, isLoading: walletLoading, refetch: refetchWallet } = useQuery({
+    queryKey: ["wallet", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+      if (error) throw error;
+
+      const level = data.purchased_level || 1;
+      const xpBalance = data.xp_balance || 0;
+      const xpForCurrentLevel = (level - 1) * 5000;
+      const totalXpForNextLevel = level * 5000;
+
+      return {
+        id: data.id,
+        xpBalance,
+        fundsBalance: data.funds_balance || 0,
+        level,
+        xpForCurrentLevel,
+        totalXpForNextLevel,
+        xpToNextLevel: totalXpForNextLevel - xpBalance,
+        minWithdrawalXp: 2000,
+      };
+    },
+    enabled: !!user?.id,
+  });
+
+  const { data: events } = useQuery({
+    queryKey: ["xp-events", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data, error } = await supabase
+        .from("xp_events")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data || []).map((e: any) => ({
+        ...e,
+        createdAt: e.created_at,
+      }));
+    },
+    enabled: !!user?.id,
+  });
+
+  const { data: bankAccounts } = useQuery({
+    queryKey: ["bank-accounts", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data, error } = await supabase
+        .from("bank_accounts")
+        .select("*")
+        .eq("user_id", user.id);
+      if (error) throw error;
+      return (data || []).map((b: any) => ({
+        ...b,
+        bankName: b.bank_name,
+        accountNumber: b.account_number,
+        accountName: b.account_name,
+      }));
+    },
+    enabled: !!user?.id,
+  });
+
+  const { data: withdrawals } = useQuery({
+    queryKey: ["withdrawals", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data, error } = await supabase
+        .from("withdrawals")
+        .select("*")
+        .eq("user_id", user.id);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user?.id,
+  });
 
   const { showToast } = useToast();
-  const createWithdrawal = useCreateWithdrawal();
 
   const minXp = wallet?.minWithdrawalXp ?? 2000;
   const canWithdraw = wallet ? wallet.xpBalance >= minXp : false;
@@ -125,9 +208,9 @@ export default function WalletScreen() {
         )
       : 0;
 
-  const handleWithdrawSubmit = () => {
+  const handleWithdrawSubmit = async () => {
     const xp = parseInt(withdrawXp, 10);
-    if (!selectedAccount) {
+    if (!selectedAccount || !user) {
       showToast({ type: "warning", title: "Select account", message: "Please select a bank account" });
       return;
     }
@@ -139,73 +222,81 @@ export default function WalletScreen() {
       showToast({ type: "warning", title: "Insufficient XP", message: "You don't have enough XP" });
       return;
     }
-    createWithdrawal.mutate(
-      { data: { bankAccountId: selectedAccount.id, amountXp: xp } },
-      {
-        onSuccess: () => {
-          qc.invalidateQueries({ queryKey: getGetWalletQueryKey() });
-          setWithdrawModal(false);
-          setWithdrawXp("");
-          setSelectedAccount(null);
-          const gross = xp * 10;
-          const net = Math.floor(gross * 0.9);
-          showToast({
-            type: "success",
-            title: "Withdrawal Requested",
-            message: `${xp} XP → ${formatNaira(net)} (after 10% fee) submitted. Arrives in 1–3 days.`,
-            duration: 5000,
-          });
-        },
-        onError: () => {
-          showToast({ type: "error", title: "Withdrawal failed", message: "Please try again." });
-        },
-      },
-    );
+
+    setWithdrawLoading(true);
+    try {
+      const grossKobo = xp * 1000;
+      const netKobo = Math.floor(grossKobo * 0.9);
+
+      const { error } = await supabase.from("withdrawals").insert({
+        id: Math.random().toString(36).slice(2),
+        user_id: user.id,
+        bank_account_id: selectedAccount.id,
+        amount_xp: xp,
+        amount_kobo: netKobo,
+        status: "pending",
+      });
+
+      if (error) throw error;
+
+      const { error: updateError } = await supabase
+        .from("profiles")
+        .update({ xp_balance: wallet.xpBalance - xp })
+        .eq("id", user.id);
+
+      if (updateError) throw updateError;
+
+      refetchWallet();
+      qc.invalidateQueries({ queryKey: ["withdrawals", user.id] });
+      setWithdrawModal(false);
+      setWithdrawXp("");
+      setSelectedAccount(null);
+      
+      showToast({
+        type: "success",
+        title: "Withdrawal Requested",
+        message: `${xp} XP requested. Arrives in 1–3 days.`,
+        duration: 5000,
+      });
+    } catch (err: any) {
+      showToast({ type: "error", title: "Withdrawal failed", message: err.message });
+    } finally {
+      setWithdrawLoading(false);
+    }
   };
 
-  const handleAddFunds = async (kobo: number) => {
-    if (!kobo || kobo <= 0) return;
+  const handleAddSubmit = async () => {
+    const naira = parseFloat(addAmount.replace(/,/g, ""));
+    if (isNaN(naira) || naira <= 0 || !user) {
+      showToast({ type: "warning", title: "Invalid amount", message: "Enter a valid amount in Naira." });
+      return;
+    }
+    
     setAddLoading(true);
     try {
-      const domain = process.env["EXPO_PUBLIC_DOMAIN"];
-      const baseUrl = domain ? `https://${domain}` : "";
-      const res = await fetch(`${baseUrl}/api/wallet/add-funds`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token ?? ""}`,
-        },
-        body: JSON.stringify({ amountKobo: kobo }),
-      });
-      if (!res.ok) {
-        const err = await res.json() as { message?: string };
-        showToast({ type: "error", title: "Failed", message: err.message ?? "Could not add funds." });
-        return;
-      }
-      const data = await res.json() as { fundsBalance: number };
-      qc.invalidateQueries({ queryKey: getGetWalletQueryKey() });
+      const kobo = Math.round(naira * 100);
+      const newBalance = (wallet?.fundsBalance ?? 0) + kobo;
+
+      const { error } = await supabase
+        .from("profiles")
+        .update({ funds_balance: newBalance })
+        .eq("id", user.id);
+
+      if (error) throw error;
+
+      refetchWallet();
       setAddModal(false);
       setAddAmount("");
       showToast({
         type: "success",
         title: "Funds Added",
-        message: `${formatNaira(kobo)} added. New balance: ${formatNaira(data.fundsBalance)}`,
-        duration: 4000,
+        message: `${formatNaira(kobo)} added successfully.`,
       });
-    } catch {
-      showToast({ type: "error", title: "Network error", message: "Please check your connection." });
+    } catch (err: any) {
+      showToast({ type: "error", title: "Failed", message: err.message });
     } finally {
       setAddLoading(false);
     }
-  };
-
-  const handleAddSubmit = () => {
-    const naira = parseFloat(addAmount.replace(/,/g, ""));
-    if (isNaN(naira) || naira <= 0) {
-      showToast({ type: "warning", title: "Invalid amount", message: "Enter a valid amount in Naira." });
-      return;
-    }
-    void handleAddFunds(Math.round(naira * 100));
   };
 
   const sections = groupByDate(events ?? []);
@@ -343,8 +434,8 @@ export default function WalletScreen() {
               <TouchableOpacity style={[styles.modalCancelBtn, { backgroundColor: colors.muted }]} onPress={() => setWithdrawModal(false)}>
                 <Text style={[styles.modalCancelText, { color: colors.mutedForeground }]}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalSubmitBtn, { backgroundColor: createWithdrawal.isPending ? colors.muted : colors.primary }]} onPress={handleWithdrawSubmit} disabled={createWithdrawal.isPending}>
-                {createWithdrawal.isPending ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.modalSubmitText}>Request Withdrawal</Text>}
+              <TouchableOpacity style={[styles.modalSubmitBtn, { backgroundColor: withdrawLoading ? colors.muted : colors.primary }]} onPress={handleWithdrawSubmit} disabled={withdrawLoading}>
+                {withdrawLoading ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.modalSubmitText}>Request Withdrawal</Text>}
               </TouchableOpacity>
             </View>
           </View>

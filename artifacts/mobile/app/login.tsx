@@ -17,6 +17,7 @@ import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import type { UserProfile } from "@/context/AuthContext";
+import { supabase } from "@workspace/supabase";
 
 const LOGO = require("../assets/images/icon.png");
 
@@ -72,36 +73,102 @@ export default function LoginScreen() {
     }
     setLoading(true);
     try {
-      const domain = process.env["EXPO_PUBLIC_DOMAIN"];
-      const baseUrl = domain ? `https://${domain}` : "";
-      const res = await fetch(`${baseUrl}/api/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
-      const data = await res.json() as { token?: string; user?: UserProfile; message?: string };
-      if (!res.ok) {
-        showToast({ type: "error", title: "Sign in failed", message: data.message ?? "Invalid credentials" });
+
+      if (error) {
+        showToast({ type: "error", title: "Sign in failed", message: error.message });
         return;
       }
-      await login(data.token!, data.user as UserProfile);
 
-      const isTutorAccount = (data.user as UserProfile)?.tutorVerified ?? 0;
+      if (!data.user) {
+        showToast({ type: "error", title: "Auth error", message: "User data not found." });
+        return;
+      }
+
+      // Fetch the profile from the profiles table
+      let { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", data.user.id)
+        .single();
+
+      // If profile is missing, try to create it from auth metadata
+      if (profileError && (profileError.code === "PGRST116" || profileError.message.includes("0 rows"))) {
+        const metadata = data.user.user_metadata || {};
+        const { data: newProfile, error: createError } = await supabase
+          .from("profiles")
+          .insert({
+            id: data.user.id,
+            email: data.user.email,
+            username: metadata.username || data.user.email?.split("@")[0] || `user_${data.user.id.slice(0, 5)}`,
+            display_name: metadata.displayName || metadata.username || data.user.email?.split("@")[0] || "User",
+            track: metadata.track || "frontend",
+            school: metadata.school,
+            referral_code: metadata.referralCode,
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error("Profile creation error:", createError);
+          showToast({ type: "error", title: "Profile error", message: "Could not create your profile." });
+          return;
+        }
+        profile = newProfile;
+        profileError = null;
+      } else if (profileError) {
+        showToast({ type: "error", title: "Profile error", message: "Could not fetch user profile." });
+        return;
+      }
+
+      if (!profile) {
+        showToast({ type: "error", title: "Profile error", message: "Profile data is empty." });
+        return;
+      }
+
+      // Map snake_case DB fields to camelCase UserProfile
+      const userProfile: UserProfile = {
+        id: profile.id,
+        email: profile.email,
+        username: profile.username,
+        displayName: profile.display_name,
+        avatarUrl: profile.avatar_url,
+        bio: profile.bio,
+        track: profile.track,
+        school: profile.school,
+        referralCode: profile.referral_code,
+        level: profile.purchased_level ?? 1,
+        xpBalance: profile.xp_balance ?? 0,
+        fundsBalance: profile.funds_balance ?? 0,
+        tutorVerified: 1, // AUTO-VERIFIED FOR TESTING PHASE
+        createdAt: profile.created_at,
+      };
+
+      await login(data.session?.access_token || "", userProfile);
+
+      const isTutorAccount = userProfile.tutorVerified ?? 0;
 
       if (role === "tutor" && isTutorAccount < 1) {
-        showToast({
-          type: "warning",
-          title: "Tutor access pending",
-          message: "Your tutor account is under review. You can still browse as a student.",
-        });
-        router.replace("/(tabs)" as never);
+        // Testing phase: auto-grant tutor access
+        await supabase
+          .from("profiles")
+          .update({ tutor_verified: 1 })
+          .eq("id", userProfile.id);
+        userProfile.tutorVerified = 1;
+        await login(data.session?.access_token || "", userProfile);
+        showToast({ type: "success", title: "Tutor access granted!", message: "Opening your Tutor Studio…" });
+        router.replace("/(tabs)/studio" as never);
       } else if (role === "tutor" && isTutorAccount >= 1) {
         showToast({ type: "success", title: "Welcome back!", message: "Opening your Tutor Studio…" });
         router.replace("/(tabs)/studio" as never);
       } else {
         router.replace("/(tabs)" as never);
       }
-    } catch {
+    } catch (err) {
+      console.error(err);
       showToast({ type: "error", title: "Network error", message: "Please try again." });
     } finally {
       setLoading(false);

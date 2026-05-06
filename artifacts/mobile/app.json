@@ -1,12 +1,13 @@
 {
   "expo": {
     "name": "Zero Club",
-    "slug": "mobile",
-    "version": "1.0.0",
+    "slug": "zero-club",
+    "version": "1.0.1",
+    "runtimeVersion": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "mobile",
-    "userInterfaceStyle": "automatic",
+    "scheme": "zeroclub",
+    "userInterfaceStyle": "dark",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/images/icon.png",
@@ -14,17 +15,44 @@
       "backgroundColor": "#0D0D0D"
     },
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "bundleIdentifier": "com.zeroclub.app"
     },
-    "android": {},
+    "android": {
+      "package": "com.zeroclub.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#0D0D0D"
+      }
+    },
     "web": {
-      "favicon": "./assets/images/icon.png"
+      "favicon": "./assets/images/icon.png",
+      "bundler": "metro",
+      "output": "static",
+      "pwa": {
+        "name": "Zero Club",
+        "shortName": "ZeroClub",
+        "description": "Premium social learning for builders.",
+        "themeColor": "#0D0D0D",
+        "backgroundColor": "#0D0D0D",
+        "display": "standalone",
+        "orientation": "portrait",
+        "icons": [
+          {
+            "src": "./assets/images/icon.png",
+            "sizes": [96, 128, 192, 256, 384, 512]
+          }
+        ]
+      }
+    },
+    "updates": {
+      "url": "https://u.expo.dev/0595a639-35d6-4f7b-a00a-10c0bb421a06"
     },
     "plugins": [
       [
         "expo-router",
         {
-          "origin": "https://replit.com/"
+          "origin": "https://zeroclub.app"
         }
       ],
       "expo-font",
@@ -32,7 +60,12 @@
     ],
     "experiments": {
       "typedRoutes": true,
-      "reactCompiler": true
+      "reactCompiler": false
+    },
+    "extra": {
+      "eas": {
+        "projectId": "0595a639-35d6-4f7b-a00a-10c0bb421a06"
+      }
     }
   }
 }

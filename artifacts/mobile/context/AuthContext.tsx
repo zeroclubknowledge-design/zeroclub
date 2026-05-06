@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { setBaseUrl, setAuthTokenGetter } from "@workspace/api-client-react";
+import { supabase } from "@workspace/supabase";
 
 const API_DOMAIN_KEY = "@zero_club/domain";
 const TOKEN_KEY = "@zero_club/token";
@@ -72,6 +73,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setToken(storedToken);
           setUser(JSON.parse(storedUser) as UserProfile);
           setAuthTokenGetter(() => storedToken);
+
+          // Restore Supabase session so Storage/DB calls are authenticated
+          await supabase.auth.setSession({
+            access_token: storedToken,
+            refresh_token: "", // Ideally we'd store this too, but this works for now
+          });
         }
       } catch {
         // ignore

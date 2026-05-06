@@ -15,16 +15,23 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import {
-  getListMessagesQueryOptions,
-  getListMessagesQueryKey,
-  useSendMessage,
-  getListChannelsQueryOptions,
-} from "@workspace/api-client-react";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
-import type { Message } from "@workspace/api-client-react";
+import { supabase } from "@workspace/supabase";
+
+type Message = {
+  id: string;
+  channelId: string;
+  authorId: string;
+  body: string;
+  createdAt: string;
+  author: {
+    id: string;
+    displayName: string;
+    avatarUrl?: string | null;
+  };
+};
 
 function timeStr(dateStr: string | Date): string {
   const d = typeof dateStr === "string" ? new Date(dateStr) : dateStr;
@@ -46,28 +53,63 @@ export default function ChannelScreen() {
   const channelId = id ?? "";
 
   const { data: messages, isLoading } = useQuery({
-    ...getListMessagesQueryOptions(channelId, {}),
+    queryKey: ["messages", channelId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("messages")
+        .select(`
+          *,
+          author:profiles (*)
+        `)
+        .eq("channel_id", channelId)
+        .order("created_at", { ascending: true });
+
+      if (error) throw error;
+      
+      return (data || []).map((m: any) => ({
+        ...m,
+        createdAt: m.created_at,
+        authorId: m.author_id,
+        author: {
+          ...m.author,
+          avatarUrl: m.author.avatar_url,
+          displayName: m.author.display_name,
+        },
+      }));
+    },
     refetchInterval: 3000,
   });
 
-  const { data: channels } = useQuery(getListChannelsQueryOptions());
-  const channel = channels?.find((c) => c.id === channelId);
+  const { data: channel } = useQuery({
+    queryKey: ["channel", channelId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("channels")
+        .select("*")
+        .eq("id", channelId)
+        .single();
+      if (error) return null;
+      return data;
+    },
+  });
 
-  const sendMessage = useSendMessage();
-
-  const handleSend = useCallback(() => {
+  const handleSend = useCallback(async () => {
     const text = messageText.trim();
-    if (!text) return;
+    if (!text || !user) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setMessageText("");
-    sendMessage.mutate(
-      { channelId, data: { body: text } },
-      {
-        onSuccess: () =>
-          qc.invalidateQueries({ queryKey: getListMessagesQueryKey(channelId, {}) }),
-      },
-    );
-  }, [messageText, channelId, sendMessage, qc]);
+
+    const { error } = await supabase.from("messages").insert({
+      id: Math.random().toString(36).slice(2),
+      channel_id: channelId,
+      author_id: user.id,
+      body: text,
+    });
+
+    if (!error) {
+      qc.invalidateQueries({ queryKey: ["messages", channelId] });
+    }
+  }, [messageText, channelId, user, qc]);
 
   const renderMessage = ({ item, index }: { item: Message; index: number }) => {
     const isMe = item.authorId === user?.id;

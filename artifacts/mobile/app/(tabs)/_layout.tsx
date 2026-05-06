@@ -19,21 +19,25 @@ import { useAuth } from "@/context/AuthContext";
 
 function NativeTabLayout() {
   const { user } = useAuth();
-  const isTutor = (user?.tutorVerified ?? 0) >= 1;
+  const isTutor = user?.tutorVerified === 1;
   return (
     <NativeTabs>
       <NativeTabs.Trigger name="index">
         <Icon sf={{ default: "house", selected: "house.fill" }} />
         <Label>Feed</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="bootcamps">
-        <Icon sf={{ default: "book", selected: "book.fill" }} />
-        <Label>Bootcamps</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="create">
-        <Icon sf={{ default: "plus.circle", selected: "plus.circle.fill" }} />
-        <Label>Post</Label>
-      </NativeTabs.Trigger>
+      {!isTutor && (
+        <NativeTabs.Trigger name="bootcamps">
+          <Icon sf={{ default: "book", selected: "book.fill" }} />
+          <Label>Learn</Label>
+        </NativeTabs.Trigger>
+      )}
+      {isTutor && (
+        <NativeTabs.Trigger name="studio">
+          <Icon sf={{ default: "tv", selected: "tv.fill" }} />
+          <Label>Studio</Label>
+        </NativeTabs.Trigger>
+      )}
       <NativeTabs.Trigger name="chat">
         <Icon sf={{ default: "message", selected: "message.fill" }} />
         <Label>Chat</Label>
@@ -42,12 +46,10 @@ function NativeTabLayout() {
         <Icon sf={{ default: "wallet.pass", selected: "wallet.pass.fill" }} />
         <Label>Wallet</Label>
       </NativeTabs.Trigger>
-      {isTutor && (
-        <NativeTabs.Trigger name="studio">
-          <Icon sf={{ default: "tv", selected: "tv.fill" }} />
-          <Label>Studio</Label>
-        </NativeTabs.Trigger>
-      )}
+      <NativeTabs.Trigger name="profile">
+        <Icon sf={{ default: "person", selected: "person.fill" }} />
+        <Label>Profile</Label>
+      </NativeTabs.Trigger>
     </NativeTabs>
   );
 }
@@ -58,13 +60,14 @@ const BASE_TAB_ITEMS: {
   icon: keyof typeof Feather.glyphMap;
   sfSymbol?: string;
   tutorOnly?: boolean;
+  studentOnly?: boolean;
 }[] = [
   { name: "index", label: "Feed", icon: "home", sfSymbol: "house" },
-  { name: "bootcamps", label: "Learn", icon: "book", sfSymbol: "book" },
-  { name: "create", label: "Post", icon: "plus" },
+  { name: "bootcamps", label: "Learn", icon: "book", sfSymbol: "book", studentOnly: true },
+  { name: "studio", label: "Studio", icon: "tv", sfSymbol: "tv", tutorOnly: true },
   { name: "chat", label: "Chat", icon: "message-circle", sfSymbol: "message" },
   { name: "wallet", label: "Wallet", icon: "credit-card", sfSymbol: "creditcard" },
-  { name: "studio", label: "Studio", icon: "tv", sfSymbol: "tv", tutorOnly: true },
+  { name: "profile", label: "Profile", icon: "user", sfSymbol: "person" },
 ];
 
 interface TabBarRoute {
@@ -97,9 +100,13 @@ function FloatingTabBar({
   const isWeb = Platform.OS === "web";
   const { isDesktop } = useBreakpoint();
   const { user } = useAuth();
-  const isTutor = (user?.tutorVerified ?? 0) >= 1;
+  const isTutor = user?.tutorVerified === 1;
 
-  const TAB_ITEMS = BASE_TAB_ITEMS.filter((t) => !t.tutorOnly || isTutor);
+  const TAB_ITEMS = BASE_TAB_ITEMS.filter((t) => {
+    if (t.tutorOnly && !isTutor) return false;
+    if (t.studentOnly && isTutor) return false;
+    return true;
+  });
 
   if (isDesktop) return null;
 
@@ -118,7 +125,6 @@ function FloatingTabBar({
           const tab = TAB_ITEMS.find((t) => t.name === route.name);
           if (!tab) return null;
           const isFocused = state.index === index;
-          const isCreate = tab.name === "create";
 
           const onPress = () => {
             const event = navigation.emit({
@@ -130,30 +136,6 @@ function FloatingTabBar({
               navigation.navigate(route.name);
             }
           };
-
-          if (isCreate) {
-            return (
-              <TouchableOpacity
-                key={route.key}
-                onPress={onPress}
-                activeOpacity={0.85}
-                style={styles.tabItem}
-              >
-                <View
-                  style={[
-                    styles.createBtn,
-                    { backgroundColor: isFocused ? colors.primary : colors.muted },
-                  ]}
-                >
-                  <Feather
-                    name="plus"
-                    size={19}
-                    color={isFocused ? "#fff" : colors.mutedForeground}
-                  />
-                </View>
-              </TouchableOpacity>
-            );
-          }
 
           return (
             <TouchableOpacity
@@ -213,10 +195,11 @@ function ClassicTabLayout() {
     >
       <Tabs.Screen name="index" />
       <Tabs.Screen name="bootcamps" />
-      <Tabs.Screen name="create" />
+      <Tabs.Screen name="create" options={{ href: null }} />
       <Tabs.Screen name="chat" />
       <Tabs.Screen name="wallet" />
       <Tabs.Screen name="studio" />
+      <Tabs.Screen name="profile" />
     </Tabs>
   );
 

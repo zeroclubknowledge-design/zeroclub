@@ -18,11 +18,14 @@ import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import { useQueryClient } from "@tanstack/react-query";
-import { useCreatePost, getListPostsQueryKey } from "@workspace/api-client-react";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import { useBreakpoint } from "@/hooks/useBreakpoint";
+import { supabase } from "@workspace/supabase";
+import { decode } from "base64-arraybuffer";
+import { readAsStringAsync } from "expo-file-system";
+import { Video, ResizeMode } from "expo-av";
 
 const TRACKS = [
   { key: "product_design", label: "Product Design" },
@@ -50,21 +53,23 @@ interface TaggedUser {
   level: number;
 }
 
-async function uploadMedia(uri: string, type: "image" | "video", token: string): Promise<string> {
-  const domain = process.env["EXPO_PUBLIC_DOMAIN"];
-  const baseUrl = domain ? `https://${domain}` : "";
-  const filename = uri.split("/").pop() ?? "upload";
-  const mimeType = type === "video" ? "video/mp4" : "image/jpeg";
-  const formData = new FormData();
-  formData.append("file", { uri, name: filename, type: mimeType } as unknown as Blob);
-  const res = await fetch(`${baseUrl}/api/upload`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
-    body: formData,
-  });
-  if (!res.ok) throw new Error("Upload failed");
-  const data = await res.json() as { url: string };
-  return `https://${domain}${data.url}`;
+async function uploadMedia(uri: string, type: "image" | "video"): Promise<string> {
+  const ext = uri.split(".").pop()?.split("?")[0] ?? (type === "video" ? "mp4" : "jpg");
+  const filename = `posts/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const contentType = type === "video" ? `video/${ext}` : `image/${ext}`;
+  
+  // Use FileSystem base64 for better Android compatibility
+  const base64 = await readAsStringAsync(uri, { encoding: "base64" });
+  const arrayBuffer = decode(base64);
+
+  const { data, error } = await supabase.storage
+    .from("uploads")
+    .upload(filename, arrayBuffer, { contentType, cacheControl: "3600", upsert: false });
+
+  if (error) throw error;
+  
+  const { data: { publicUrl } } = supabase.storage.from("uploads").getPublicUrl(data.path);
+  return publicUrl;
 }
 
 export default function CreateScreen() {
@@ -88,7 +93,7 @@ export default function CreateScreen() {
   const [tagSearching, setTagSearching] = useState(false);
 
   const { showToast } = useToast();
-  const createPost = useCreatePost();
+  const [isPosting, setIsPosting] = useState(false);
   const charCount = body.length;
   const maxChars = 500;
 
@@ -119,18 +124,16 @@ export default function CreateScreen() {
     }
     setTagSearching(true);
     try {
-      const domain = process.env["EXPO_PUBLIC_DOMAIN"];
-      const baseUrl = domain ? `https://${domain}` : "";
-      const res = await fetch(
-        `${baseUrl}/api/profiles/search?q=${encodeURIComponent(q.trim())}`,
-        { headers: { Authorization: `Bearer ${token}` } },
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, username, display_name, avatar_url")
+        .or(`username.ilike.%${q}%,display_name.ilike.%${q}%`)
+        .limit(10);
+
+      if (error) throw error;
+      setTagResults(
+        (data || []).filter((u) => u.id !== user?.id && !taggedUsers.find((t) => t.id === u.id)) as TaggedUser[],
       );
-      if (res.ok) {
-        const data = await res.json() as TaggedUser[];
-        setTagResults(
-          data.filter((u) => u.id !== user?.id && !taggedUsers.find((t) => t.id === u.id)),
-        );
-      }
     } catch {
       setTagResults([]);
     } finally {
@@ -157,48 +160,59 @@ export default function CreateScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     let mediaUrl: string | undefined;
-    if (media && token) {
+    if (media) {
       setUploading(true);
       try {
-        mediaUrl = await uploadMedia(media.uri, media.type, token);
-      } catch {
-        showToast({ type: "error", title: "Upload failed", message: "Could not upload media. Try again." });
+        mediaUrl = await uploadMedia(media.uri, media.type);
+      } catch (err: any) {
+        console.error(err);
+        showToast({ 
+          type: "error", 
+          title: "Upload failed", 
+          message: err.message || "Could not upload media." 
+        });
         setUploading(false);
         return;
       }
       setUploading(false);
     }
 
-    const mentions = taggedUsers.map((u) => `@${u.username}`).join(" ");
-    const fullBody = mentions ? `${body.trim()}\n\n${mentions}` : body.trim();
+    setIsPosting(true);
+    try {
+      const mentions = taggedUsers.map((u) => `@${u.username}`).join(" ");
+      const fullBody = mentions ? `${body.trim()}\n\n${mentions}` : body.trim();
 
-    createPost.mutate(
-      {
-        data: {
-          body: fullBody,
-          track: track as import("@workspace/api-client-react").CreatePostRequestTrack,
-          isProofProject: false,
-          imageUrl: mediaUrl ?? null,
-        },
-      },
-      {
-        onSuccess: () => {
-          qc.invalidateQueries({ queryKey: getListPostsQueryKey({}) });
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          setBody("");
-          setMedia(null);
-          setTaggedUsers([]);
-          setSubmitted(true);
-          setTimeout(() => setSubmitted(false), 3000);
-        },
-        onError: () => {
-          showToast({ type: "error", title: "Failed to post", message: "Try again." });
-        },
-      },
-    );
+      const newId = Math.random().toString(36).slice(2) + Date.now().toString(36);
+
+      const { error } = await supabase.from("posts").insert({
+        id: newId,
+        author_id: user?.id,
+        body: fullBody,
+        track,
+        image_url: mediaUrl,
+        is_proof_project: false,
+        xp_awarded: 15,
+        proof_click_count: 0,
+      });
+
+      if (error) throw error;
+
+      qc.invalidateQueries({ queryKey: ["posts"] });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setBody("");
+      setMedia(null);
+      setTaggedUsers([]);
+      setSubmitted(true);
+      setTimeout(() => setSubmitted(false), 3000);
+    } catch (err) {
+      console.error(err);
+      showToast({ type: "error", title: "Failed to post", message: "Try again." });
+    } finally {
+      setIsPosting(false);
+    }
   };
 
-  const isPending = uploading || createPost.isPending;
+  const isPending = uploading || isPosting;
 
   const formContent = (
     <>
@@ -232,10 +246,15 @@ export default function CreateScreen() {
             {media.type === "image" ? (
               <Image source={{ uri: media.uri }} style={styles.mediaPreview} resizeMode="cover" />
             ) : (
-              <View style={[styles.videoPlaceholder, { backgroundColor: colors.muted }]}>
-                <Feather name="film" size={32} color={colors.primary} />
-                <Text style={[styles.videoLabel, { color: colors.mutedForeground }]}>Video selected</Text>
-              </View>
+              <Video
+                source={{ uri: media.uri }}
+                style={styles.mediaPreview}
+                resizeMode={ResizeMode.COVER}
+                shouldPlay
+                isMuted
+                isLooping
+                useNativeControls={false}
+              />
             )}
             <TouchableOpacity style={[styles.removeMedia, { backgroundColor: colors.card }]} onPress={() => setMedia(null)}>
               <Feather name="x" size={16} color={colors.foreground} />

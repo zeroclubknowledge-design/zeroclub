@@ -16,6 +16,9 @@ import * as ImagePicker from "expo-image-picker";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
+import { supabase } from "@workspace/supabase";
+import { decode } from "base64-arraybuffer";
+import { readAsStringAsync } from "expo-file-system";
 
 const TRACK_LABELS: Record<string, string> = {
   product_design: "Product Design",
@@ -48,25 +51,28 @@ export default function ProfileScreen() {
   const [counts, setCounts] = useState<ProfileCounts | null>(null);
 
   useEffect(() => {
-    if (!user?.id || !token) return;
-    const domain = process.env["EXPO_PUBLIC_DOMAIN"];
-    const baseUrl = domain ? `https://${domain}` : "";
-    fetch(`${baseUrl}/api/profiles/${user.id}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((r) => r.json())
-      .then((data) => {
-        const d = data as ProfileCounts;
+    if (!user?.id) return;
+    async function loadStats() {
+      try {
+        const [followers, following, profile] = await Promise.all([
+          supabase.from("follows").select("*", { count: "exact", head: true }).eq("following_id", user.id),
+          supabase.from("follows").select("*", { count: "exact", head: true }).eq("follower_id", user.id),
+          supabase.from("profiles").select("xp_balance, funds_balance").eq("id", user.id).single(),
+        ]);
+
         setCounts({
-          followerCount: d.followerCount ?? 0,
-          followingCount: d.followingCount ?? 0,
-          xpBalance: d.xpBalance ?? user.xpBalance,
-          fundsBalance: d.fundsBalance ?? 0,
-          level: d.level ?? user.level,
+          followerCount: followers.count ?? 0,
+          followingCount: following.count ?? 0,
+          xpBalance: profile.data?.xp_balance ?? user.xpBalance,
+          fundsBalance: profile.data?.funds_balance ?? 0,
+          level: user.level,
         });
-      })
-      .catch(() => {});
-  }, [user?.id, token]);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    loadStats();
+  }, [user?.id]);
 
   const handlePickAvatar = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -80,36 +86,52 @@ export default function ProfileScreen() {
       aspect: [1, 1],
       quality: 0.8,
     });
-    if (result.canceled || !result.assets[0] || !token || !user) return;
+    if (result.canceled || !result.assets[0] || !user) return;
 
     setAvatarUploading(true);
     try {
       const uri = result.assets[0].uri;
-      const filename = uri.split("/").pop() ?? "avatar.jpg";
-      const formData = new FormData();
-      formData.append("file", { uri, name: filename, type: "image/jpeg" } as unknown as Blob);
-      const domain = process.env["EXPO_PUBLIC_DOMAIN"];
-      const baseUrl = domain ? `https://${domain}` : "";
+      const filename = `avatars/${user.id}-${Date.now()}.jpg`;
+      
+      // Use FileSystem base64 for better Android compatibility
+      const base64 = await readAsStringAsync(uri, { encoding: "base64" });
+      const arrayBuffer = decode(base64);
 
-      const uploadRes = await fetch(`${baseUrl}/api/upload`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
-      if (!uploadRes.ok) throw new Error("Upload failed");
-      const { url } = await uploadRes.json() as { url: string };
-      const avatarUrl = `${baseUrl}${url}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("uploads")
+        .upload(filename, arrayBuffer, { contentType: "image/jpeg", upsert: true });
 
-      const updateRes = await fetch(`${baseUrl}/api/profiles/${user.id}/update`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ avatarUrl }),
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage.from("uploads").getPublicUrl(uploadData.path);
+
+      // Update Profile table
+      const { data: updatedProfile, error: updateError } = await supabase
+        .from("profiles")
+        .update({ avatar_url: publicUrl })
+        .eq("id", user.id)
+        .select()
+        .single();
+
+      if (updateError) throw updateError;
+
+      await updateUser({
+        ...user,
+        avatarUrl: updatedProfile.avatar_url,
+        username: updatedProfile.username,
+        displayName: updatedProfile.display_name,
+        bio: updatedProfile.bio,
+        track: updatedProfile.track,
+        school: updatedProfile.school,
+        referralCode: updatedProfile.referral_code,
+        xpBalance: updatedProfile.xp_balance,
+        fundsBalance: updatedProfile.funds_balance,
+        level: updatedProfile.purchased_level,
       });
-      if (!updateRes.ok) throw new Error("Profile update failed");
-      const updated = await updateRes.json() as typeof user;
-      await updateUser({ ...user, ...updated, avatarUrl });
-    } catch {
-      showToast({ type: "error", title: "Could not update photo", message: "Try again." });
+      showToast({ type: "success", title: "Profile updated", message: "Your photo has been updated." });
+    } catch (err: any) {
+      console.error(err);
+      showToast({ type: "error", title: "Could not update photo", message: err?.message || String(err) });
     } finally {
       setAvatarUploading(false);
     }
@@ -161,13 +183,13 @@ export default function ProfileScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { paddingTop: topPadding + 8, borderBottomColor: colors.border, backgroundColor: colors.background }]}>
+      <View style={[styles.header, { paddingTop: topPadding + 4, borderBottomColor: colors.border, backgroundColor: colors.background }]}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <Feather name="arrow-left" size={22} color={colors.foreground} />
         </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <Text style={[styles.headerTitle, { color: colors.foreground }]}>My Profile</Text>
-        </View>
+        
+        <Text style={[styles.headerTitle, { color: colors.foreground }]}>My Profile</Text>
+        
         <TouchableOpacity style={styles.backBtn} onPress={() => router.push("/settings" as never)}>
           <Feather name="settings" size={20} color={colors.mutedForeground} />
         </TouchableOpacity>
@@ -307,12 +329,13 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingBottom: 14,
+    justifyContent: "space-between",
+    paddingHorizontal: 8,
+    paddingBottom: 8,
     borderBottomWidth: 1,
   },
-  backBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
-  headerTitle: { flex: 1, textAlign: "center", fontSize: 17, fontWeight: "700", fontFamily: "Inter_700Bold" },
+  backBtn: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
+  headerTitle: { fontSize: 17, fontWeight: "700", fontFamily: "Inter_700Bold", textAlign: "center" },
   content: { padding: 16, gap: 12 },
   heroCard: {
     borderRadius: 20,

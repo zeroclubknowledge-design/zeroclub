@@ -19,11 +19,9 @@ import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import { useQueryClient } from "@tanstack/react-query";
-
-const BASE_URL = () => {
-  const domain = process.env["EXPO_PUBLIC_DOMAIN"];
-  return domain ? `https://${domain}` : "";
-};
+import { supabase } from "@workspace/supabase";
+import { readAsStringAsync } from "expo-file-system";
+import { decode } from "base64-arraybuffer";
 
 const TRACKS = [
   { key: "product_design", label: "Product Design" },
@@ -110,8 +108,6 @@ export default function CreateBootcampScreen() {
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const headers = { Authorization: `Bearer ${token ?? ""}` };
-
   const pickMedia = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
@@ -128,19 +124,25 @@ export default function CreateBootcampScreen() {
     const asset = result.assets[0];
     setUploading(true);
     try {
-      const formData = new FormData();
       const ext = asset.uri.split(".").pop() ?? "jpg";
-      const mimeType = asset.type === "video" ? `video/${ext}` : `image/${ext}`;
-      formData.append("file", { uri: asset.uri, name: `cover.${ext}`, type: mimeType } as unknown as Blob);
-      const res = await fetch(`${BASE_URL()}/api/upload`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token ?? ""}` },
-        body: formData,
-      });
-      if (!res.ok) throw new Error("Upload failed");
-      const data = await res.json() as { url: string; mediaType: string };
-      setCoverUrl(data.url);
-      setCoverMediaType(data.mediaType === "video" ? "video" : "image");
+      const fileName = `bootcamp-covers/${user?.id ?? "anon"}-${Date.now()}.${ext}`;
+      
+      // Use FileSystem base64 for better Android compatibility
+      const base64 = await readAsStringAsync(asset.uri, { encoding: "base64" });
+      const arrayBuffer = decode(base64);
+
+      const { error: uploadError } = await supabase.storage
+        .from("uploads")
+        .upload(fileName, arrayBuffer, {
+          contentType: asset.type === "video" ? `video/${ext}` : `image/${ext}`,
+          upsert: true,
+        });
+
+      if (uploadError) throw uploadError;
+
+      const { data: publicData } = supabase.storage.from("uploads").getPublicUrl(fileName);
+      setCoverUrl(publicData.publicUrl);
+      setCoverMediaType(asset.type === "video" ? "video" : "image");
       showToast({ type: "success", title: "Uploaded!", message: "Cover media ready" });
     } catch {
       showToast({ type: "error", title: "Upload failed", message: "Please try again" });
@@ -154,34 +156,34 @@ export default function CreateBootcampScreen() {
       showToast({ type: "warning", title: "Missing fields", message: "Title, subtitle, and description are required" });
       return;
     }
+    if (!user?.id) return;
     setSaving(true);
     try {
       const priceCents = isFree ? 0 : Math.round(parseFloat(price || "0") * 100);
-      const body = {
+      const newId = Math.random().toString(36).slice(2) + Date.now().toString(36);
+
+      const { error } = await supabase.from("bootcamps").insert({
+        id: newId,
         title: title.trim(),
         subtitle: subtitle.trim(),
         description: description.trim(),
         track,
         difficulty,
-        deliveryMedium,
-        xpReward: parseInt(xpReward || "100", 10),
-        priceCents,
-        coverUrl,
-      };
-      const res = await fetch(`${BASE_URL()}/api/tutor/bootcamps`, {
-        method: "POST",
-        headers: { ...headers, "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        delivery_medium: deliveryMedium,
+        xp_reward: parseInt(xpReward || "100", 10),
+        price_cents: priceCents,
+        cover_url: coverUrl,
+        tutor_id: user.id,
+        admin_reviewed: false,
+        modules_count: 0,
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({})) as { message?: string };
-        throw new Error(err.message ?? "Failed to create bootcamp");
-      }
-      const created = await res.json() as { id: string };
+
+      if (error) throw error;
+
       await qc.invalidateQueries({ queryKey: ["tutor-bootcamps"] });
-      await qc.invalidateQueries({ queryKey: ["tutor-stats"] });
+      await qc.invalidateQueries({ queryKey: ["bootcamps"] });
       showToast({ type: "success", title: "Bootcamp created!", message: "Now add modules to your bootcamp" });
-      router.replace({ pathname: "/tutor/[id]", params: { id: created.id } } as never);
+      router.replace({ pathname: "/tutor/[id]", params: { id: newId } } as never);
     } catch (err) {
       showToast({ type: "error", title: "Error", message: err instanceof Error ? err.message : "Failed to create" });
     } finally {
@@ -189,7 +191,7 @@ export default function CreateBootcampScreen() {
     }
   };
 
-  const coverUri = coverUrl?.startsWith("/") ? `${BASE_URL()}${coverUrl}` : coverUrl ?? undefined;
+  const coverUri = coverUrl ?? undefined;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>

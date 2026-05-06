@@ -12,12 +12,10 @@ import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
-import {
-  getListBootcampsQueryOptions,
-} from "@workspace/api-client-react";
-import type { Bootcamp } from "@workspace/api-client-react";
 import { useColors } from "@/hooks/useColors";
 import { BootcampCard } from "@/components/BootcampCard";
+import { supabase } from "@workspace/supabase";
+import { useAuth } from "@/context/AuthContext";
 
 const FILTER_OPTIONS = [
   { id: "all", label: "All Enrolled" },
@@ -33,24 +31,45 @@ export default function MyBootcampsScreen() {
   const topPadding = Platform.OS === "web" ? 16 : insets.top;
 
   const [filter, setFilter] = React.useState<FilterId>("all");
+  const { user } = useAuth();
+  const { data: enrolled, isLoading } = useQuery({
+    queryKey: ["my-bootcamps", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data, error } = await supabase
+        .from("enrollments")
+        .select(`
+          *,
+          bootcamp:bootcamps (*)
+        `)
+        .eq("user_id", user.id);
 
-  const { data: bootcamps, isLoading } = useQuery(getListBootcampsQueryOptions());
+      if (error) throw error;
 
-  // Only show bootcamps the user has enrolled in
-  const enrolled = React.useMemo(() => {
-    if (!bootcamps) return [];
-    return bootcamps.filter((b) => b.enrolled);
-  }, [bootcamps]);
+      return (data || []).map((e: any) => ({
+        ...e.bootcamp,
+        enrolled: true,
+        enrollment: e,
+        deliveryMedium: e.bootcamp.delivery_medium,
+        modulesCount: e.bootcamp.modules_count,
+        xpReward: e.bootcamp.xp_reward,
+        priceCents: e.bootcamp.price_cents,
+        coverUrl: e.bootcamp.cover_url,
+      }));
+    },
+    enabled: !!user?.id,
+  });
 
   const filtered = React.useMemo(() => {
+    if (!enrolled) return [];
     if (filter === "all") return enrolled;
-    if (filter === "in_progress") return enrolled.filter((b) => (b.enrollment?.progress ?? 0) < 100);
-    if (filter === "completed") return enrolled.filter((b) => (b.enrollment?.progress ?? 0) === 100);
+    if (filter === "in_progress") return enrolled.filter((b: any) => (b.enrollment?.progress ?? 0) < 100);
+    if (filter === "completed") return enrolled.filter((b: any) => (b.enrollment?.progress ?? 0) === 100);
     return enrolled;
   }, [enrolled, filter]);
 
-  const completedCount = enrolled.filter((b) => (b.enrollment?.progress ?? 0) === 100).length;
-  const inProgressCount = enrolled.filter((b) => (b.enrollment?.progress ?? 0) < 100).length;
+  const completedCount = (enrolled ?? []).filter((b: any) => (b.enrollment?.progress ?? 0) === 100).length;
+  const inProgressCount = (enrolled ?? []).filter((b: any) => (b.enrollment?.progress ?? 0) < 100).length;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -69,10 +88,10 @@ export default function MyBootcampsScreen() {
       </View>
 
       {/* Summary strip */}
-      {!isLoading && enrolled.length > 0 && (
+      {!isLoading && (enrolled ?? []).length > 0 && (
         <View style={[styles.summaryStrip, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
           <View style={styles.summaryItem}>
-            <Text style={[styles.summaryCount, { color: colors.foreground }]}>{enrolled.length}</Text>
+            <Text style={[styles.summaryCount, { color: colors.foreground }]}>{(enrolled ?? []).length}</Text>
             <Text style={[styles.summaryLabel, { color: colors.mutedForeground }]}>Enrolled</Text>
           </View>
           <View style={[styles.summaryDivider, { backgroundColor: colors.border }]} />
@@ -89,7 +108,7 @@ export default function MyBootcampsScreen() {
       )}
 
       {/* Filter pills */}
-      {!isLoading && enrolled.length > 0 && (
+      {!isLoading && (enrolled ?? []).length > 0 && (
         <View style={styles.filterRow}>
           {FILTER_OPTIONS.map((f) => (
             <TouchableOpacity
@@ -121,7 +140,7 @@ export default function MyBootcampsScreen() {
         <View style={styles.center}>
           <ActivityIndicator color={colors.primary} />
         </View>
-      ) : enrolled.length === 0 ? (
+      ) : (enrolled ?? []).length === 0 ? (
         <View style={styles.center}>
           <View style={[styles.emptyIcon, { backgroundColor: colors.card }]}>
             <Feather name="book" size={32} color={colors.mutedForeground} />
@@ -153,7 +172,7 @@ export default function MyBootcampsScreen() {
           keyExtractor={(b) => b.id}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
-          renderItem={({ item }: { item: Bootcamp }) => (
+          renderItem={({ item }: { item: any }) => (
             <BootcampCard
               id={item.id}
               title={item.title}

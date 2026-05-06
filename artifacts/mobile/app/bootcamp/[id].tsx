@@ -13,17 +13,11 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import {
-  getGetBootcampQueryOptions,
-  getGetBootcampQueryKey,
-  getListBootcampsQueryKey,
-  useEnrollBootcamp,
-  useUpdateProgress,
-  type Bootcamp,
-} from "@workspace/api-client-react";
 import { useAuth } from "@/context/AuthContext";
 import { useColors } from "@/hooks/useColors";
+import { useToast } from "@/context/ToastContext";
 import { PaymentModal } from "@/components/PaymentModal";
+import { supabase } from "@workspace/supabase";
 
 interface BootcampModule {
   id: string;
@@ -33,13 +27,6 @@ interface BootcampModule {
   xpReward: number;
   orderIndex: number;
 }
-
-type BootcampDetail = Bootcamp & {
-  modules: BootcampModule[];
-  priceCents: number;
-  paid?: boolean;
-  paymentRef?: string | null;
-};
 
 const TRACK_LABELS: Record<string, string> = {
   product_design: "Product Design",
@@ -74,56 +61,138 @@ export default function BootcampDetailScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const qc = useQueryClient();
+  const { showToast } = useToast();
+  const { user, token } = useAuth();
   const [showPayment, setShowPayment] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
-  const { data, isLoading, refetch } = useQuery(
-    getGetBootcampQueryOptions(id ?? ""),
-  );
-  const bootcamp = data as BootcampDetail | undefined;
+  const { data: bootcamp, isLoading, refetch } = useQuery({
+    queryKey: ["bootcamp", id, user?.id],
+    queryFn: async () => {
+      if (!id) return null;
+      const { data: bData, error: bError } = await supabase
+        .from("bootcamps")
+        .select(`
+          *,
+          modules:bootcamp_modules (*)
+        `)
+        .eq("id", id)
+        .single();
 
-  const { token } = useAuth();
-  const enroll = useEnrollBootcamp();
-  const updateProgress = useUpdateProgress();
+      if (bError) throw bError;
 
-  const invalidate = () => {
-    qc.invalidateQueries({ queryKey: getGetBootcampQueryKey(id ?? "") });
-    qc.invalidateQueries({ queryKey: getListBootcampsQueryKey() });
-  };
+      let enrollment = null;
+      if (user?.id) {
+        const { data: eData, error: eError } = await supabase
+          .from("enrollments")
+          .select("*")
+          .eq("bootcamp_id", id)
+          .eq("user_id", user.id)
+          .single();
+        if (!eError) enrollment = eData;
+      }
 
-  const handleEnroll = () => {
-    if (!bootcamp) return;
+      return {
+        ...bData,
+        enrolled: !!enrollment,
+        enrollment: enrollment ? {
+          ...enrollment,
+          modulesCompleted: enrollment.modules_completed,
+        } : null,
+        deliveryMedium: bData.delivery_medium,
+        modulesCount: bData.modules_count,
+        xpReward: bData.xp_reward,
+        priceCents: bData.price_cents,
+        modules: (bData.modules || []).sort((a: any, b: any) => a.order_index - b.order_index).map((m: any) => ({
+          ...m,
+          durationMinutes: m.duration_minutes,
+          xpReward: m.xp_reward,
+          orderIndex: m.order_index,
+        })),
+      };
+    },
+    enabled: !!id,
+  });
+
+  const handleEnroll = async () => {
+    if (!bootcamp || !user) return;
     if ((bootcamp.priceCents ?? 0) > 0) {
       setShowPayment(true);
     } else {
-      enroll.mutate({ bootcampId: id! }, { onSuccess: invalidate });
+      setIsUpdating(true);
+      const { error } = await supabase.from("enrollments").insert({
+        id: `${user.id}-${id}`,
+        user_id: user.id,
+        bootcamp_id: id!,
+        modules_completed: 0,
+        progress: 0,
+        paid: false,
+      });
+      setIsUpdating(false);
+      if (error) {
+        showToast({ type: "error", title: "Enrollment failed", message: error.message });
+      } else {
+        showToast({ type: "success", title: "Enrolled!", message: "Welcome to the bootcamp." });
+        refetch();
+        qc.invalidateQueries({ queryKey: ["bootcamps"] });
+        qc.invalidateQueries({ queryKey: ["my-bootcamps"] });
+      }
     }
   };
 
   const handlePaymentSuccess = async (paymentRef: string) => {
     setShowPayment(false);
+    if (!user) return;
+    setIsUpdating(true);
     try {
-      const baseUrl = process.env["EXPO_PUBLIC_DOMAIN"]
-        ? `https://${process.env["EXPO_PUBLIC_DOMAIN"]}`
-        : "";
-      await fetch(`${baseUrl}/api/bootcamps/${id}/enroll`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ paymentRef }),
+      const { error } = await supabase.from("enrollments").insert({
+        id: `${user.id}-${id}`,
+        user_id: user.id,
+        bootcamp_id: id!,
+        modules_completed: 0,
+        progress: 0,
+        paid: true,
+        payment_ref: paymentRef,
       });
-      invalidate();
-    } catch {
-      // ignore
+      if (error) throw error;
+      showToast({ type: "success", title: "Payment successful", message: "You are now enrolled!" });
+      refetch();
+      qc.invalidateQueries({ queryKey: ["bootcamps"] });
+      qc.invalidateQueries({ queryKey: ["my-bootcamps"] });
+    } catch (err: any) {
+      showToast({ type: "error", title: "Enrollment failed", message: err.message });
+    } finally {
+      setIsUpdating(false);
     }
   };
 
-  const handleCompleteModule = (moduleIndex: number) => {
-    if (!bootcamp?.enrollment) return;
+  const handleCompleteModule = async (moduleIndex: number) => {
+    if (!bootcamp?.enrollment || !user) return;
     const current = bootcamp.enrollment.modulesCompleted ?? 0;
     if (moduleIndex !== current) return;
-    updateProgress.mutate(
-      { bootcampId: id!, data: { modulesCompleted: current + 1 } },
-      { onSuccess: invalidate },
-    );
+    
+    setIsUpdating(true);
+    const nextModules = current + 1;
+    const nextProgress = Math.min(100, Math.round((nextModules / bootcamp.modulesCount) * 100));
+
+    const { error } = await supabase
+      .from("enrollments")
+      .update({
+        modules_completed: nextModules,
+        progress: nextProgress,
+        completed_at: nextProgress === 100 ? new Date().toISOString() : null,
+      })
+      .eq("bootcamp_id", id!)
+      .eq("user_id", user.id);
+
+    setIsUpdating(false);
+    if (error) {
+      showToast({ type: "error", title: "Update failed", message: error.message });
+    } else {
+      refetch();
+      qc.invalidateQueries({ queryKey: ["bootcamps"] });
+      qc.invalidateQueries({ queryKey: ["my-bootcamps"] });
+    }
   };
 
   const topPadding = Platform.OS === "web" ? 20 : insets.top;
