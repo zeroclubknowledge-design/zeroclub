@@ -341,7 +341,6 @@ export default function ClubLevelsScreen() {
     </View>
   );
 }
-}
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
