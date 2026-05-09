@@ -183,7 +183,7 @@ export default function ChatScreen() {
       </View>
 
       {/* ── Online indicator strip ── */}
-      {!isLoading && totalChannels > 0 && (
+      {!channelsLoading && totalChannels > 0 && (
         <View style={[styles.onlineStrip, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
           <View style={[styles.onlineDot, { backgroundColor: "#10B981" }]} />
           <Text style={[styles.onlineText, { color: colors.mutedForeground }]}>
