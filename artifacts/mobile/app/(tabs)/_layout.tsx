@@ -199,11 +199,11 @@ function ClassicTabLayout() {
       screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: "#0D0D0D" } }}
     >
       <Tabs.Screen name="index" />
-      <Tabs.Screen name="bootcamps" options={{ href: isTutor ? null : "/bootcamps" }} />
+      {!isTutor && <Tabs.Screen name="bootcamps" />}
       <Tabs.Screen name="create" options={{ href: null }} />
       <Tabs.Screen name="chat" />
       <Tabs.Screen name="wallet" />
-      <Tabs.Screen name="studio" options={{ href: isTutor ? "/studio" : null }} />
+      {isTutor && <Tabs.Screen name="studio" />}
       <Tabs.Screen name="profile" />
     </Tabs>
   );
