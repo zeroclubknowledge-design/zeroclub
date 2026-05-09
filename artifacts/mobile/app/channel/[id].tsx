@@ -77,7 +77,7 @@ export default function ChannelScreen() {
         },
       }));
     },
-    refetchInterval: 3000,
+    staleTime: 10000,
   });
 
   const { data: channel } = useQuery({
