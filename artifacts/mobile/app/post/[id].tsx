@@ -317,26 +317,26 @@ export default function PostDetailScreen() {
             activeOpacity={0.8}
           >
             <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
-              {author.avatarUrl ? (
+              {author?.avatar_url ? (
                 <Image
-                  source={{ uri: author.avatarUrl }}
+                  source={{ uri: author.avatar_url }}
                   style={StyleSheet.absoluteFillObject}
                   borderRadius={24}
                 />
               ) : (
                 <Text style={styles.avatarText}>
-                  {author.displayName[0]?.toUpperCase() ?? "?"}
+                  {initials(author?.display_name || author?.username)}
                 </Text>
               )}
             </View>
             <View style={styles.authorMeta}>
               <View style={styles.authorNameRow}>
                 <Text style={[styles.authorName, { color: colors.foreground }]}>
-                  {author.displayName}
+                  {author?.display_name || author?.username || "Unknown"}
                 </Text>
                 <View style={[styles.levelBadge, { backgroundColor: colors.primary + "20" }]}>
                   <Feather name="zap" size={9} color={colors.primary} />
-                  <Text style={[styles.levelText, { color: colors.primary }]}>Lv{author.level}</Text>
+                  <Text style={[styles.levelText, { color: colors.primary }]}>Lv{author?.purchased_level || 1}</Text>
                 </View>
                 {p.isProofProject && (
                   <View style={[styles.proofBadge, { backgroundColor: colors.primary }]}>
@@ -461,15 +461,15 @@ export default function PostDetailScreen() {
                 activeOpacity={0.8}
               >
                 <View style={[styles.commentAvatar, { backgroundColor: colors.primary }]}>
-                  {comment.author.avatarUrl ? (
+                  {(comment.author as any)?.avatar_url ? (
                     <Image
-                      source={{ uri: comment.author.avatarUrl }}
+                      source={{ uri: (comment.author as any).avatar_url }}
                       style={StyleSheet.absoluteFillObject}
                       borderRadius={16}
                     />
                   ) : (
                     <Text style={styles.commentAvatarText}>
-                      {comment.author.displayName[0]?.toUpperCase() ?? "?"}
+                      {initials((comment.author as any)?.display_name || (comment.author as any)?.username)}
                     </Text>
                   )}
                 </View>
@@ -477,15 +477,15 @@ export default function PostDetailScreen() {
               <View style={styles.commentContent}>
                 <View style={styles.commentHeader}>
                   <Text style={[styles.commentName, { color: colors.foreground }]}>
-                    {comment.author.displayName}
+                    {(comment.author as any)?.display_name || (comment.author as any)?.username || "Anon"}
                   </Text>
                   <View style={[styles.commentLevelBadge, { backgroundColor: colors.muted }]}>
                     <Text style={[styles.commentLevelText, { color: colors.primary }]}>
-                      Lv{comment.author.level}
+                      Lv{(comment.author as any)?.purchased_level || 1}
                     </Text>
                   </View>
                   <Text style={[styles.commentTime, { color: colors.mutedForeground }]}>
-                    {timeAgo(comment.createdAt)}
+                    {timeAgo(comment.created_at)}
                   </Text>
                 </View>
                 <Text style={[styles.commentBody, { color: colors.foreground }]}>{comment.body}</Text>
@@ -507,15 +507,15 @@ export default function PostDetailScreen() {
         ]}
       >
         <View style={[styles.commentAvatar, { backgroundColor: colors.primary }]}>
-          {user?.avatarUrl ? (
+          {(user as any)?.avatar_url || (user as any)?.avatarUrl ? (
             <Image
-              source={{ uri: user.avatarUrl }}
+              source={{ uri: (user as any)?.avatar_url || (user as any)?.avatarUrl }}
               style={StyleSheet.absoluteFillObject}
               borderRadius={16}
             />
           ) : (
             <Text style={styles.commentAvatarText}>
-              {(user?.displayName ?? "U")[0]?.toUpperCase()}
+              {initials((user as any)?.display_name || (user as any)?.displayName || (user as any)?.username)}
             </Text>
           )}
         </View>
