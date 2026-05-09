@@ -199,20 +199,27 @@ export default function ChatScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
           renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[styles.channelRow, { backgroundColor: colors.card, borderColor: colors.border }]}
-              onPress={() => router.push({ pathname: "/channel/[id]", params: { id: item.id, title: item.display_name || item.username } } as never)}
-            >
-              <View style={[styles.channelIcon, { backgroundColor: colors.primary + "18" }]}>
-                {item.avatar_url ? (
-                  <Image source={{ uri: item.avatar_url }} style={styles.avatarImg} />
-                ) : (
-                  <Text style={{ color: colors.primary, fontWeight: "700" }}>
-                    {(item.display_name || item.username || "U")[0].toUpperCase()}
-                  </Text>
-                )}
-              </View>
-              <View style={styles.channelInfo}>
+            <View style={[styles.channelRow, { borderBottomColor: colors.border + "40" }]}>
+              <TouchableOpacity 
+                onPress={() => router.push({ pathname: "/user/[id]", params: { id: item.id } } as never)}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.channelIcon, { backgroundColor: colors.primary + "18" }]}>
+                  {item.avatar_url ? (
+                    <Image source={{ uri: item.avatar_url }} style={styles.avatarImg} />
+                  ) : (
+                    <Text style={{ color: colors.primary, fontWeight: "700" }}>
+                      {(item.display_name || item.username || "U")[0].toUpperCase()}
+                    </Text>
+                  )}
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.channelInfo}
+                onPress={() => router.push({ pathname: "/channel/[id]", params: { id: item.id, title: item.display_name || item.username } } as never)}
+                activeOpacity={0.5}
+              >
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
                   <Text style={[styles.channelName, { color: colors.foreground }]}>
                     {item.display_name || item.username}
@@ -226,9 +233,14 @@ export default function ChatScreen() {
                 <Text style={[styles.channelDesc, { color: colors.mutedForeground }]}>
                   {item.isFollower ? "Follows you" : `Level ${item.purchased_level || 1} Builder`}
                 </Text>
-              </View>
-              <Feather name="message-square" size={16} color={colors.mutedForeground} />
-            </TouchableOpacity>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                onPress={() => router.push({ pathname: "/channel/[id]", params: { id: item.id, title: item.display_name || item.username } } as never)}
+              >
+                <Feather name="message-square" size={16} color={colors.mutedForeground} />
+              </TouchableOpacity>
+            </View>
           )}
           ListEmptyComponent={
             <View style={styles.emptyWrap}>
@@ -249,7 +261,7 @@ export default function ChatScreen() {
 
             return (
               <TouchableOpacity
-                style={[styles.channelRow, { backgroundColor: colors.card, borderColor: colors.border }]}
+                style={[styles.channelRow, { borderBottomColor: colors.border + "40" }]}
                 onPress={() =>
                   router.push(
                     isCommunity
@@ -370,10 +382,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
     marginHorizontal: 16,
-    marginBottom: 8,
-    padding: 14,
-    borderRadius: 14,
-    borderWidth: 1,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
   },
   channelIcon: {
     width: 40,
