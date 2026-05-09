@@ -32,6 +32,7 @@ import { useToast } from "@/context/ToastContext";
 import { useDialog } from "@/context/DialogContext";
 import * as Haptics from "expo-haptics";
 import { Video, ResizeMode } from "expo-av";
+import { supabase } from "@workspace/supabase";
 
 const TRACK_LABELS: Record<string, string> = {
   product_design: "Product Design",
@@ -92,57 +93,74 @@ export default function PostDetailScreen() {
   const { showDialog } = useDialog();
   const videoRef = useRef<Video>(null);
 
-  const { data: post, isLoading } = useQuery(getGetPostQueryOptions(id ?? ""));
-  const { data: comments } = useQuery(getListCommentsQueryOptions(id ?? ""));
+  const { data: post, isLoading: postLoading } = useQuery({
+    queryKey: ["post", id],
+    queryFn: async () => {
+      if (!id) return null;
+      const { data, error } = await supabase
+        .from("posts")
+        .select("*, author:profiles!author_id(*)")
+        .eq("id", id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!id,
+  });
 
-  const likePost = useLikePost();
-  const bookmarkPost = useBookmarkPost();
-  const createComment = useCreateComment();
+  const { data: comments, isLoading: commentsLoading, refetch: refetchComments } = useQuery({
+    queryKey: ["comments", id],
+    queryFn: async () => {
+      if (!id) return [];
+      const { data, error } = await supabase
+        .from("comments")
+        .select("*, author:profiles(*)")
+        .eq("post_id", id)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!id,
+  });
 
-  const isAuthor = user?.id === (post as any)?.authorId || user?.id === (post as any)?.author?.id;
+  const isLoading = postLoading || commentsLoading;
 
-  const handleLike = () => {
-    if (!id) return;
+  const isAuthor = user?.id === post?.author_id || user?.id === post?.author?.id;
+
+  const handleLike = async () => {
+    if (!id || !user?.id) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    likePost.mutate(
-      { postId: id },
-      {
-        onSuccess: () => {
-          qc.invalidateQueries({ queryKey: getGetPostQueryKey(id) });
-          qc.invalidateQueries({ queryKey: getListPostsQueryKey({}) });
-        },
-      },
-    );
+    try {
+      // For now, toggle likes in the UI logic or prepare for 'likes' table
+      showToast({ title: "Coming soon", message: "Likes are being migrated to Supabase" });
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  const handleBookmark = () => {
-    if (!id) return;
+  const handleBookmark = async () => {
+    if (!id || !user?.id) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    bookmarkPost.mutate(
-      { postId: id },
-      {
-        onSuccess: () => qc.invalidateQueries({ queryKey: getGetPostQueryKey(id) }),
-      },
-    );
+    showToast({ title: "Coming soon", message: "Bookmarks are being migrated to Supabase" });
   };
 
-  const handleComment = () => {
-    if (!commentText.trim() || !id) return;
+  const handleComment = async () => {
+    if (!commentText.trim() || !id || !user?.id) return;
     const body = commentText.trim();
     setCommentText("");
-    createComment.mutate(
-      { postId: id, data: { body } },
-      {
-        onSuccess: () => {
-          qc.invalidateQueries({ queryKey: getListCommentsQueryKey(id) });
-          qc.invalidateQueries({ queryKey: getGetPostQueryKey(id) });
-        },
-        onError: () => {
-          showToast({ type: "error", title: "Could not post comment" });
-          setCommentText(body);
-        },
-      },
-    );
+    try {
+      const { error } = await supabase.from("comments").insert({
+        post_id: id,
+        author_id: user.id,
+        body,
+      });
+      if (error) throw error;
+      refetchComments();
+      showToast({ type: "success", title: "Comment posted" });
+    } catch (err: any) {
+      showToast({ type: "error", title: "Could not post comment", message: err.message });
+      setCommentText(body);
+    }
   };
 
   const handleEdit = async () => {
