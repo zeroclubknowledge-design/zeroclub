@@ -160,8 +160,8 @@ export default function ProfileScreen() {
     },
     {
       icon: "book" as const,
-      label: "My Bootcamps",
-      subtitle: "View enrolled courses",
+      label: "My Subscription",
+      subtitle: "View access & enrolled courses",
       onPress: () => router.push("/my-bootcamps" as never),
       accent: colors.primary,
     },
