@@ -165,11 +165,21 @@ export default function PostDetailScreen() {
             setDeleting(true);
             try {
               const { error } = await supabase.from("posts").delete().eq("id", id);
-              if (error) throw error;
+              if (error) {
+                console.error("Supabase Delete Error:", error);
+                showToast({ 
+                  type: "error", 
+                  title: "Delete Failed", 
+                  message: error.message || "You don't have permission to delete this post." 
+                });
+                return;
+              }
               qc.invalidateQueries({ queryKey: ["posts"] });
+              showToast({ type: "success", title: "Post deleted" });
               router.back();
-            } catch {
-              showToast({ type: "error", title: "Could not delete" });
+            } catch (err: any) {
+              console.error("Catch Delete Error:", err);
+              showToast({ type: "error", title: "Could not delete", message: err.message });
             } finally {
               setDeleting(false);
             }
