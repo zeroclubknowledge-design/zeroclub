@@ -39,35 +39,39 @@ export default function BootcampsScreen() {
   const { data: bootcamps, isLoading, refetch } = useQuery({
     queryKey: ["bootcamps", user?.id],
     queryFn: async () => {
-      const { data: bData, error: bError } = await supabase
-        .from("bootcamps")
-        .select("*")
-        .eq("admin_reviewed", true);
+      try {
+        const { data: bData, error: bError } = await supabase
+          .from("bootcamps")
+          .select("*");
 
-      if (bError) throw bError;
+        if (bError) throw bError;
 
-      let enrollments: any[] = [];
-      if (user?.id) {
-        const { data: eData, error: eError } = await supabase
-          .from("enrollments")
-          .select("*")
-          .eq("user_id", user.id);
-        if (!eError) enrollments = eData || [];
+        let enrollments: any[] = [];
+        if (user?.id) {
+          const { data: eData, error: eError } = await supabase
+            .from("enrollments")
+            .select("*")
+            .eq("user_id", user.id);
+          if (!eError) enrollments = eData || [];
+        }
+
+        return (bData || []).map((b: any) => {
+          const enrollment = enrollments.find((e: any) => e.bootcamp_id === b.id);
+          return {
+            ...b,
+            enrolled: !!enrollment,
+            enrollment: enrollment,
+            deliveryMedium: b.delivery_medium,
+            modulesCount: b.modules_count,
+            xpReward: b.xp_reward,
+            priceCents: b.price_cents,
+            coverUrl: b.cover_url,
+          };
+        });
+      } catch (err) {
+        console.error("Bootcamps error:", err);
+        return [];
       }
-
-      return (bData || []).map((b: any) => {
-        const enrollment = enrollments.find((e: any) => e.bootcamp_id === b.id);
-        return {
-          ...b,
-          enrolled: !!enrollment,
-          enrollment: enrollment,
-          deliveryMedium: b.delivery_medium,
-          modulesCount: b.modules_count,
-          xpReward: b.xp_reward,
-          priceCents: b.price_cents,
-          coverUrl: b.cover_url,
-        };
-      });
     },
   });
 

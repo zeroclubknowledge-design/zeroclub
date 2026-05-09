@@ -112,29 +112,34 @@ export default function WalletScreen() {
   const { data: wallet, isLoading: walletLoading, refetch: refetchWallet } = useQuery({
     queryKey: ["wallet", user?.id],
     queryFn: async () => {
-      if (!user?.id) return null;
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
-      if (error) throw error;
+      try {
+        if (!user?.id) return null;
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", user.id)
+          .single();
+        if (error) throw error;
 
-      const level = data.purchased_level || 1;
-      const xpBalance = data.xp_balance || 0;
-      const xpForCurrentLevel = (level - 1) * 5000;
-      const totalXpForNextLevel = level * 5000;
+        const level = data.purchased_level || 1;
+        const xpBalance = data.xp_balance || 0;
+        const xpForCurrentLevel = (level - 1) * 5000;
+        const totalXpForNextLevel = level * 5000;
 
-      return {
-        id: data.id,
-        xpBalance,
-        fundsBalance: data.funds_balance || 0,
-        level,
-        xpForCurrentLevel,
-        totalXpForNextLevel,
-        xpToNextLevel: totalXpForNextLevel - xpBalance,
-        minWithdrawalXp: 2000,
-      };
+        return {
+          id: data.id,
+          xpBalance,
+          fundsBalance: data.funds_balance || 0,
+          level,
+          xpForCurrentLevel,
+          totalXpForNextLevel,
+          xpToNextLevel: totalXpForNextLevel - xpBalance,
+          minWithdrawalXp: 2000,
+        };
+      } catch (err) {
+        console.error("Wallet error:", err);
+        return null;
+      }
     },
     enabled: !!user?.id,
   });

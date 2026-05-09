@@ -75,44 +75,50 @@ export default function FeedScreen() {
   const { data: posts, isLoading, refetch } = useQuery({
     queryKey: ["posts", selectedTrack],
     queryFn: async () => {
-      let query = supabase
-        .from("posts")
-        .select(`
-          *,
-          author:profiles (
-            id,
-            display_name,
-            username,
-            avatar_url,
-            purchased_level,
-            track
-          )
-        `)
-        .order("created_at", { ascending: false });
+      try {
+        let query = supabase
+          .from("posts")
+          .select(`
+            *,
+            author:profiles (
+              id,
+              display_name,
+              username,
+              avatar_url,
+              purchased_level,
+              track
+            )
+          `)
+          .order("created_at", { ascending: false });
 
-      if (selectedTrack !== "all") {
-        query = query.eq("track", selectedTrack);
+        if (selectedTrack !== "all") {
+          query = query.eq("track", selectedTrack);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+        return (data || []) as Post[];
+      } catch (err) {
+        console.error("Feed error:", err);
+        return [];
       }
-
-      const { data, error } = await query;
-      if (error) throw error;
-
-      // Map Supabase response to expected Post type if necessary
-      return (data || []) as Post[];
     },
   });
 
   const { data: summary } = useQuery({
     queryKey: ["feed-summary"],
     queryFn: async () => {
-      // Basic summary logic for now
-      const { count: totalMembers } = await supabase.from("profiles").select("*", { count: "exact", head: true });
-      const { count: postsToday } = await supabase
-        .from("posts")
-        .select("*", { count: "exact", head: true })
-        .gte("created_at", new Date(new Date().setHours(0,0,0,0)).toISOString());
-      
-      return { totalMembers: totalMembers || 0, postsToday: postsToday || 0, activeMembersToday: 0 };
+      try {
+        const { count: totalMembers } = await supabase.from("profiles").select("*", { count: "exact", head: true });
+        const { count: postsToday } = await supabase
+          .from("posts")
+          .select("*", { count: "exact", head: true })
+          .gte("created_at", new Date(new Date().setHours(0,0,0,0)).toISOString());
+        
+        return { totalMembers: totalMembers || 0, postsToday: postsToday || 0, activeMembersToday: 0 };
+      } catch (err) {
+        return { totalMembers: 0, postsToday: 0, activeMembersToday: 0 };
+      }
     }
   });
 
