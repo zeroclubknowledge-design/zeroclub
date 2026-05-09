@@ -81,10 +81,32 @@ export default function UserProfileScreen() {
         school: pData.school,
         level: pData.purchased_level || 1,
         xpBalance: pData.xp_balance || 0,
-        followerCount: 0,
-        followingCount: 0,
         isFollowing: false,
       };
+
+      // Check if following
+      if (user?.id) {
+        const { data: followData } = await supabase
+          .from("follows")
+          .select("*")
+          .eq("follower_id", user.id)
+          .eq("following_id", id)
+          .maybeSingle();
+        formatted.isFollowing = !!followData;
+      }
+
+      // Get counts
+      const { count: fCount } = await supabase
+        .from("follows")
+        .select("*", { count: "exact", head: true })
+        .eq("following_id", id);
+      const { count: gCount } = await supabase
+        .from("follows")
+        .select("*", { count: "exact", head: true })
+        .eq("follower_id", id);
+        
+      formatted.followerCount = fCount || 0;
+      formatted.followingCount = gCount || 0;
       
       setProfile(formatted);
     } catch (err: any) {
@@ -100,25 +122,45 @@ export default function UserProfileScreen() {
   }, [id]);
 
   const handleFollow = async () => {
-    if (!profile || !token) return;
+    if (!profile || !user?.id) return;
     setFollowLoading(true);
-    const domain = process.env["EXPO_PUBLIC_DOMAIN"];
-    const baseUrl = domain ? `https://${domain}` : "";
-    const method = profile.isFollowing ? "DELETE" : "POST";
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    
     try {
-      const res = await fetch(`${baseUrl}/api/profiles/${profile.id}/follow`, {
-        method,
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error("Failed");
-      const data = await res.json() as { following: boolean; followerCount: number };
-      setProfile((prev) =>
-        prev
-          ? { ...prev, isFollowing: data.following, followerCount: data.followerCount }
-          : prev,
-      );
-    } catch {
-      showToast({ type: "error", title: "Could not update follow status" });
+      if (profile.isFollowing) {
+        // Unfollow
+        const { error } = await supabase
+          .from("follows")
+          .delete()
+          .eq("follower_id", user.id)
+          .eq("following_id", profile.id);
+        if (error) throw error;
+        
+        setProfile(prev => prev ? { 
+          ...prev, 
+          isFollowing: false, 
+          followerCount: Math.max(0, prev.followerCount - 1) 
+        } : null);
+      } else {
+        // Follow
+        const { error } = await supabase
+          .from("follows")
+          .insert({
+            follower_id: user.id,
+            following_id: profile.id
+          });
+        if (error) throw error;
+        
+        setProfile(prev => prev ? { 
+          ...prev, 
+          isFollowing: true, 
+          followerCount: prev.followerCount + 1 
+        } : null);
+      }
+      qc.invalidateQueries({ queryKey: ["chat_people"] });
+    } catch (err: any) {
+      console.error("Follow error:", err);
+      showToast({ type: "error", title: "Action failed", message: err.message });
     } finally {
       setFollowLoading(false);
     }
