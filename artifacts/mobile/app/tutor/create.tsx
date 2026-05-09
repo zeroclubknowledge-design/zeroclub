@@ -168,6 +168,10 @@ export default function CreateBootcampScreen() {
       return;
     }
     if (!user?.id) return;
+    if (user.tutorVerified !== 1) {
+      showToast({ type: "error", title: "Access Denied", message: "Only verified Tutors can create bootcamps." });
+      return;
+    }
     setSaving(true);
     try {
       const priceCents = isFree ? 0 : Math.round(parseFloat(price || "0") * 100);
@@ -188,7 +192,7 @@ export default function CreateBootcampScreen() {
         price_cents: priceCents,
         cover_url: coverUrl,
         tutor_id: user.id,
-        admin_reviewed: false,
+        admin_reviewed: true, // Default to true as per user request to remove admin control
         modules_count: 0,
       });
 
@@ -198,8 +202,9 @@ export default function CreateBootcampScreen() {
       await qc.invalidateQueries({ queryKey: ["bootcamps"] });
       showToast({ type: "success", title: "Bootcamp created!", message: "Now add modules to your bootcamp" });
       router.replace({ pathname: "/tutor/[id]", params: { id: newId } } as never);
-    } catch (err) {
-      showToast({ type: "error", title: "Error", message: err instanceof Error ? err.message : "Failed to create" });
+    } catch (err: any) {
+      console.error("Create error:", err);
+      showToast({ type: "error", title: "Error", message: err?.message || "Failed to create" });
     } finally {
       setSaving(false);
     }

@@ -68,6 +68,7 @@ export function DesktopSidebar() {
       <View style={styles.navSection}>
         {/* Testing phase: show all nav items including Studio */}
         {NAV_ITEMS.map((item) => {
+          if (item.tutorOnly && user?.tutorVerified !== 1) return null;
           const active = isActive(item.route);
           return (
             <TouchableOpacity
