@@ -164,6 +164,18 @@ export default function PostDetailScreen() {
             if (!id) return;
             setDeleting(true);
             try {
+              // 1. Delete associated media from storage if it exists
+              const mediaUrl = post.image_url || post.imageUrl;
+              if (mediaUrl) {
+                const pathParts = mediaUrl.split("/uploads/");
+                if (pathParts.length > 1) {
+                  const filePath = pathParts[1];
+                  console.log("Cleaning up storage:", filePath);
+                  await supabase.storage.from("uploads").remove([filePath]);
+                }
+              }
+
+              // 2. Delete post record
               const { error } = await supabase.from("posts").delete().eq("id", id);
               if (error) {
                 console.error("Supabase Delete Error:", error);
@@ -175,7 +187,7 @@ export default function PostDetailScreen() {
                 return;
               }
               qc.invalidateQueries({ queryKey: ["posts"] });
-              showToast({ type: "success", title: "Post deleted" });
+              showToast({ type: "success", title: "Post and media deleted" });
               router.back();
             } catch (err: any) {
               console.error("Catch Delete Error:", err);
@@ -197,32 +209,43 @@ export default function PostDetailScreen() {
 
   // --- Render Sections ---
 
-  const renderHeader = () => (
-    <View style={[styles.headerContainer, { paddingTop: topPadding + 8, borderBottomColor: colors.border }]}>
-      <TouchableOpacity style={styles.iconBtn} onPress={() => router.back()}>
-        <Feather name="arrow-left" size={22} color={colors.foreground} />
+  const renderFloatingActions = () => (
+    <View style={[styles.floatingHeader, { top: insets.top + 8 }]}>
+      <TouchableOpacity 
+        style={[styles.floatingBtn, { backgroundColor: colors.background + "D9", borderColor: colors.border }]} 
+        onPress={() => router.back()}
+      >
+        <Feather name="arrow-left" size={20} color={colors.foreground} />
       </TouchableOpacity>
       
-      <Animated.View style={[styles.headerTitleWrap, { opacity: headerOpacity }]}>
-        <Text style={[styles.headerTitle, { color: colors.foreground }]} numberOfLines={1}>
-          {post?.author?.display_name || "Post"}
-        </Text>
-      </Animated.View>
+      <View style={{ flex: 1 }} />
 
-      <View style={styles.headerActions}>
-        {user?.id === post?.author_id && (
-          <TouchableOpacity onPress={handleDelete} disabled={deleting} style={styles.iconBtn}>
-            {deleting ? <ActivityIndicator size="small" color={colors.destructive} /> : <Feather name="trash-2" size={20} color={colors.destructive} />}
-          </TouchableOpacity>
-        )}
-      </View>
+      <TouchableOpacity 
+        style={[styles.floatingBtn, { backgroundColor: colors.background + "D9", borderColor: colors.border }]}
+        onPress={() => {
+          showDialog({
+            title: "Options",
+            buttons: [
+              { text: "Edit Post", onPress: () => showToast({ title: "Coming soon" }) },
+              ...(user?.id === (post as any)?.author_id ? [{ 
+                text: "Delete Post", 
+                style: "destructive" as const, 
+                onPress: handleDelete 
+              }] : []),
+              { text: "Cancel", style: "cancel" }
+            ]
+          });
+        }}
+      >
+        <Feather name="more-vertical" size={20} color={colors.foreground} />
+      </TouchableOpacity>
     </View>
   );
 
   if (isLoading) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        {renderHeader()}
+      {renderFloatingActions()}
         <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
           <View style={styles.authorRow}>
             <SkeletonItem width={48} height={48} borderRadius={24} />
@@ -266,7 +289,7 @@ export default function PostDetailScreen() {
       style={[styles.container, { backgroundColor: colors.background }]} 
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      {renderHeader()}
+      {renderFloatingActions()}
 
       <Animated.ScrollView
         style={styles.scroll}
@@ -274,12 +297,7 @@ export default function PostDetailScreen() {
         onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: true })}
         scrollEventThrottle={16}
       >
-        {/* Track Badge */}
-        <View style={[styles.trackBadge, { backgroundColor: colors.primary + "15" }]}>
-          <Text style={[styles.trackText, { color: colors.primary }]}>
-            {TRACK_LABELS[p.track] || p.track || "General"}
-          </Text>
-        </View>
+        {/* Author info will start here */}
 
         {/* Author */}
         <TouchableOpacity 
@@ -433,24 +451,30 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { flex: 1 },
   content: { padding: 20 },
-  headerContainer: {
+  floatingHeader: {
+    position: "absolute",
+    top: 40, // We'll adjust this with insets in render
+    left: 16,
+    right: 16,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 12,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    zIndex: 10,
+    zIndex: 100,
   },
-  iconBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center", borderRadius: 20 },
-  headerTitleWrap: { flex: 1, alignItems: "center" },
-  headerTitle: { fontSize: 16, fontWeight: "800", fontFamily: "Inter_700Bold" },
-  headerActions: { width: 44, alignItems: "flex-end" },
+  floatingBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+  },
   
-  trackBadge: { alignSelf: "flex-start", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, marginBottom: 16 },
-  trackText: { fontSize: 12, fontWeight: "800", letterSpacing: 0.5 },
-  
-  authorRow: { flexDirection: "row", alignItems: "center", gap: 14 },
+  authorRow: { flexDirection: "row", alignItems: "center", gap: 14, marginTop: 60 },
   avatar: { width: 48, height: 48, borderRadius: 24, overflow: "hidden", alignItems: "center", justifyContent: "center" },
   avatarText: { color: "#fff", fontSize: 20, fontWeight: "800" },
   authorName: { fontSize: 17, fontWeight: "700" },
