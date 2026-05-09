@@ -71,14 +71,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         ]);
         if (storedToken && storedUser) {
           setToken(storedToken);
-          setUser(JSON.parse(storedUser) as UserProfile);
+          const parsedUser = JSON.parse(storedUser) as UserProfile;
+          setUser(parsedUser);
           setAuthTokenGetter(() => storedToken);
 
-          // Restore Supabase session so Storage/DB calls are authenticated
+          // Restore Supabase session
           await supabase.auth.setSession({
             access_token: storedToken,
-            refresh_token: "", // Ideally we'd store this too, but this works for now
+            refresh_token: "",
           });
+
+          // NEW: Fetch fresh profile from Supabase to ensure roles (tutor_verified) are up to date
+          const { data: freshProfile } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", parsedUser.id)
+            .single();
+          
+          if (freshProfile) {
+            const updatedUser = {
+              ...parsedUser,
+              tutorVerified: Number(freshProfile.tutor_verified),
+              xpBalance: freshProfile.xp_balance,
+              fundsBalance: freshProfile.funds_balance,
+            };
+            setUser(updatedUser);
+            await AsyncStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
+          }
         }
       } catch {
         // ignore
