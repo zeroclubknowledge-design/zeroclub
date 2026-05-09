@@ -41,8 +41,8 @@ const TRACK_LABELS: Record<string, string> = {
 interface Author {
   id: string;
   username: string;
-  displayName: string;
-  avatarUrl?: string | null;
+  display_name: string;
+  avatar_url?: string | null;
   level: number;
   track: string;
 }
@@ -132,23 +132,23 @@ export function PostCard({
           style={styles.authorPressable}
         >
           <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
-            {author.avatarUrl ? (
-              <Image source={{ uri: author.avatarUrl }} style={StyleSheet.absoluteFillObject} borderRadius={20} />
+            {author?.avatar_url ? (
+              <Image source={{ uri: author.avatar_url }} style={StyleSheet.absoluteFillObject} borderRadius={20} />
             ) : (
               <Text style={[styles.avatarText, { color: colors.primaryForeground }]}>
-                {author.displayName[0]?.toUpperCase() ?? "?"}
+                {(author?.display_name || author?.username || "?")[0].toUpperCase()}
               </Text>
             )}
           </View>
           <View style={styles.authorInfo}>
             <View style={styles.authorRow}>
-              <Text style={[styles.displayName, { color: colors.foreground }]}>{author.displayName}</Text>
+              <Text style={[styles.displayName, { color: colors.foreground }]}>{author?.display_name || author?.username || "Unknown"}</Text>
               <View style={[styles.levelBadge, { backgroundColor: colors.muted }]}>
-                <Text style={[styles.levelText, { color: colors.primary }]}>Lv{author.level}</Text>
+                <Text style={[styles.levelText, { color: colors.primary }]}>Lv{author?.level || 1}</Text>
               </View>
             </View>
             <Text style={[styles.username, { color: colors.mutedForeground }]}>
-              @{author.username} · {timeAgo(createdAt)}
+              @{author?.username || "anon"} · {timeAgo(createdAt)}
             </Text>
           </View>
         </TouchableOpacity>
