@@ -14,17 +14,8 @@ import {
 import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import {
-  useQuery,
-  useMutation,
-  useQueryClient,
-} from "@tanstack/react-query";
-import {
-  getListBankAccountsQueryOptions,
-  getListBankAccountsQueryKey,
-  useCreateBankAccount,
-  useDeleteBankAccount,
-} from "@workspace/api-client-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@workspace/supabase";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
@@ -48,7 +39,7 @@ const TRACKS = Object.keys(TRACK_LABELS);
 export default function SettingsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user, token, logout, updateUser } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const qc = useQueryClient();
   const topPadding = Platform.OS === "web" ? 16 : insets.top;
 
@@ -63,58 +54,87 @@ export default function SettingsScreen() {
   const [bankName, setBankName] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [accountName, setAccountName] = useState("");
+  const [addingBank, setAddingBank] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
   const { showToast } = useToast();
   const { showDialog } = useDialog();
-  const { data: bankAccounts, isLoading: accountsLoading } = useQuery(getListBankAccountsQueryOptions());
-  const createBankAccount = useCreateBankAccount();
-  const deleteBankAccount = useDeleteBankAccount();
+
+  const { data: bankAccounts, isLoading: accountsLoading } = useQuery({
+    queryKey: ["bank-accounts", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data, error } = await supabase
+        .from("bank_accounts")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user?.id,
+  });
 
   const handleSaveProfile = async () => {
-    if (!user || !token) return;
+    if (!user) return;
     setSavingProfile(true);
     try {
-      const domain = process.env["EXPO_PUBLIC_DOMAIN"];
-      const baseUrl = domain ? `https://${domain}` : "";
-      const res = await fetch(`${baseUrl}/api/profiles/${user.id}/update`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ displayName, bio, school, track }),
-      });
-      if (!res.ok) throw new Error("Failed");
-      const updated = await res.json() as typeof user;
-      await updateUser({ ...user, ...updated });
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          display_name: displayName,
+          bio,
+          school,
+          track,
+        })
+        .eq("id", user.id);
+
+      if (error) throw error;
+
+      await updateUser({ ...user, displayName, bio, school, track });
       setEditModal(false);
       showToast({ type: "success", title: "Profile saved", message: "Your profile has been updated" });
-    } catch {
-      showToast({ type: "error", title: "Could not save profile", message: "Try again." });
+    } catch (err: any) {
+      showToast({ type: "error", title: "Could not save profile", message: err.message || "Try again." });
     } finally {
       setSavingProfile(false);
     }
   };
 
-  const handleAddBankAccount = () => {
-    if (!bankName || !accountNumber || !accountName) {
+  const handleAddBankAccount = async () => {
+    if (!bankName || !accountNumber || !accountName || !user) {
       showToast({ type: "warning", title: "Missing fields", message: "Please fill in all bank account fields" });
       return;
     }
-    createBankAccount.mutate(
-      { data: { bankName, accountNumber, accountName } },
-      {
-        onSuccess: () => {
-          qc.invalidateQueries({ queryKey: getListBankAccountsQueryKey() });
-          setAddBankModal(false);
-          setBankName("");
-          setAccountNumber("");
-          setAccountName("");
-          showToast({ type: "success", title: "Bank account added" });
-        },
-        onError: () => {
-          showToast({ type: "error", title: "Could not add bank account" });
-        },
-      },
-    );
+    setAddingBank(true);
+    try {
+      const newId = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+        const r = (Math.random() * 16) | 0,
+          v = c === "x" ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+      });
+
+      const { error } = await supabase.from("bank_accounts").insert({
+        id: newId,
+        user_id: user.id,
+        bank_name: bankName,
+        account_number: accountNumber,
+        account_name: accountName,
+      });
+
+      if (error) throw error;
+
+      qc.invalidateQueries({ queryKey: ["bank-accounts", user.id] });
+      setAddBankModal(false);
+      setBankName("");
+      setAccountNumber("");
+      setAccountName("");
+      showToast({ type: "success", title: "Bank account added" });
+    } catch (err: any) {
+      showToast({ type: "error", title: "Could not add bank account", message: err.message });
+    } finally {
+      setAddingBank(false);
+    }
   };
 
   const handleDeleteAccount = (id: string, name: string) => {
@@ -126,13 +146,15 @@ export default function SettingsScreen() {
         {
           text: "Remove",
           style: "destructive",
-          onPress: () => {
-            deleteBankAccount.mutate({ id }, {
-              onSuccess: () => {
-                qc.invalidateQueries({ queryKey: getListBankAccountsQueryKey() });
-                showToast({ type: "success", title: "Account removed" });
-              },
-            });
+          onPress: async () => {
+            try {
+              const { error } = await supabase.from("bank_accounts").delete().eq("id", id);
+              if (error) throw error;
+              qc.invalidateQueries({ queryKey: ["bank-accounts", user?.id] });
+              showToast({ type: "success", title: "Account removed" });
+            } catch (err: any) {
+              showToast({ type: "error", title: "Failed to remove", message: err.message });
+            }
           },
         },
       ],
@@ -220,13 +242,13 @@ export default function SettingsScreen() {
                     <Feather name="credit-card" size={15} color={colors.primary} />
                   </View>
                   <View style={styles.bankInfo}>
-                    <Text style={[styles.bankName, { color: colors.foreground }]}>{acct.bankName}</Text>
+                    <Text style={[styles.bankName, { color: colors.foreground }]}>{acct.bank_name}</Text>
                     <Text style={[styles.bankDetails, { color: colors.mutedForeground }]}>
-                      {acct.accountNumber} · {acct.accountName}
+                      {acct.account_number} · {acct.account_name}
                     </Text>
                   </View>
                   <TouchableOpacity
-                    onPress={() => handleDeleteAccount(acct.id, acct.bankName)}
+                    onPress={() => handleDeleteAccount(acct.id, acct.bank_name)}
                     style={styles.deleteBtn}
                   >
                     <Feather name="trash-2" size={15} color="#ef4444" />
@@ -388,12 +410,12 @@ export default function SettingsScreen() {
                 colors={colors}
               />
               <TouchableOpacity
-                style={[styles.saveBtn, { backgroundColor: createBankAccount.isPending ? colors.muted : colors.primary }]}
+                style={[styles.saveBtn, { backgroundColor: addingBank ? colors.muted : colors.primary }]}
                 onPress={handleAddBankAccount}
-                disabled={createBankAccount.isPending}
+                disabled={addingBank}
                 activeOpacity={0.85}
               >
-                {createBankAccount.isPending ? (
+                {addingBank ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
                   <Text style={styles.saveBtnText}>Add Account</Text>
