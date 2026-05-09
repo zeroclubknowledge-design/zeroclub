@@ -187,6 +187,8 @@ function DesktopTabsWrapper({ children }: { children: React.ReactNode }) {
 
 function ClassicTabLayout() {
   const { isDesktop } = useBreakpoint();
+  const { user, isLoading } = useAuth();
+  const isTutor = !isLoading && user?.tutorVerified === 1;
 
   const tabs = (
     <Tabs
