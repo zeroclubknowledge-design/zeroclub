@@ -147,7 +147,6 @@ export default function ChatScreen() {
           </View>
         </View>
 
-        </View>
 
         {/* ── Tabs ── */}
         <View style={styles.tabBar}>
