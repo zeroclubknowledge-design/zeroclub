@@ -190,13 +190,8 @@ export default function CreateScreen() {
       const mentions = taggedUsers.map((u) => `@${u.username}`).join(" ");
       const fullBody = mentions ? `${body.trim()}\n\n${mentions}` : body.trim();
 
-      const newId = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
-        const r = Math.random() * 16 | 0, v = c === "x" ? r : (r & 0x3 | 0x8);
-        return v.toString(16);
-      });
-
-      const { error } = await supabase.from("posts").insert({
-        id: newId,
+      // 1. Insert the post
+      const { error: postError } = await supabase.from("posts").insert({
         author_id: user?.id,
         body: fullBody,
         track,
@@ -206,15 +201,27 @@ export default function CreateScreen() {
         proof_click_count: 0,
       });
 
-      if (error) throw error;
+      if (postError) throw postError;
 
+      // 2. Increment user XP in profiles table
+      if (user?.id) {
+        await supabase.rpc("increment_xp", { x: 15, user_id: user.id });
+      }
+
+      // 3. Refresh and Navigate
       qc.invalidateQueries({ queryKey: ["posts"] });
+      qc.invalidateQueries({ queryKey: ["feed-summary"] });
+      
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      showToast({ type: "success", title: "Posted!", message: "+15 XP earned 🎉" });
+      
+      // Navigate back to feed
+      const { router } = require("expo-router");
+      router.replace("/(tabs)");
+      
       setBody("");
       setMedia(null);
       setTaggedUsers([]);
-      setSubmitted(true);
-      setTimeout(() => setSubmitted(false), 3000);
     } catch (err: any) {
       console.error(err);
       showToast({ type: "error", title: "Failed to post", message: err?.message || "Try again." });
