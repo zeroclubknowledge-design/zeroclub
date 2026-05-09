@@ -17,14 +17,7 @@ import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  getGetPostQueryOptions,
-  getGetPostQueryKey,
   getListPostsQueryKey,
-  getListCommentsQueryOptions,
-  getListCommentsQueryKey,
-  useLikePost,
-  useBookmarkPost,
-  useCreateComment,
 } from "@workspace/api-client-react";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
@@ -93,16 +86,31 @@ export default function PostDetailScreen() {
   const { showDialog } = useDialog();
   const videoRef = useRef<Video>(null);
 
-  const { data: post, isLoading: postLoading } = useQuery({
+  const { data: post, isLoading: postLoading, error: postError } = useQuery({
     queryKey: ["post", id],
     queryFn: async () => {
       if (!id) return null;
+      // Explicitly select using the author_id foreign key
       const { data, error } = await supabase
         .from("posts")
-        .select("*, author:profiles!author_id(*)")
+        .select(`
+          *,
+          author:profiles!author_id (
+            id,
+            display_name,
+            username,
+            avatar_url,
+            purchased_level,
+            track
+          )
+        `)
         .eq("id", id)
-        .single();
-      if (error) throw error;
+        .maybeSingle(); // Use maybeSingle to prevent PGRST116 (no rows) errors
+      
+      if (error) {
+        console.error("Supabase Post Error:", error);
+        throw error;
+      }
       return data;
     },
     enabled: !!id,
@@ -114,10 +122,13 @@ export default function PostDetailScreen() {
       if (!id) return [];
       const { data, error } = await supabase
         .from("comments")
-        .select("*, author:profiles(*)")
+        .select("*, author:profiles!author_id(*)")
         .eq("post_id", id)
         .order("created_at", { ascending: true });
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase Comments Error:", error);
+        return []; // Fallback to empty comments instead of crashing
+      }
       return data || [];
     },
     enabled: !!id,
@@ -125,7 +136,7 @@ export default function PostDetailScreen() {
 
   const isLoading = postLoading || commentsLoading;
 
-  const isAuthor = user?.id === post?.author_id || user?.id === post?.author?.id;
+  const isAuthor = user?.id && post?.author_id ? user.id === post.author_id : false;
 
   const handleLike = async () => {
     if (!id || !user?.id) return;
@@ -334,12 +345,12 @@ export default function PostDetailScreen() {
                 )}
               </View>
               <Text style={[styles.authorSub, { color: colors.mutedForeground }]}>
-                @{author.username} · {timeAgo(p.createdAt)}
+                @{author.username} · {timeAgo(p.created_at)}
               </Text>
             </View>
             <View style={[styles.xpEarned, { backgroundColor: colors.xpGold + "18" }]}>
               <Feather name="zap" size={11} color={colors.xpGold} />
-              <Text style={[styles.xpEarnedText, { color: colors.xpGold }]}>+{p.xpAwarded}</Text>
+              <Text style={[styles.xpEarnedText, { color: colors.xpGold }]}>+{p.xp_awarded}</Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -396,7 +407,7 @@ export default function PostDetailScreen() {
               color={p.isLiked ? colors.primary : colors.mutedForeground}
             />
             <Text style={[styles.actionCount, { color: p.isLiked ? colors.primary : colors.mutedForeground }]}>
-              {p.likeCount}
+              {p.like_count || 0}
             </Text>
             <Text style={[styles.actionLabel, { color: colors.mutedForeground }]}>likes</Text>
           </TouchableOpacity>
@@ -405,7 +416,7 @@ export default function PostDetailScreen() {
 
           <View style={styles.actionBtn}>
             <Feather name="message-circle" size={20} color={colors.mutedForeground} />
-            <Text style={[styles.actionCount, { color: colors.foreground }]}>{p.commentCount}</Text>
+            <Text style={[styles.actionCount, { color: colors.foreground }]}>{p.comment_count || 0}</Text>
             <Text style={[styles.actionLabel, { color: colors.mutedForeground }]}>comments</Text>
           </View>
 
