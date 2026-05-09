@@ -216,17 +216,8 @@ function ClassicTabLayout() {
 }
 
 export default function TabLayout() {
-  const { isDesktop } = useBreakpoint();
-  // On web and desktop, always use the robust Classic layout to avoid experimental router errors
-  if (Platform.OS === "web" || isDesktop) {
-    return <ClassicTabLayout />;
-  }
-  
-  // Use liquid glass for a premium native look only if available
-  if (isLiquidGlassAvailable()) {
-    return <NativeTabLayout />;
-  }
-
+  // Use the robust Classic layout across all platforms (Web, iOS, Android) 
+  // to ensure 100% stable routing and avoid experimental 'unstable-native-tabs' errors.
   return <ClassicTabLayout />;
 }
 
