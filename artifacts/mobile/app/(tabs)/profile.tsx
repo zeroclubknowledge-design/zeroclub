@@ -161,7 +161,7 @@ export default function ProfileScreen() {
     {
       icon: "book" as const,
       label: "My Subscription",
-      subtitle: "View your active plan & benefits",
+      subtitle: level === 2 ? "Zero Club Learn" : level === 3 ? "Zero Club Network" : level >= 4 ? "Zero Club IRL" : "Free Tier",
       onPress: () => router.push("/club-levels" as never),
       accent: colors.primary,
     },
