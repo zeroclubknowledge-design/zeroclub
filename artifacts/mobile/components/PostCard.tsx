@@ -152,6 +152,7 @@ export function PostCard({
             </Text>
           </View>
         </TouchableOpacity>
+        <View style={{ flex: 1 }} />
         {isProofProject && (
           <View style={[styles.proofBadge, { backgroundColor: colors.primary }]}>
             <Feather name="zap" size={10} color="#fff" />
@@ -276,7 +277,6 @@ const styles = StyleSheet.create({
   authorPressable: {
     flexDirection: "row",
     alignItems: "center",
-    flex: 1,
     gap: 10,
   },
   avatar: {

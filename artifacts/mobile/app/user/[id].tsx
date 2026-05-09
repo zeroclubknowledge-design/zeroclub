@@ -60,16 +60,34 @@ export default function UserProfileScreen() {
 
   const fetchProfile = async () => {
     if (!id) return;
-    const domain = process.env["EXPO_PUBLIC_DOMAIN"];
-    const baseUrl = domain ? `https://${domain}` : "";
+    setLoading(true);
     try {
-      const res = await fetch(`${baseUrl}/api/profiles/${id}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      if (!res.ok) throw new Error("Not found");
-      const data = await res.json() as PublicProfile;
-      setProfile(data);
-    } catch {
+      const { data: pData, error: pError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", id)
+        .single();
+        
+      if (pError) throw pError;
+      
+      const formatted: PublicProfile = {
+        id: pData.id,
+        username: pData.username || "anon",
+        displayName: pData.display_name || "Unknown Builder",
+        avatarUrl: pData.avatar_url,
+        bio: pData.bio,
+        track: pData.track || "frontend",
+        school: pData.school,
+        level: pData.purchased_level || 1,
+        xpBalance: pData.xp_balance || 0,
+        followerCount: 0,
+        followingCount: 0,
+        isFollowing: false,
+      };
+      
+      setProfile(formatted);
+    } catch (err: any) {
+      console.error("Profile error:", err);
       showToast({ type: "error", title: "Could not load profile" });
     } finally {
       setLoading(false);
