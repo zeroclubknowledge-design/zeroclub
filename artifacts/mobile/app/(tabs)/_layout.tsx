@@ -18,8 +18,9 @@ import { DesktopSidebar } from "@/components/DesktopSidebar";
 import { useAuth } from "@/context/AuthContext";
 
 function NativeTabLayout() {
-  const { user } = useAuth();
-  const isTutor = user?.tutorVerified === 1;
+  const { user, isLoading } = useAuth();
+  // Default to student view if loading or user is missing
+  const isTutor = !isLoading && user?.tutorVerified === 1;
   return (
     <NativeTabs>
       <NativeTabs.Trigger name="index">
@@ -99,8 +100,8 @@ function FloatingTabBar({
   const isIOS = Platform.OS === "ios";
   const isWeb = Platform.OS === "web";
   const { isDesktop } = useBreakpoint();
-  const { user } = useAuth();
-  const isTutor = user?.tutorVerified === 1;
+  const { user, isLoading } = useAuth();
+  const isTutor = !isLoading && user?.tutorVerified === 1;
 
   const TAB_ITEMS = BASE_TAB_ITEMS.filter((t) => {
     if (t.tutorOnly && !isTutor) return false;
