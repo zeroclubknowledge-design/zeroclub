@@ -84,6 +84,9 @@ export default function PostDetailScreen() {
   const [commentText, setCommentText] = useState("");
   const [sendingComment, setSendingComment] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editBody, setEditBody] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const topPadding = Platform.OS === "web" ? 16 : insets.top;
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -186,6 +189,7 @@ export default function PostDetailScreen() {
                 });
                 return;
               }
+              qc.resetQueries({ queryKey: ["posts"] });
               qc.invalidateQueries({ queryKey: ["posts"] });
               showToast({ type: "success", title: "Post and media deleted" });
               router.back();
@@ -201,6 +205,28 @@ export default function PostDetailScreen() {
     });
   };
 
+  const handleSaveEdit = async () => {
+    if (!editBody.trim() || !id) return;
+    setSavingEdit(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    try {
+      const { error } = await supabase
+        .from("posts")
+        .update({ body: editBody.trim() })
+        .eq("id", id);
+      if (error) throw error;
+      
+      qc.invalidateQueries({ queryKey: ["post", id] });
+      qc.invalidateQueries({ queryKey: ["posts"] });
+      showToast({ type: "success", title: "Changes saved" });
+      setIsEditing(false);
+    } catch (err: any) {
+      showToast({ type: "error", title: "Could not save", message: err.message });
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
   const headerOpacity = scrollY.interpolate({
     inputRange: [0, 60],
     outputRange: [0, 1],
@@ -213,32 +239,54 @@ export default function PostDetailScreen() {
     <View style={[styles.floatingHeader, { top: insets.top + 8 }]}>
       <TouchableOpacity 
         style={[styles.floatingBtn, { backgroundColor: colors.background + "D9", borderColor: colors.border }]} 
-        onPress={() => router.back()}
+        onPress={() => isEditing ? setIsEditing(false) : router.back()}
       >
-        <Feather name="arrow-left" size={20} color={colors.foreground} />
+        <Feather name={isEditing ? "x" : "arrow-left"} size={20} color={colors.foreground} />
       </TouchableOpacity>
       
       <View style={{ flex: 1 }} />
 
-      <TouchableOpacity 
-        style={[styles.floatingBtn, { backgroundColor: colors.background + "D9", borderColor: colors.border }]}
-        onPress={() => {
-          showDialog({
-            title: "Options",
-            buttons: [
-              { text: "Edit Post", onPress: () => showToast({ title: "Coming soon" }) },
-              ...(user?.id === (post as any)?.author_id ? [{ 
-                text: "Delete Post", 
-                style: "destructive" as const, 
-                onPress: handleDelete 
-              }] : []),
-              { text: "Cancel", style: "cancel" }
-            ]
-          });
-        }}
-      >
-        <Feather name="more-vertical" size={20} color={colors.foreground} />
-      </TouchableOpacity>
+      {isEditing ? (
+        <TouchableOpacity 
+          style={[styles.floatingBtn, { backgroundColor: colors.primary, borderColor: colors.primary }]}
+          onPress={handleSaveEdit}
+          disabled={savingEdit}
+        >
+          {savingEdit ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Feather name="check" size={20} color="#fff" />
+          )}
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity 
+          style={[styles.floatingBtn, { backgroundColor: colors.background + "D9", borderColor: colors.border }]}
+          onPress={() => {
+            showDialog({
+              title: "Options",
+              buttons: [
+                ...(user?.id === (post as any)?.author_id ? [
+                  { 
+                    text: "Edit Post", 
+                    onPress: () => {
+                      setEditBody(post.body);
+                      setIsEditing(true);
+                    } 
+                  },
+                  { 
+                    text: "Delete Post", 
+                    style: "destructive" as const, 
+                    onPress: handleDelete 
+                  }
+                ] : []),
+                { text: "Cancel", style: "cancel" }
+              ]
+            });
+          }}
+        >
+          <Feather name="more-vertical" size={20} color={colors.foreground} />
+        </TouchableOpacity>
+      )}
     </View>
   );
 
@@ -326,7 +374,21 @@ export default function PostDetailScreen() {
         </TouchableOpacity>
 
         {/* Content */}
-        <Text style={[styles.postBody, { color: colors.foreground }]}>{p.body}</Text>
+        {isEditing ? (
+          <View style={[styles.editContainer, { borderColor: colors.primary }]}>
+            <TextInput
+              style={[styles.editInput, { color: colors.foreground }]}
+              value={editBody}
+              onChangeText={setEditBody}
+              multiline
+              autoFocus
+              placeholder="What's on your mind?"
+              placeholderTextColor={colors.mutedForeground}
+            />
+          </View>
+        ) : (
+          <Text style={[styles.postBody, { color: colors.foreground }]}>{p.body}</Text>
+        )}
 
         {/* Media */}
         {mediaUrl && (
@@ -482,6 +544,14 @@ const styles = StyleSheet.create({
   xpText: { fontSize: 11, fontWeight: "800" },
   
   postBody: { fontSize: 18, lineHeight: 28, marginTop: 20, fontFamily: "Inter_400Regular" },
+  editContainer: { 
+    marginTop: 20, 
+    borderRadius: 20, 
+    borderWidth: 2, 
+    padding: 16, 
+    backgroundColor: "rgba(0,0,0,0.05)" 
+  },
+  editInput: { fontSize: 18, lineHeight: 28, fontFamily: "Inter_400Regular", minHeight: 120, textAlignVertical: "top" },
   mediaContainer: { marginTop: 20, borderRadius: 24, borderWidth: 1, overflow: "hidden", backgroundColor: "#000" },
   fullImage: { width: "100%", height: "100%" },
   
