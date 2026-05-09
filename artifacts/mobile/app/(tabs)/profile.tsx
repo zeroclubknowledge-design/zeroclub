@@ -161,8 +161,8 @@ export default function ProfileScreen() {
     {
       icon: "book" as const,
       label: "My Subscription",
-      subtitle: "View access & enrolled courses",
-      onPress: () => router.push("/my-bootcamps" as never),
+      subtitle: "View your active plan & benefits",
+      onPress: () => router.push("/club-levels" as never),
       accent: colors.primary,
     },
     {
