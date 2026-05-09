@@ -416,9 +416,9 @@ export default function FeedScreen() {
               createdAt={item.created_at}
               author={{
                 id: (item.author as any)?.id || item.author_id,
-                displayName: item.author?.display_name || "Unknown",
+                display_name: item.author?.display_name || "Unknown",
                 username: item.author?.username || "unknown",
-                avatarUrl: item.author?.avatar_url,
+                avatar_url: item.author?.avatar_url,
                 level: (item.author as any)?.purchased_level || 1,
                 track: (item.author as any)?.track || "frontend"
               }}
