@@ -81,6 +81,7 @@ export default function PostDetailScreen() {
   const [editModal, setEditModal] = useState(false);
   const [editBody, setEditBody] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [sendingComment, setSendingComment] = useState(false);
 
   const { showToast } = useToast();
   const { showDialog } = useDialog();
@@ -159,6 +160,7 @@ export default function PostDetailScreen() {
     if (!commentText.trim() || !id || !user?.id) return;
     const body = commentText.trim();
     setCommentText("");
+    setSendingComment(true);
     try {
       const { error } = await supabase.from("comments").insert({
         post_id: id,
@@ -171,6 +173,8 @@ export default function PostDetailScreen() {
     } catch (err: any) {
       showToast({ type: "error", title: "Could not post comment", message: err.message });
       setCommentText(body);
+    } finally {
+      setSendingComment(false);
     }
   };
 
@@ -540,9 +544,9 @@ export default function PostDetailScreen() {
             { backgroundColor: commentText.trim() ? colors.primary : colors.muted },
           ]}
           onPress={handleComment}
-          disabled={!commentText.trim() || createComment.isPending}
+          disabled={!commentText.trim() || sendingComment}
         >
-          {createComment.isPending ? (
+          {sendingComment ? (
             <ActivityIndicator size="small" color="#fff" />
           ) : (
             <Feather name="send" size={14} color={commentText.trim() ? "#fff" : colors.mutedForeground} />
