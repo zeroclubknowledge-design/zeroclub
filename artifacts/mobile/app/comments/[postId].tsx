@@ -24,6 +24,7 @@ import {
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
+import { supabase } from "@workspace/supabase";
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -60,30 +61,62 @@ export default function CommentsScreen() {
   const [text, setText] = useState("");
   const inputRef = useRef<TextInput>(null);
 
-  const { data: comments, isLoading } = useQuery(
-    getListCommentsQueryOptions(postId ?? ""),
-  );
+  const { data: post, isLoading: postLoading } = useQuery({
+    queryKey: ["post", postId],
+    queryFn: async () => {
+      if (!postId) return null;
+      const { data, error } = await supabase
+        .from("posts")
+        .select("*, author:profiles!author_id(*)")
+        .eq("id", postId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!postId,
+  });
 
-  const createComment = useCreateComment();
+  const { data: comments, isLoading: commentsLoading, refetch: refetchComments } = useQuery({
+    queryKey: ["comments", postId],
+    queryFn: async () => {
+      if (!postId) return [];
+      const { data, error } = await supabase
+        .from("comments")
+        .select("*, author:profiles(*)")
+        .eq("post_id", postId)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!postId,
+  });
 
-  const handleSend = () => {
-    if (!text.trim() || !postId) return;
+  const [isSending, setIsSending] = useState(false);
+
+  const handleSend = async () => {
+    if (!text.trim() || !postId || !user?.id) return;
     const body = text.trim();
-    setText("");
-    createComment.mutate(
-      { postId, data: { body } },
-      {
-        onSuccess: () => {
-          qc.invalidateQueries({ queryKey: getListCommentsQueryKey(postId) });
-          qc.invalidateQueries({ queryKey: getListPostsQueryKey({}) });
-        },
-        onError: () => {
-          showToast({ type: "error", title: "Could not post comment" });
-          setText(body);
-        },
-      },
-    );
+    setIsSending(true);
+    try {
+      const { error } = await supabase.from("comments").insert({
+        post_id: postId,
+        author_id: user.id,
+        body,
+      });
+
+      if (error) throw error;
+
+      setText("");
+      refetchComments();
+      showToast({ type: "success", title: "Comment posted" });
+    } catch (err: any) {
+      showToast({ type: "error", title: "Could not post comment", message: err.message });
+    } finally {
+      setIsSending(false);
+    }
   };
+
+  const isLoading = postLoading || commentsLoading;
 
   const initials = (name: string) => name.slice(0, 1).toUpperCase();
 
@@ -115,6 +148,30 @@ export default function CommentsScreen() {
         <FlatList
           data={(comments ?? []) as Comment[]}
           keyExtractor={(c) => c.id}
+          ListHeaderComponent={
+            post ? (
+              <View style={[styles.postHeader, { borderBottomColor: colors.border }]}>
+                <View style={styles.postAuthorRow}>
+                  <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
+                    {post.author?.avatar_url ? (
+                      <Image source={{ uri: post.author.avatar_url }} style={StyleSheet.absoluteFillObject} borderRadius={18} />
+                    ) : (
+                      <Text style={styles.avatarText}>{initials(post.author?.display_name || "U")}</Text>
+                    )}
+                  </View>
+                  <View>
+                    <Text style={[styles.postAuthorName, { color: colors.foreground }]}>{post.author?.display_name}</Text>
+                    <Text style={[styles.postTime, { color: colors.mutedForeground }]}>{timeAgo(post.created_at)}</Text>
+                  </View>
+                </View>
+                <Text style={[styles.postBody, { color: colors.foreground }]}>{post.body}</Text>
+                {post.image_url && (
+                  <Image source={{ uri: post.image_url }} style={styles.postImage} resizeMode="cover" />
+                )}
+                <View style={[styles.divider, { backgroundColor: colors.border }]} />
+              </View>
+            ) : null
+          }
           contentContainerStyle={[
             styles.list,
             { paddingBottom: insets.bottom + 80 },
@@ -254,16 +311,16 @@ export default function CommentsScreen() {
             styles.sendBtn,
             {
               backgroundColor:
-                text.trim() && !createComment.isPending
+                text.trim() && !isSending
                   ? colors.primary
                   : colors.muted,
             },
           ]}
           onPress={handleSend}
-          disabled={!text.trim() || createComment.isPending}
+          disabled={!text.trim() || isSending}
           activeOpacity={0.85}
         >
-          {createComment.isPending ? (
+          {isSending ? (
             <ActivityIndicator size="small" color="#fff" />
           ) : (
             <Feather
@@ -296,7 +353,14 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
   },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  list: { paddingTop: 8 },
+  list: { paddingBottom: 20 },
+  postHeader: { padding: 16, borderBottomWidth: 1 },
+  postAuthorRow: { flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 12 },
+  postAuthorName: { fontSize: 15, fontWeight: "700" },
+  postTime: { fontSize: 12 },
+  postBody: { fontSize: 16, lineHeight: 24, marginBottom: 12 },
+  postImage: { width: "100%", height: 250, borderRadius: 12, marginBottom: 12 },
+  divider: { height: 1, marginTop: 4 },
   commentRow: {
     flexDirection: "row",
     gap: 12,
