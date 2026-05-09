@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
+import { supabase } from "@workspace/supabase";
 
 const TRACK_LABELS: Record<string, string> = {
   product_design: "Product Design",

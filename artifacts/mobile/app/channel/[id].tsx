@@ -39,7 +39,7 @@ function timeStr(dateStr: string | Date): string {
 }
 
 export default function ChannelScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, title } = useLocalSearchParams<{ id: string; title?: string }>();
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
@@ -193,7 +193,7 @@ export default function ChannelScreen() {
         </TouchableOpacity>
         <View style={styles.channelInfo}>
           <Text style={[styles.channelName, { color: colors.foreground }]} numberOfLines={1}>
-            #{channel?.name ?? id}
+            {channel?.name || title || "Chat"}
           </Text>
           {channel?.description && (
             <Text style={[styles.channelDesc, { color: colors.mutedForeground }]} numberOfLines={1}>
@@ -248,7 +248,7 @@ export default function ChannelScreen() {
         >
           <TextInput
             style={[styles.input, { color: colors.foreground }]}
-            placeholder={`Message #${channel?.name ?? id}...`}
+            placeholder={`Message ${channel?.name ? "#" + channel.name : (title || "...")}`}
             placeholderTextColor={colors.mutedForeground}
             value={messageText}
             onChangeText={setMessageText}

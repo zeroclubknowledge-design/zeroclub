@@ -200,10 +200,10 @@ export default function ChatScreen() {
           contentContainerStyle={styles.listContent}
           renderItem={({ item }) => (
             <View style={[styles.channelRow, { borderBottomColor: colors.border + "40" }]}>
-              <TouchableOpacity 
-                onPress={() => router.push({ pathname: "/user/[id]", params: { id: item.id } } as never)}
-                activeOpacity={0.7}
-              >
+            <TouchableOpacity 
+              onPress={() => router.push({ pathname: "/user/[id]", params: { id: item.id } })}
+              activeOpacity={0.7}
+            >
                 <View style={[styles.channelIcon, { backgroundColor: colors.primary + "18" }]}>
                   {item.avatar_url ? (
                     <Image source={{ uri: item.avatar_url }} style={styles.avatarImg} />
