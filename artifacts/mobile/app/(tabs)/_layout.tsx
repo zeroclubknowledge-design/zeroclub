@@ -19,8 +19,8 @@ import { useAuth } from "@/context/AuthContext";
 
 function NativeTabLayout() {
   const { user, isLoading } = useAuth();
-  // Strictly check for 1. Anything else (0, null, undefined) is a student.
-  const isTutor = !isLoading && user && Number(user.tutorVerified) === 1;
+  // IRON-CLAD: Default to false. Only show if we have a user AND they are explicitly verified.
+  const isTutor = !!user && !isLoading && Number(user.tutorVerified) === 1;
   return (
     <NativeTabs>
       <NativeTabs.Trigger name="index">
@@ -101,8 +101,8 @@ function FloatingTabBar({
   const isWeb = Platform.OS === "web";
   const { isDesktop } = useBreakpoint();
   const { user, isLoading } = useAuth();
-  // Strictly check for 1. Anything else (0, null, undefined) is a student.
-  const isTutor = !isLoading && user && Number(user.tutorVerified) === 1;
+  // IRON-CLAD: Default to false. Only show if we have a user AND they are explicitly verified.
+  const isTutor = !!user && !isLoading && Number(user.tutorVerified) === 1;
 
   const TAB_ITEMS = BASE_TAB_ITEMS.filter((t) => {
     if (t.tutorOnly && !isTutor) return false;
@@ -189,8 +189,8 @@ function DesktopTabsWrapper({ children }: { children: React.ReactNode }) {
 function ClassicTabLayout() {
   const { isDesktop } = useBreakpoint();
   const { user, isLoading } = useAuth();
-  // Strictly check for 1. Anything else (0, null, undefined) is a student.
-  const isTutor = !isLoading && user && Number(user.tutorVerified) === 1;
+  // IRON-CLAD: Default to false. Only show if we have a user AND they are explicitly verified.
+  const isTutor = !!user && !isLoading && Number(user.tutorVerified) === 1;
 
   const tabs = (
     <Tabs
