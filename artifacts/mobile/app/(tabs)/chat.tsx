@@ -51,9 +51,6 @@ export default function ChatScreen() {
   const topPadding = Platform.OS === "web" ? 16 : insets.top;
   const { user } = useAuth();
   const [search, setSearch] = React.useState("");
-
-  const { user } = useAuth();
-  const [search, setSearch] = React.useState("");
   const [activeTab, setActiveTab] = React.useState<ChatTab>("messages");
 
   // 1. Fetch Channels & Rooms
