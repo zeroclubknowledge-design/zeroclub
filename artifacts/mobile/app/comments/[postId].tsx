@@ -39,12 +39,12 @@ function timeAgo(dateStr: string): string {
 interface Comment {
   id: string;
   body: string;
-  createdAt: string;
+  created_at: string;
   author: {
     id: string;
-    displayName: string;
+    display_name: string;
     username: string;
-    avatarUrl?: string | null;
+    avatar_url?: string | null;
     level: number;
   };
 }
@@ -118,7 +118,7 @@ export default function CommentsScreen() {
 
   const isLoading = postLoading || commentsLoading;
 
-  const initials = (name: string) => name.slice(0, 1).toUpperCase();
+  const initials = (name?: string) => (name || "U").slice(0, 1).toUpperCase();
 
   return (
     <KeyboardAvoidingView
@@ -207,15 +207,15 @@ export default function CommentsScreen() {
                 <View
                   style={[styles.avatar, { backgroundColor: colors.primary }]}
                 >
-                  {item.author.avatarUrl ? (
+                  {item.author.avatar_url ? (
                     <Image
-                      source={{ uri: item.author.avatarUrl }}
+                      source={{ uri: item.author.avatar_url }}
                       style={StyleSheet.absoluteFillObject}
                       borderRadius={18}
                     />
                   ) : (
                     <Text style={styles.avatarText}>
-                      {initials(item.author.displayName)}
+                      {initials(item.author.display_name)}
                     </Text>
                   )}
                 </View>
@@ -226,7 +226,7 @@ export default function CommentsScreen() {
                   <Text
                     style={[styles.commentName, { color: colors.foreground }]}
                   >
-                    {item.author.displayName}
+                    {item.author.display_name}
                   </Text>
                   <View
                     style={[
@@ -243,7 +243,7 @@ export default function CommentsScreen() {
                   <Text
                     style={[styles.commentTime, { color: colors.mutedForeground }]}
                   >
-                    {timeAgo(item.createdAt)}
+                    {timeAgo(item.created_at)}
                   </Text>
                 </View>
                 <Text style={[styles.commentBody, { color: colors.foreground }]}>
@@ -272,15 +272,15 @@ export default function CommentsScreen() {
             { backgroundColor: colors.primary },
           ]}
         >
-          {user?.avatarUrl ? (
+          {user?.avatar_url ? (
             <Image
-              source={{ uri: user.avatarUrl }}
+              source={{ uri: user.avatar_url }}
               style={StyleSheet.absoluteFillObject}
               borderRadius={16}
             />
           ) : (
             <Text style={styles.avatarSmallText}>
-              {initials(user?.displayName ?? "U")}
+              {initials(user?.display_name ?? "U")}
             </Text>
           )}
         </View>
