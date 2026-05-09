@@ -245,6 +245,11 @@ export default function PostDetailScreen() {
   const author = p.author;
   const mediaUrl = p.image_url || p.imageUrl;
   const isVideo = mediaUrl ? isVideoUrl(mediaUrl) : false;
+  
+  // Debug: If media exists but isn't showing, we want to know
+  if (mediaUrl) {
+    console.log("Post Media Found:", mediaUrl);
+  }
 
   return (
     <KeyboardAvoidingView 

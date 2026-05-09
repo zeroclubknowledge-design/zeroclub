@@ -107,12 +107,12 @@ export default function BootcampsScreen() {
               onPress={() => router.push("/profile")}
               style={[styles.avatarBtn, { backgroundColor: colors.primary + "22" }]}
               activeOpacity={0.7}
-            >
-              {user?.avatarUrl ? (
-                <Image source={{ uri: user.avatarUrl }} style={styles.avatarImg} />
+             >
+              {(user as any)?.avatar_url || (user as any)?.avatarUrl ? (
+                <Image source={{ uri: (user as any)?.avatar_url || (user as any)?.avatarUrl }} style={styles.avatarImg} />
               ) : (
                 <Text style={[styles.avatarInitials, { color: colors.primary }]}>
-                  {(user?.displayName ?? "U").slice(0, 1).toUpperCase()}
+                  {((user as any)?.display_name || (user as any)?.displayName || "U").slice(0, 1).toUpperCase()}
                 </Text>
               )}
             </TouchableOpacity>

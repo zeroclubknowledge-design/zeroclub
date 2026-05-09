@@ -56,7 +56,10 @@ export default function ChatScreen() {
         .from("channels")
         .select("*")
         .order("name");
-      if (error) throw error;
+      if (error) {
+        console.error("Supabase Channels Error:", error);
+        return [];
+      }
       return (data || []).map((c: any) => ({
         ...c,
         bootcampId: c.bootcamp_id,
@@ -102,11 +105,11 @@ export default function ChatScreen() {
               style={[styles.avatarBtn, { backgroundColor: colors.primary + "22" }]}
               activeOpacity={0.7}
             >
-              {user?.avatarUrl ? (
-                <Image source={{ uri: user.avatarUrl }} style={styles.avatarImg} />
+              {(user as any)?.avatar_url || (user as any)?.avatarUrl ? (
+                <Image source={{ uri: (user as any)?.avatar_url || (user as any)?.avatarUrl }} style={styles.avatarImg} />
               ) : (
                 <Text style={[styles.avatarInitials, { color: colors.primary }]}>
-                  {(user?.displayName ?? "U").slice(0, 1).toUpperCase()}
+                  {((user as any)?.display_name || (user as any)?.displayName || "U").slice(0, 1).toUpperCase()}
                 </Text>
               )}
             </TouchableOpacity>
