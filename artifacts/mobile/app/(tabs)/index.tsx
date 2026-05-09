@@ -78,7 +78,7 @@ export default function FeedScreen() {
       try {
         let query = supabase
           .from("posts")
-          .select("*, author:profiles(*)")
+          .select("*, author:profiles!author_id(*)")
           .order("created_at", { ascending: false });
 
         if (selectedTrack !== "all") {
