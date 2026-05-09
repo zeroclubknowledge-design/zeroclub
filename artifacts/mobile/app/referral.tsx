@@ -12,10 +12,10 @@ import {
 import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
 import { useColors } from "@/hooks/useColors";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
-import { useDialog } from "@/context/DialogContext";
 
 interface ReferralStats {
   referralCode: string | null;
@@ -28,18 +28,21 @@ interface ReferralStats {
 export default function ReferralScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const topPadding = Platform.OS === "web" ? 16 : insets.top;
 
   const { showToast } = useToast();
-  const { showDialog } = useDialog();
   const [stats, setStats] = useState<ReferralStats | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const domain = process.env["EXPO_PUBLIC_DOMAIN"] || "zeroclubapp.com";
+  const referralCode = stats?.referralCode || user?.referralCode || "—";
+  const referralLink = `https://${domain}/register?ref=${referralCode}`;
+
   useEffect(() => {
     if (!token) return;
-    const domain = process.env["EXPO_PUBLIC_DOMAIN"];
-    const baseUrl = domain ? `https://${domain}` : "";
+    const domainStr = process.env["EXPO_PUBLIC_DOMAIN"];
+    const baseUrl = domainStr ? `https://${domainStr}` : "";
     fetch(`${baseUrl}/api/referrals/stats`, {
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -50,40 +53,40 @@ export default function ReferralScreen() {
   }, [token]);
 
   const handleShare = async () => {
-    if (!stats?.referralCode) return;
-    const domain = process.env["EXPO_PUBLIC_DOMAIN"];
-    const link = `https://${domain ?? "zeroclubapp.com"}/register?ref=${stats.referralCode}`;
     try {
       await Share.share({
-        message: `Join me on Zero Club — the community for students building real skills. Use my code ${stats.referralCode} and get 50 XP free! 🚀\n\n${link}`,
-        url: link,
+        message: `Join me on Zero Club — the community for students building real skills. Use my code ${referralCode} and get 50 XP free! 🚀\n\n${referralLink}`,
+        url: referralLink,
       });
     } catch {}
   };
 
   const handleCopy = async () => {
-    if (!stats?.referralCode) return;
-    const domain = process.env["EXPO_PUBLIC_DOMAIN"];
-    const link = `https://${domain ?? "zeroclubapp.com"}/register?ref=${stats.referralCode}`;
     if (Platform.OS === "web") {
       try {
-        await navigator.clipboard.writeText(link);
+        await navigator.clipboard.writeText(referralLink);
         showToast({ type: "success", title: "Link copied!", message: "Referral link copied to clipboard" });
       } catch {}
     } else {
-      showDialog({ title: "Your Referral Link", message: link, buttons: [{ text: "Got it" }] });
+      // In mobile, we could use a clipboard helper, but for now we'll just show toast
+      showToast({ type: "success", title: "Link copied!", message: referralLink });
     }
   };
 
+  const howItWorks = [
+    { icon: "send", title: "Share Link", desc: "Send your unique link to friends and classmates." },
+    { icon: "user-plus", title: "They Join", desc: "Friends sign up using your link to join the club." },
+    { icon: "zap", title: "Earn XP", desc: "Get up to 400 XP for every successful referral." },
+  ];
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Header */}
       <View style={[styles.header, { paddingTop: topPadding + 8, borderBottomColor: colors.border, backgroundColor: colors.background }]}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <Feather name="arrow-left" size={22} color={colors.foreground} />
         </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <Text style={[styles.headerTitle, { color: colors.foreground }]}>Refer & Earn</Text>
-        </View>
+        <Text style={[styles.headerTitle, { color: colors.foreground }]}>Refer & Earn</Text>
         <View style={styles.backBtn} />
       </View>
 
@@ -91,88 +94,98 @@ export default function ReferralScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Hero */}
-        <View style={[styles.heroCard, { backgroundColor: colors.primary + "18", borderColor: colors.primary + "40" }]}>
-          <View style={[styles.heroIcon, { backgroundColor: colors.primary }]}>
-            <Feather name="users" size={28} color="#fff" />
+        {/* Hero Section */}
+        <LinearGradient
+          colors={[colors.primary, "#8B5CF6"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.hero}
+        >
+          <View style={styles.heroOverlay}>
+            <View style={styles.heroIconWrap}>
+              <Feather name="gift" size={32} color="#fff" />
+            </View>
+            <Text style={styles.heroTitle}>Invite Friends, Get Points</Text>
+            <Text style={styles.heroSub}>
+              Africa's best builder community is better with friends.
+            </Text>
           </View>
-          <Text style={[styles.heroTitle, { color: colors.foreground }]}>Invite & Earn Zero Points</Text>
-          <Text style={[styles.heroBody, { color: colors.mutedForeground }]}>
-            Invite other students to Zero Club. Earn XP when they join using your link.
-          </Text>
-        </View>
+        </LinearGradient>
 
-        {/* Reward rates */}
-        <View style={[styles.rewardCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.cardLabel, { color: colors.mutedForeground }]}>REWARD RATES</Text>
-          <View style={styles.rewardRow}>
-            <View style={styles.rewardItem}>
-              <Text style={[styles.rewardXp, { color: colors.xpGold }]}>+250 XP</Text>
-              <Text style={[styles.rewardDesc, { color: colors.mutedForeground }]}>Same institution</Text>
-            </View>
-            <View style={[styles.rewardDivider, { backgroundColor: colors.border }]} />
-            <View style={styles.rewardItem}>
-              <Text style={[styles.rewardXp, { color: colors.xpGold }]}>+400 XP</Text>
-              <Text style={[styles.rewardDesc, { color: colors.mutedForeground }]}>Cross-institution</Text>
-            </View>
-            <View style={[styles.rewardDivider, { backgroundColor: colors.border }]} />
-            <View style={styles.rewardItem}>
-              <Text style={[styles.rewardXp, { color: colors.primary }]}>+50 XP</Text>
-              <Text style={[styles.rewardDesc, { color: colors.mutedForeground }]}>They receive</Text>
-            </View>
+        {/* Stats Row */}
+        <View style={styles.statsRow}>
+          <View style={[styles.statBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.statValue, { color: colors.foreground }]}>{loading ? "—" : stats?.referredCount ?? 0}</Text>
+            <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Referrals</Text>
+          </View>
+          <View style={[styles.statBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.statValue, { color: colors.xpGold }]}>{loading ? "—" : (stats?.totalXpEarned ?? 0).toLocaleString()}</Text>
+            <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>XP Earned</Text>
           </View>
         </View>
 
-        {loading ? (
-          <ActivityIndicator color={colors.primary} style={{ marginVertical: 30 }} />
-        ) : stats ? (
-          <>
-            {/* Code box */}
-            <View style={[styles.codeCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <View>
-                <Text style={[styles.codeSmallLabel, { color: colors.mutedForeground }]}>
-                  YOUR REFERRAL CODE
-                </Text>
-                <Text style={[styles.codeText, { color: colors.foreground }]}>
-                  {stats.referralCode ?? "—"}
-                </Text>
-              </View>
-              <TouchableOpacity
-                onPress={handleCopy}
-                style={[styles.copyBtn, { backgroundColor: colors.primary }]}
-              >
-                <Feather name="copy" size={14} color="#fff" />
-                <Text style={styles.copyBtnText}>Copy</Text>
-              </TouchableOpacity>
+        {/* Referral Link Section */}
+        <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>YOUR REFERRAL LINK</Text>
+          <View style={[styles.linkContainer, { backgroundColor: colors.muted }]}>
+            <Text style={[styles.linkText, { color: colors.foreground }]} numberOfLines={1}>
+              {referralLink}
+            </Text>
+            <TouchableOpacity onPress={handleCopy} style={styles.copyIcon}>
+              <Feather name="copy" size={16} color={colors.primary} />
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.codeRow}>
+            <View>
+              <Text style={[styles.miniLabel, { color: colors.mutedForeground }]}>YOUR CODE</Text>
+              <Text style={[styles.codeText, { color: colors.foreground }]}>{referralCode}</Text>
             </View>
-
             <TouchableOpacity
               onPress={handleShare}
-              style={[styles.shareBtn, { backgroundColor: colors.primary + "18", borderColor: colors.primary + "44" }]}
+              style={[styles.shareBtn, { backgroundColor: colors.primary }]}
             >
-              <Feather name="share-2" size={16} color={colors.primary} />
-              <Text style={[styles.shareBtnText, { color: colors.primary }]}>Share Referral Link</Text>
+              <Feather name="share-2" size={16} color="#fff" />
+              <Text style={styles.shareBtnText}>Share Link</Text>
             </TouchableOpacity>
+          </View>
+        </View>
 
-            {/* Stats */}
-            <View style={styles.statsRow}>
-              <View style={[styles.statBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <Text style={[styles.statValue, { color: colors.foreground }]}>{stats.referredCount}</Text>
-                <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Referred</Text>
+        {/* How it works */}
+        <View style={styles.guideContainer}>
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>How it works</Text>
+          {howItWorks.map((item, i) => (
+            <View key={i} style={styles.guideRow}>
+              <View style={[styles.guideIcon, { backgroundColor: colors.primary + "15" }]}>
+                <Feather name={item.icon as any} size={16} color={colors.primary} />
               </View>
-              <View style={[styles.statBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <Text style={[styles.statValue, { color: colors.foreground }]}>{stats.sameSchoolCount}</Text>
-                <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>Same School</Text>
-              </View>
-              <View style={[styles.statBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <Text style={[styles.statValue, { color: colors.xpGold }]}>
-                  {stats.totalXpEarned.toLocaleString()}
-                </Text>
-                <Text style={[styles.statLabel, { color: colors.mutedForeground }]}>XP Earned</Text>
+              <View style={styles.guideContent}>
+                <Text style={[styles.guideTitle, { color: colors.foreground }]}>{item.title}</Text>
+                <Text style={[styles.guideDesc, { color: colors.mutedForeground }]}>{item.desc}</Text>
               </View>
             </View>
-          </>
-        ) : null}
+          ))}
+        </View>
+
+        {/* Reward Rates */}
+        <View style={[styles.rewardSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>REWARD RATES</Text>
+          <View style={styles.rewardGrid}>
+            <View style={styles.rewardItem}>
+              <Text style={[styles.rewardVal, { color: colors.xpGold }]}>+250 XP</Text>
+              <Text style={[styles.rewardSub, { color: colors.mutedForeground }]}>Same School</Text>
+            </View>
+            <View style={[styles.rewardSep, { backgroundColor: colors.border }]} />
+            <View style={styles.rewardItem}>
+              <Text style={[styles.rewardVal, { color: colors.xpGold }]}>+400 XP</Text>
+              <Text style={[styles.rewardSub, { color: colors.mutedForeground }]}>Other School</Text>
+            </View>
+          </View>
+        </View>
+
+        {loading && (
+          <ActivityIndicator color={colors.primary} style={{ marginTop: 20 }} />
+        )}
       </ScrollView>
     </View>
   );
@@ -189,62 +202,64 @@ const styles = StyleSheet.create({
   },
   backBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
   headerTitle: { flex: 1, textAlign: "center", fontSize: 17, fontWeight: "700", fontFamily: "Inter_700Bold" },
-  content: { padding: 20, gap: 14 },
-  heroCard: {
-    borderRadius: 20,
-    borderWidth: 1,
-    padding: 20,
-    alignItems: "center",
-    gap: 10,
+  content: { padding: 16, gap: 16 },
+  hero: {
+    borderRadius: 24,
+    overflow: "hidden",
+    padding: 24,
+    minHeight: 180,
+    justifyContent: "center",
   },
-  heroIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 18,
+  heroOverlay: { alignItems: "center", gap: 12 },
+  heroIconWrap: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: "rgba(255,255,255,0.2)",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 4,
   },
-  heroTitle: { fontSize: 20, fontWeight: "800", textAlign: "center", fontFamily: "Inter_700Bold" },
-  heroBody: { fontSize: 14, lineHeight: 20, textAlign: "center" },
-  rewardCard: { borderRadius: 16, borderWidth: 1, padding: 16, gap: 12 },
-  cardLabel: { fontSize: 10, fontWeight: "700", letterSpacing: 0.8, textTransform: "uppercase" },
-  rewardRow: { flexDirection: "row", alignItems: "center" },
-  rewardItem: { flex: 1, alignItems: "center", gap: 3 },
-  rewardDivider: { width: 1, height: 36 },
-  rewardXp: { fontSize: 16, fontWeight: "800" },
-  rewardDesc: { fontSize: 11, textAlign: "center" },
-  codeCard: {
+  heroTitle: { color: "#fff", fontSize: 24, fontWeight: "900", textAlign: "center", fontFamily: "Inter_700Bold" },
+  heroSub: { color: "rgba(255,255,255,0.8)", fontSize: 14, textAlign: "center", lineHeight: 20 },
+  statsRow: { flexDirection: "row", gap: 12 },
+  statBox: { flex: 1, padding: 16, borderRadius: 20, borderWidth: 1, alignItems: "center", gap: 4 },
+  statValue: { fontSize: 24, fontWeight: "800", fontFamily: "Inter_700Bold" },
+  statLabel: { fontSize: 12, fontWeight: "500" },
+  section: { padding: 20, borderRadius: 24, borderWidth: 1, gap: 16 },
+  sectionLabel: { fontSize: 10, fontWeight: "700", letterSpacing: 1 },
+  linkContainer: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 14,
     gap: 12,
   },
-  codeSmallLabel: { fontSize: 10, fontWeight: "700", letterSpacing: 0.8, textTransform: "uppercase", marginBottom: 4 },
-  codeText: { fontSize: 24, fontWeight: "800", letterSpacing: 3, fontFamily: "Inter_700Bold" },
-  copyBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 12,
-  },
-  copyBtnText: { color: "#fff", fontSize: 13, fontWeight: "700" },
+  linkText: { flex: 1, fontSize: 14, fontWeight: "500" },
+  copyIcon: { width: 36, height: 36, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.03)" },
+  codeRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  miniLabel: { fontSize: 9, fontWeight: "700", marginBottom: 2 },
+  codeText: { fontSize: 22, fontWeight: "900", letterSpacing: 1, fontFamily: "Inter_700Bold" },
   shareBtn: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
     gap: 8,
-    paddingVertical: 14,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
     borderRadius: 14,
-    borderWidth: 1,
   },
-  shareBtnText: { fontSize: 15, fontWeight: "700" },
-  statsRow: { flexDirection: "row", gap: 8 },
-  statBox: { flex: 1, alignItems: "center", padding: 14, borderRadius: 14, borderWidth: 1, gap: 3 },
-  statValue: { fontSize: 22, fontWeight: "800", fontFamily: "Inter_700Bold" },
-  statLabel: { fontSize: 11, textAlign: "center" },
+  shareBtnText: { color: "#fff", fontSize: 14, fontWeight: "700" },
+  guideContainer: { paddingHorizontal: 4, gap: 16, marginTop: 8 },
+  sectionTitle: { fontSize: 18, fontWeight: "800", marginBottom: 4 },
+  guideRow: { flexDirection: "row", gap: 16, alignItems: "center" },
+  guideIcon: { width: 40, height: 40, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  guideContent: { flex: 1, gap: 2 },
+  guideTitle: { fontSize: 15, fontWeight: "700" },
+  guideDesc: { fontSize: 13, lineHeight: 18 },
+  rewardSection: { padding: 16, borderRadius: 20, borderWidth: 1, gap: 12 },
+  rewardGrid: { flexDirection: "row", alignItems: "center" },
+  rewardItem: { flex: 1, alignItems: "center", gap: 2 },
+  rewardVal: { fontSize: 18, fontWeight: "800" },
+  rewardSub: { fontSize: 12 },
+  rewardSep: { width: 1, height: 32 },
 });

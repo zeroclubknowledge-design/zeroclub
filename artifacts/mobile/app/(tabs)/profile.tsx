@@ -196,7 +196,7 @@ export default function ProfileScreen() {
       </View>
 
       <ScrollView
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 40 }]}
+        contentContainerStyle={[styles.content, { paddingBottom: 200 }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Hero */}

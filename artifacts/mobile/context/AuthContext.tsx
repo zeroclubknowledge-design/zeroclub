@@ -93,6 +93,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(newToken);
     setUser(newUser);
     setAuthTokenGetter(() => newToken);
+
+    // Update Supabase session immediately
+    await supabase.auth.setSession({
+      access_token: newToken,
+      refresh_token: "",
+    });
+
     await Promise.all([
       AsyncStorage.setItem(TOKEN_KEY, newToken),
       AsyncStorage.setItem(USER_KEY, JSON.stringify(newUser)),

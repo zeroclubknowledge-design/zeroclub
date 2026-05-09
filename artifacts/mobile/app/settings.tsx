@@ -9,6 +9,7 @@ import {
   TextInput,
   ActivityIndicator,
   Modal,
+  Switch,
 } from "react-native";
 import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
@@ -62,6 +63,7 @@ export default function SettingsScreen() {
   const [bankName, setBankName] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [accountName, setAccountName] = useState("");
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
   const { showToast } = useToast();
   const { showDialog } = useDialog();
@@ -251,13 +253,28 @@ export default function SettingsScreen() {
         {/* Account */}
         <SectionHeader icon="shield" title="Account" colors={colors} />
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <SettingRow
-            icon="bell"
-            label="Notifications"
-            value="Enabled"
-            colors={colors}
-            onPress={() => router.push("/notifications" as never)}
-          />
+          <View style={styles.settingRow}>
+            <Feather name="bell" size={15} color={colors.mutedForeground} />
+            <Text style={[styles.settingLabel, { color: colors.foreground }]}>Notifications</Text>
+            <View style={styles.settingRight}>
+              <Text style={[styles.settingValue, { color: colors.mutedForeground }]}>
+                {notificationsEnabled ? "Enabled" : "Disabled"}
+              </Text>
+              <Switch
+                value={notificationsEnabled}
+                onValueChange={(val) => {
+                  setNotificationsEnabled(val);
+                  showToast({
+                    type: val ? "success" : "warning",
+                    title: val ? "Notifications enabled" : "Notifications disabled",
+                    message: val ? "You will receive push notifications." : "You will no longer receive push notifications.",
+                  });
+                }}
+                trackColor={{ false: colors.muted, true: colors.primary }}
+                thumbColor="#fff"
+              />
+            </View>
+          </View>
           <Separator colors={colors} />
           <SettingRow
             icon="help-circle"

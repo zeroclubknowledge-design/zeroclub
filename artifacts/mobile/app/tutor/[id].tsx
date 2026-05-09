@@ -135,7 +135,10 @@ export default function TutorBootcampScreen() {
       } else {
         // Create new module
         const nextOrder = (bootcamp?.modules?.length ?? 0);
-        const newId = Math.random().toString(36).slice(2);
+        const newId = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
+          const r = Math.random() * 16 | 0, v = c === "x" ? r : (r & 0x3 | 0x8);
+          return v.toString(16);
+        });
 
         const { error } = await supabase.from("bootcamp_modules").insert({
           id: newId,

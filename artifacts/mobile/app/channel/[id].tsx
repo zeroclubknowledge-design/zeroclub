@@ -99,8 +99,13 @@ export default function ChannelScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setMessageText("");
 
+    const newId = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0, v = c === "x" ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+
     const { error } = await supabase.from("messages").insert({
-      id: Math.random().toString(36).slice(2),
+      id: newId,
       channel_id: channelId,
       author_id: user.id,
       body: text,

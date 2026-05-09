@@ -26,7 +26,6 @@ import { supabase } from "@workspace/supabase";
 import { decode } from "base64-arraybuffer";
 import { readAsStringAsync } from "expo-file-system";
 import { Video, ResizeMode } from "expo-av";
-
 const TRACKS = [
   { key: "product_design", label: "Product Design" },
   { key: "frontend", label: "Frontend" },
@@ -56,11 +55,20 @@ interface TaggedUser {
 async function uploadMedia(uri: string, type: "image" | "video"): Promise<string> {
   const ext = uri.split(".").pop()?.split("?")[0] ?? (type === "video" ? "mp4" : "jpg");
   const filename = `posts/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-  const contentType = type === "video" ? `video/${ext}` : `image/${ext}`;
   
-  // Use FileSystem base64 for better Android compatibility
-  const base64 = await readAsStringAsync(uri, { encoding: "base64" });
-  const arrayBuffer = decode(base64);
+  let arrayBuffer: ArrayBuffer;
+  let contentType: string;
+
+  if (Platform.OS === "web") {
+    const response = await fetch(uri);
+    const blob = await response.blob();
+    arrayBuffer = await blob.arrayBuffer();
+    contentType = blob.type || (type === "video" ? "video/mp4" : "image/jpeg");
+  } else {
+    const base64 = await readAsStringAsync(uri, { encoding: "base64" });
+    arrayBuffer = decode(base64);
+    contentType = type === "video" ? "video/mp4" : "image/jpeg";
+  }
 
   const { data, error } = await supabase.storage
     .from("uploads")
@@ -182,7 +190,10 @@ export default function CreateScreen() {
       const mentions = taggedUsers.map((u) => `@${u.username}`).join(" ");
       const fullBody = mentions ? `${body.trim()}\n\n${mentions}` : body.trim();
 
-      const newId = Math.random().toString(36).slice(2) + Date.now().toString(36);
+      const newId = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0, v = c === "x" ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
 
       const { error } = await supabase.from("posts").insert({
         id: newId,
@@ -204,9 +215,9 @@ export default function CreateScreen() {
       setTaggedUsers([]);
       setSubmitted(true);
       setTimeout(() => setSubmitted(false), 3000);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      showToast({ type: "error", title: "Failed to post", message: "Try again." });
+      showToast({ type: "error", title: "Failed to post", message: err?.message || "Try again." });
     } finally {
       setIsPosting(false);
     }

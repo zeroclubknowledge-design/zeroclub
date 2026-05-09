@@ -228,8 +228,13 @@ export default function WalletScreen() {
       const grossKobo = xp * 1000;
       const netKobo = Math.floor(grossKobo * 0.9);
 
+      const newId = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0, v = c === "x" ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+
       const { error } = await supabase.from("withdrawals").insert({
-        id: Math.random().toString(36).slice(2),
+        id: newId,
         user_id: user.id,
         bank_account_id: selectedAccount.id,
         amount_xp: xp,

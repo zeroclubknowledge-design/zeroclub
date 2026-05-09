@@ -440,7 +440,7 @@ export default function FeedScreen() {
       <TouchableOpacity 
         style={[styles.fab, { backgroundColor: colors.primary, bottom: insets.bottom + 80 }]} 
         activeOpacity={0.8}
-        onPress={() => router.push("/create" as never)}
+        onPress={() => router.push("/(tabs)/create" as never)}
       >
         <Feather name="plus" size={24} color="#fff" />
       </TouchableOpacity>

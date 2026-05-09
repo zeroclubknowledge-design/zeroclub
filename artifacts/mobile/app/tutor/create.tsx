@@ -88,7 +88,7 @@ function PickerRow({ label, options, value, onChange, colors }: {
 export default function CreateBootcampScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const { showToast } = useToast();
   const qc = useQueryClient();
   const topPadding = Platform.OS === "web" ? 16 : insets.top;
@@ -127,14 +127,24 @@ export default function CreateBootcampScreen() {
       const ext = asset.uri.split(".").pop() ?? "jpg";
       const fileName = `bootcamp-covers/${user?.id ?? "anon"}-${Date.now()}.${ext}`;
       
-      // Use FileSystem base64 for better Android compatibility
-      const base64 = await readAsStringAsync(asset.uri, { encoding: "base64" });
-      const arrayBuffer = decode(base64);
+      let arrayBuffer: ArrayBuffer;
+      let contentType: string;
+
+      if (Platform.OS === "web") {
+        const response = await fetch(asset.uri);
+        const blob = await response.blob();
+        arrayBuffer = await blob.arrayBuffer();
+        contentType = blob.type || (asset.type === "video" ? "video/mp4" : "image/jpeg");
+      } else {
+        const base64 = await readAsStringAsync(asset.uri, { encoding: "base64" });
+        arrayBuffer = decode(base64);
+        contentType = asset.type === "video" ? "video/mp4" : "image/jpeg";
+      }
 
       const { error: uploadError } = await supabase.storage
         .from("uploads")
         .upload(fileName, arrayBuffer, {
-          contentType: asset.type === "video" ? `video/${ext}` : `image/${ext}`,
+          contentType,
           upsert: true,
         });
 
@@ -144,8 +154,9 @@ export default function CreateBootcampScreen() {
       setCoverUrl(publicData.publicUrl);
       setCoverMediaType(asset.type === "video" ? "video" : "image");
       showToast({ type: "success", title: "Uploaded!", message: "Cover media ready" });
-    } catch {
-      showToast({ type: "error", title: "Upload failed", message: "Please try again" });
+    } catch (err: any) {
+      console.error(err);
+      showToast({ type: "error", title: "Upload failed", message: err?.message || "Please try again" });
     } finally {
       setUploading(false);
     }
@@ -160,7 +171,10 @@ export default function CreateBootcampScreen() {
     setSaving(true);
     try {
       const priceCents = isFree ? 0 : Math.round(parseFloat(price || "0") * 100);
-      const newId = Math.random().toString(36).slice(2) + Date.now().toString(36);
+      const newId = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0, v = c === "x" ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
 
       const { error } = await supabase.from("bootcamps").insert({
         id: newId,
