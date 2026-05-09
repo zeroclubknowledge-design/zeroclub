@@ -19,8 +19,8 @@ import { useAuth } from "@/context/AuthContext";
 
 function NativeTabLayout() {
   const { user, isLoading } = useAuth();
-  // Default to student view if loading or user is missing
-  const isTutor = !isLoading && user?.tutorVerified === 1;
+  // Strictly check for 1. Anything else (0, null, undefined) is a student.
+  const isTutor = !isLoading && user && Number(user.tutorVerified) === 1;
   return (
     <NativeTabs>
       <NativeTabs.Trigger name="index">
@@ -101,7 +101,8 @@ function FloatingTabBar({
   const isWeb = Platform.OS === "web";
   const { isDesktop } = useBreakpoint();
   const { user, isLoading } = useAuth();
-  const isTutor = !isLoading && user?.tutorVerified === 1;
+  // Strictly check for 1. Anything else (0, null, undefined) is a student.
+  const isTutor = !isLoading && user && Number(user.tutorVerified) === 1;
 
   const TAB_ITEMS = BASE_TAB_ITEMS.filter((t) => {
     if (t.tutorOnly && !isTutor) return false;
@@ -188,7 +189,8 @@ function DesktopTabsWrapper({ children }: { children: React.ReactNode }) {
 function ClassicTabLayout() {
   const { isDesktop } = useBreakpoint();
   const { user, isLoading } = useAuth();
-  const isTutor = !isLoading && user?.tutorVerified === 1;
+  // Strictly check for 1. Anything else (0, null, undefined) is a student.
+  const isTutor = !isLoading && user && Number(user.tutorVerified) === 1;
 
   const tabs = (
     <Tabs
