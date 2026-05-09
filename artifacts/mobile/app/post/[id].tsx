@@ -393,18 +393,20 @@ export default function PostDetailScreen() {
 
       {/* Input Footer */}
       <BlurView 
-        intensity={Platform.OS === "ios" ? 80 : 100} 
+        intensity={Platform.OS === "ios" ? 90 : 100} 
         tint={colors.background === "#000" ? "dark" : "light"}
         style={[styles.inputFooter, { paddingBottom: insets.bottom + 12, borderTopColor: colors.border }]}
       >
-        <TextInput
-          style={[styles.input, { backgroundColor: colors.muted + "60", color: colors.foreground, borderColor: colors.border }]}
-          placeholder="Write a comment..."
-          placeholderTextColor={colors.mutedForeground}
-          value={commentText}
-          onChangeText={setCommentText}
-          multiline
-        />
+        <View style={[styles.inputWrapper, { backgroundColor: colors.muted + "90", borderColor: colors.border }]}>
+          <TextInput
+            style={[styles.input, { color: colors.foreground }]}
+            placeholder="Write a comment..."
+            placeholderTextColor={colors.mutedForeground}
+            value={commentText}
+            onChangeText={setCommentText}
+            multiline
+          />
+        </View>
         <TouchableOpacity 
           style={[styles.sendBtn, { backgroundColor: colors.primary }]} 
           onPress={handleComment}
@@ -433,7 +435,7 @@ const styles = StyleSheet.create({
   iconBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center", borderRadius: 20 },
   headerTitleWrap: { flex: 1, alignItems: "center" },
   headerTitle: { fontSize: 16, fontWeight: "800", fontFamily: "Inter_700Bold" },
-  headerActions: { width: 40 },
+  headerActions: { width: 44, alignItems: "flex-end" },
   
   trackBadge: { alignSelf: "flex-start", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10, marginBottom: 16 },
   trackText: { fontSize: 12, fontWeight: "800", letterSpacing: 0.5 },
@@ -482,7 +484,18 @@ const styles = StyleSheet.create({
     padding: 16,
     borderTopWidth: 1,
     gap: 12,
+    elevation: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
   },
-  input: { flex: 1, borderRadius: 24, borderWidth: 1, paddingHorizontal: 18, paddingVertical: 12, fontSize: 15, maxHeight: 120 },
-  sendBtn: { width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center" },
+  inputWrapper: {
+    flex: 1,
+    borderRadius: 24,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+  input: { paddingHorizontal: 18, paddingVertical: 12, fontSize: 15, maxHeight: 120 },
+  sendBtn: { width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center", elevation: 2 },
 });
