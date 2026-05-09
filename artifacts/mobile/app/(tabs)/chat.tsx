@@ -27,7 +27,10 @@ type ExtChannel = {
   description?: string | null;
   bootcampId?: string | null;
   parentChannelId?: string | null;
+  type?: "channel" | "room";
 };
+
+type ChatTab = "messages" | "channels" | "rooms";
 
 interface Section {
   title: string;
@@ -49,23 +52,54 @@ export default function ChatScreen() {
   const { user } = useAuth();
   const [search, setSearch] = React.useState("");
 
-  const { data: channels, isLoading } = useQuery({
+  const { user } = useAuth();
+  const [search, setSearch] = React.useState("");
+  const [activeTab, setActiveTab] = React.useState<ChatTab>("messages");
+
+  // 1. Fetch Channels & Rooms
+  const { data: channels, isLoading: channelsLoading } = useQuery({
     queryKey: ["channels"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("channels")
         .select("*")
         .order("name");
-      if (error) {
-        console.error("Supabase Channels Error:", error);
-        return [];
-      }
+      if (error) return [];
       return (data || []).map((c: any) => ({
         ...c,
         bootcampId: c.bootcamp_id,
         parentChannelId: c.parent_channel_id,
+        type: c.type || (c.bootcamp_id ? "room" : "channel")
       }));
     },
+  });
+
+  // 2. Fetch Followers & Top Ranked for Messages tab
+  const { data: people, isLoading: peopleLoading } = useQuery({
+    queryKey: ["chat_people"],
+    queryFn: async () => {
+      // Get followers
+      const { data: follows } = await supabase
+        .from("follows")
+        .select("follower:profiles!follower_id(*)")
+        .eq("following_id", user?.id);
+      
+      // Get top ranked (for premium access)
+      const { data: topRanked } = await supabase
+        .from("profiles")
+        .select("*")
+        .order("purchased_level", { ascending: false })
+        .limit(10);
+        
+      const followersList = (follows || []).map(f => ({ ...f.follower, isFollower: true }));
+      const topList = (topRanked || []).map(p => ({ ...p, isTopRanked: true }));
+      
+      // Merge and unique
+      const combined = [...followersList, ...topList];
+      const unique = combined.filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
+      return unique;
+    },
+    enabled: !!user?.id && activeTab === "messages"
   });
 
   const sections = useMemo<Section[]>(() => {
@@ -116,21 +150,39 @@ export default function ChatScreen() {
           </View>
         </View>
 
+        </View>
+
+        {/* ── Tabs ── */}
+        <View style={styles.tabBar}>
+          {(["messages", "channels", "rooms"] as ChatTab[]).map((tab) => (
+            <TouchableOpacity
+              key={tab}
+              onPress={() => setActiveTab(tab)}
+              style={[
+                styles.tab,
+                activeTab === tab && { borderBottomColor: colors.primary }
+              ]}
+            >
+              <Text style={[
+                styles.tabText, 
+                { color: activeTab === tab ? colors.foreground : colors.mutedForeground }
+              ]}>
+                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
         {/* ── Search bar ── */}
         <View style={[styles.searchWrap, { backgroundColor: colors.muted }]}>
           <Feather name="search" size={16} color={colors.mutedForeground} />
           <TextInput
             value={search}
             onChangeText={setSearch}
-            placeholder="Search channels…"
+            placeholder={`Search ${activeTab}...`}
             placeholderTextColor={colors.mutedForeground}
             style={[styles.searchInput, { color: colors.foreground }]}
           />
-          {search.length > 0 && (
-            <TouchableOpacity onPress={() => setSearch("")} activeOpacity={0.7}>
-              <Feather name="x" size={16} color={colors.mutedForeground} />
-            </TouchableOpacity>
-          )}
         </View>
       </View>
 
@@ -144,31 +196,57 @@ export default function ChatScreen() {
         </View>
       )}
 
-      {/* ── Channel List ── */}
-      {isLoading ? (
-        <View style={styles.center}>
-          <ActivityIndicator color={colors.primary} />
-        </View>
-      ) : (
+      {/* ── Main Content ── */}
+      {activeTab === "messages" ? (
         <SectionList
-          sections={sections}
+          sections={[{ title: "Recent Chats", data: (people || []).filter(p => p.id !== user?.id) }]}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          stickySectionHeadersEnabled={false}
-          renderSectionHeader={({ section }) => (
-            <View style={styles.sectionHeader}>
-              <View style={[styles.sectionDot, {
-                backgroundColor: section.title === "Community" ? colors.primary : colors.xpGold,
-              }]} />
-              <Text style={[styles.sectionTitle, { color: colors.mutedForeground }]}>
-                {section.title.toUpperCase()}
-              </Text>
-              <Text style={[styles.sectionCount, { color: colors.mutedForeground }]}>
-                {section.data.length}
-              </Text>
-            </View>
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={[styles.channelRow, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={() => router.push({ pathname: "/channel/[id]", params: { id: item.id, title: item.display_name || item.username } } as never)}
+            >
+              <View style={[styles.channelIcon, { backgroundColor: colors.primary + "18" }]}>
+                {item.avatar_url ? (
+                  <Image source={{ uri: item.avatar_url }} style={styles.avatarImg} />
+                ) : (
+                  <Text style={{ color: colors.primary, fontWeight: "700" }}>
+                    {(item.display_name || item.username || "U")[0].toUpperCase()}
+                  </Text>
+                )}
+              </View>
+              <View style={styles.channelInfo}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <Text style={[styles.channelName, { color: colors.foreground }]}>
+                    {item.display_name || item.username}
+                  </Text>
+                  {item.isTopRanked && (
+                    <View style={{ backgroundColor: colors.xpGold + "20", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
+                      <Text style={{ fontSize: 10, color: colors.xpGold, fontWeight: "700" }}>PRO</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={[styles.channelDesc, { color: colors.mutedForeground }]}>
+                  {item.isFollower ? "Follows you" : `Level ${item.purchased_level || 1} Builder`}
+                </Text>
+              </View>
+              <Feather name="message-square" size={16} color={colors.mutedForeground} />
+            </TouchableOpacity>
           )}
+          ListEmptyComponent={
+            <View style={styles.emptyWrap}>
+              <Feather name="users" size={32} color={colors.mutedForeground} />
+              <Text style={{ color: colors.foreground, marginTop: 12, fontWeight: "700" }}>No conversations yet</Text>
+              <Text style={{ color: colors.mutedForeground, textAlign: "center" }}>Followers and top builders will appear here.</Text>
+            </View>
+          }
+        />
+      ) : (
+        <SectionList
+          sections={sections.filter(s => activeTab === "channels" ? s.title === "Community" : s.title === "Bootcamp Rooms")}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
           renderItem={({ item, section }) => {
             const isCommunity = section.title === "Community";
             const iconColor = CHANNEL_ICON_COLORS[item.name] ?? colors.primary;
@@ -183,46 +261,22 @@ export default function ChatScreen() {
                       : ({ pathname: "/bootcamp-hub/[id]", params: { id: item.id } } as never)
                   )
                 }
-                activeOpacity={0.75}
               >
                 <View style={[styles.channelIcon, { backgroundColor: iconColor + "18" }]}>
-                  <Feather
-                    name={isCommunity ? "hash" : "book-open"}
-                    size={16}
-                    color={iconColor}
-                  />
+                  <Feather name={isCommunity ? "hash" : "book-open"} size={16} color={iconColor} />
                 </View>
                 <View style={styles.channelInfo}>
-                  <Text style={[styles.channelName, { color: colors.foreground }]} numberOfLines={1}>
+                  <Text style={[styles.channelName, { color: colors.foreground }]}>
                     {isCommunity ? `#${item.name}` : item.title ?? item.name}
                   </Text>
-                  {item.description ? (
-                    <Text style={[styles.channelDesc, { color: colors.mutedForeground }]} numberOfLines={1}>
-                      {item.description}
-                    </Text>
-                  ) : (
-                    <Text style={[styles.channelDesc, { color: colors.mutedForeground }]} numberOfLines={1}>
-                      {isCommunity ? "Community discussion" : "Bootcamp chat room"}
-                    </Text>
-                  )}
+                  <Text style={[styles.channelDesc, { color: colors.mutedForeground }]}>
+                    {item.description || (isCommunity ? "Community discussion" : "Bootcamp chat room")}
+                  </Text>
                 </View>
                 <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
               </TouchableOpacity>
             );
           }}
-          ListEmptyComponent={
-            <View style={styles.emptyWrap}>
-              <View style={[styles.emptyIcon, { backgroundColor: colors.card }]}>
-                <Feather name="message-circle" size={32} color={colors.mutedForeground} />
-              </View>
-              <Text style={[styles.emptyTitle, { color: colors.foreground }]}>
-                {search ? "No channels found" : "No channels yet"}
-              </Text>
-              <Text style={[styles.emptyDesc, { color: colors.mutedForeground }]}>
-                {search ? "Try a different search term." : "Chat channels will appear here once they're created."}
-              </Text>
-            </View>
-          }
         />
       )}
     </View>
@@ -278,6 +332,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   searchInput: { flex: 1, fontSize: 14, paddingVertical: 0 },
+  
+  // Tabs
+  tabBar: { flexDirection: "row", paddingHorizontal: 16, marginBottom: 12, gap: 20 },
+  tab: { paddingVertical: 8, borderBottomWidth: 2, borderBottomColor: "transparent" },
+  tabText: { fontSize: 15, fontWeight: "700" },
 
   // Online strip
   onlineStrip: {
