@@ -82,7 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           });
 
           // NEW: Fetch fresh profile from Supabase to ensure roles (tutor_verified) are up to date
-          const { data: freshProfile } = await supabase
+          const { data: freshProfile, error: fetchError } = await supabase
             .from("profiles")
             .select("*")
             .eq("id", parsedUser.id)
@@ -97,6 +97,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             };
             setUser(updatedUser);
             await AsyncStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
+          } else if (fetchError) {
+            // If fetch fails (e.g. CORS on localhost), assume student mode for safety
+            console.warn("Could not verify tutor status, defaulting to student mode.");
+            const safeUser = { ...parsedUser, tutorVerified: 0 };
+            setUser(safeUser);
           }
         }
       } catch {
