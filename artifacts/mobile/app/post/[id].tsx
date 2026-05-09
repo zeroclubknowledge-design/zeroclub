@@ -20,7 +20,7 @@ import * as Haptics from "expo-haptics";
 import { Video, ResizeMode } from "expo-av";
 import { BlurView } from "expo-blur";
 
-import { supabase } from "../../lib/supabase";
+import { supabase } from "@workspace/supabase";
 import { useAuth } from "../../context/AuthContext";
 import { useColors } from "../../hooks/useColors";
 import { useToast } from "../../context/ToastContext";
@@ -326,7 +326,11 @@ export default function PostDetailScreen() {
                 />
               )
             ) : (
-              <Image source={{ uri: mediaUrl }} style={{ width: "100%", height: 350 }} resizeMode="cover" />
+              <Image 
+                source={{ uri: mediaUrl }} 
+                style={{ width: "100%", height: 350, backgroundColor: "#111" }} 
+                resizeMode="cover" 
+              />
             )}
           </View>
         )}
