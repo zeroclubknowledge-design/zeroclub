@@ -18,207 +18,109 @@ import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
 import { getGetWalletQueryOptions, getGetWalletQueryKey } from "@workspace/api-client-react";
 
-interface ClubLevel {
-  number: number;
+interface SubscriptionPlan {
+  id: string;
+  level: number;
   name: string;
-  emoji: string;
+  monthlyPriceKobo: number;
+  yearlyPriceKobo: number;
+  bestFor: string;
+  features: string[];
+  copy: string;
   color: string;
-  referrals: number;
-  bootcamps: number;
-  isAmbassador: boolean;
-  ambassadorTitle?: string;
-  monthlyStipend?: string;
-  upgradePriceKobo: number;
-  perks: string[];
+  icon: string;
+  plusPrefix?: string;
 }
+
+const SUBSCRIPTION_PLANS: SubscriptionPlan[] = [
+  {
+    id: "learn",
+    level: 2,
+    name: "Zero Club Learn",
+    monthlyPriceKobo: 350_000,
+    yearlyPriceKobo: 4_200_000,
+    bestFor: "Students focused on learning digital skills and building consistency.",
+    features: [
+      "Access to core bootcamps",
+      "Tutor-led learning experience",
+      "XP earning system",
+      "Daily skill challenges",
+      "Project posting access",
+      "Basic AI Study Buddy",
+      "Skill progression tracking",
+      "Community feed access",
+      "Certificates of completion",
+      "Streak rewards & leveling"
+    ],
+    copy: "Learn real digital skills, earn XP, build projects, and grow consistently without sacrificing school.",
+    color: "#D4387C",
+    icon: "book"
+  },
+  {
+    id: "network",
+    level: 3,
+    name: "Zero Club Network",
+    monthlyPriceKobo: 500_000,
+    yearlyPriceKobo: 6_000_000,
+    bestFor: "Students who want learning + networking + visibility + collaboration.",
+    plusPrefix: "Everything in Learn PLUS",
+    features: [
+      "Private networking rooms",
+      "Collaboration groups",
+      "Accountability circles",
+      "Premium bootcamps",
+      "Tutor Q&A sessions",
+      "Project visibility boosts",
+      "Portfolio showcase features",
+      "Priority challenge access",
+      "Advanced AI Study Buddy",
+      "XP multiplier rewards",
+      "Exclusive student opportunities"
+    ],
+    copy: "Learn, connect, collaborate, and grow with ambitious students building real digital careers.",
+    color: "#8B5CF6",
+    icon: "users"
+  },
+  {
+    id: "irl",
+    level: 4,
+    name: "Zero Club IRL",
+    monthlyPriceKobo: 1_000_000,
+    yearlyPriceKobo: 12_000_000,
+    bestFor: "Students who want premium access, real-world networking, and elite opportunities.",
+    plusPrefix: "Everything in Network PLUS",
+    features: [
+      "IRL events & meetups",
+      "Workshops & creator sessions",
+      "Hackathons & competitions",
+      "VIP networking experiences",
+      "Direct tutor access",
+      "Career opportunity access",
+      "Premium community badge",
+      "Early feature access",
+      "Exclusive merchandise drops",
+      "Live mentorship experiences",
+      "Future talent placement access"
+    ],
+    copy: "Go beyond online learning with real-world access, elite networking, and premium growth opportunities.",
+    color: "#F59E0B",
+    icon: "award"
+  }
+];
 
 function formatNaira(kobo: number): string {
   return `₦${(kobo / 100).toLocaleString("en-NG", { minimumFractionDigits: 0 })}`;
 }
 
-const CLUB_LEVELS: ClubLevel[] = [
-  {
-    number: 1,
-    name: "Zero",
-    emoji: "🌱",
-    color: "#6B7280",
-    referrals: 0,
-    bootcamps: 0,
-    isAmbassador: false,
-    upgradePriceKobo: 0,
-    perks: ["Access to community feed", "Join club channels", "Earn Zero Points"],
-  },
-  {
-    number: 2,
-    name: "Spark",
-    emoji: "✨",
-    color: "#06B6D4",
-    referrals: 1,
-    bootcamps: 1,
-    isAmbassador: false,
-    upgradePriceKobo: 50_000,
-    perks: ["Unlock bootcamp channels", "Show & Tell access", "Profile level badge"],
-  },
-  {
-    number: 3,
-    name: "Builder",
-    emoji: "🔨",
-    color: "#3B82F6",
-    referrals: 3,
-    bootcamps: 2,
-    isAmbassador: false,
-    upgradePriceKobo: 120_000,
-    perks: ["Priority post visibility", "Builder badge on profile", "Access to resources channels"],
-  },
-  {
-    number: 4,
-    name: "Maker",
-    emoji: "⚙️",
-    color: "#6366F1",
-    referrals: 5,
-    bootcamps: 3,
-    isAmbassador: false,
-    upgradePriceKobo: 250_000,
-    perks: ["Maker badge", "XP bonus on proof posts", "Early bootcamp access"],
-  },
-  {
-    number: 5,
-    name: "Creator",
-    emoji: "🎨",
-    color: "#8B5CF6",
-    referrals: 8,
-    bootcamps: 5,
-    isAmbassador: false,
-    upgradePriceKobo: 500_000,
-    perks: ["Creator badge", "Featured in club spotlight", "XP multiplier (1.1×)"],
-  },
-  {
-    number: 6,
-    name: "Innovator",
-    emoji: "💡",
-    color: "#A855F7",
-    referrals: 12,
-    bootcamps: 7,
-    isAmbassador: false,
-    upgradePriceKobo: 900_000,
-    perks: ["Innovator badge", "Invite-only sessions", "XP multiplier (1.2×)"],
-  },
-  {
-    number: 7,
-    name: "Pioneer",
-    emoji: "🚀",
-    color: "#EC4899",
-    referrals: 18,
-    bootcamps: 10,
-    isAmbassador: false,
-    upgradePriceKobo: 1_500_000,
-    perks: ["Pioneer badge", "Beta feature access", "Mentorship circle access"],
-  },
-  {
-    number: 8,
-    name: "Champion",
-    emoji: "🥉",
-    color: "#CD7F32",
-    referrals: 25,
-    bootcamps: 13,
-    isAmbassador: true,
-    ambassadorTitle: "Bronze Ambassador",
-    monthlyStipend: "₦15,000",
-    upgradePriceKobo: 2_500_000,
-    perks: ["Monthly ₦15,000 stipend", "Ambassador badge", "Official Zero Club merch", "Monthly ambassador calls"],
-  },
-  {
-    number: 9,
-    name: "Leader",
-    emoji: "🥈",
-    color: "#9CA3AF",
-    referrals: 35,
-    bootcamps: 17,
-    isAmbassador: true,
-    ambassadorTitle: "Silver Ambassador",
-    monthlyStipend: "₦30,000",
-    upgradePriceKobo: 4_000_000,
-    perks: ["Monthly ₦30,000 stipend", "Silver Ambassador badge", "Priority support access", "Featured ambassador profile"],
-  },
-  {
-    number: 10,
-    name: "Mentor",
-    emoji: "🥇",
-    color: "#F59E0B",
-    referrals: 50,
-    bootcamps: 22,
-    isAmbassador: true,
-    ambassadorTitle: "Gold Ambassador",
-    monthlyStipend: "₦60,000",
-    upgradePriceKobo: 6_500_000,
-    perks: ["Monthly ₦60,000 stipend", "Gold Ambassador badge", "Bootcamp co-host rights", "Revenue share bonus"],
-  },
-  {
-    number: 11,
-    name: "Legend",
-    emoji: "💠",
-    color: "#BAC8FF",
-    referrals: 70,
-    bootcamps: 28,
-    isAmbassador: true,
-    ambassadorTitle: "Platinum Ambassador",
-    monthlyStipend: "₦100,000",
-    upgradePriceKobo: 10_000_000,
-    perks: ["Monthly ₦100,000 stipend", "Platinum badge", "Community equity access", "Exclusive retreats & events"],
-  },
-  {
-    number: 12,
-    name: "Icon",
-    emoji: "💎",
-    color: "#67E8F9",
-    referrals: 100,
-    bootcamps: 35,
-    isAmbassador: true,
-    ambassadorTitle: "Diamond Ambassador",
-    monthlyStipend: "₦150,000",
-    upgradePriceKobo: 16_000_000,
-    perks: ["Monthly ₦150,000 stipend", "Diamond badge", "Board advisory seat", "Product input rights"],
-  },
-  {
-    number: 13,
-    name: "Titan",
-    emoji: "🏆",
-    color: "#34D399",
-    referrals: 150,
-    bootcamps: 45,
-    isAmbassador: true,
-    ambassadorTitle: "Elite Ambassador",
-    monthlyStipend: "₦250,000",
-    upgradePriceKobo: 25_000_000,
-    perks: ["Monthly ₦250,000 stipend", "Elite badge", "Zero Club equity options", "Annual retreat (all-expenses)"],
-  },
-  {
-    number: 14,
-    name: "Visionary",
-    emoji: "👁️",
-    color: "#F43F5E",
-    referrals: 200,
-    bootcamps: 55,
-    isAmbassador: true,
-    ambassadorTitle: "Master Ambassador",
-    monthlyStipend: "₦400,000",
-    upgradePriceKobo: 40_000_000,
-    perks: ["Monthly ₦400,000 stipend", "Master badge", "Co-founder advisory role", "Revenue profit share (1%)"],
-  },
-  {
-    number: 15,
-    name: "Zero Elite",
-    emoji: "⚡",
-    color: "#D4387C",
-    referrals: 300,
-    bootcamps: 70,
-    isAmbassador: true,
-    ambassadorTitle: "Grand Ambassador",
-    monthlyStipend: "₦700,000",
-    upgradePriceKobo: 70_000_000,
-    perks: ["Monthly ₦700,000 stipend", "Grand Ambassador badge", "Full equity stake", "Lifetime club membership", "Own Zero Club chapter"],
-  },
-];
+const CLUB_LEVELS = SUBSCRIPTION_PLANS.map(p => ({
+  number: p.level,
+  name: p.name,
+  emoji: p.id === "learn" ? "🌱" : p.id === "network" ? "🚀" : "💎",
+  color: p.color,
+  upgradePriceKobo: p.monthlyPriceKobo,
+  perks: p.features,
+  isAmbassador: p.id === "irl"
+}));
 
 function computeClubLevel(referrals: number, bootcampsCompleted: number): number {
   let level = 1;
@@ -238,6 +140,7 @@ export default function ClubLevelsScreen() {
   const qc = useQueryClient();
   const topPadding = Platform.OS === "web" ? 16 : insets.top;
   const [upgradingLevel, setUpgradingLevel] = useState<number | null>(null);
+  const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
 
   const { data: walletRaw, isLoading: walletLoading } = useQuery(getGetWalletQueryOptions());
   const wallet = walletRaw as (typeof walletRaw & { purchasedLevel?: number }) | undefined;
@@ -252,28 +155,30 @@ export default function ClubLevelsScreen() {
   const fundsBalance = wallet?.fundsBalance ?? 0;
 
   async function handleUpgrade(targetLevel: number) {
-    const tier = CLUB_LEVELS.find((t) => t.number === targetLevel);
-    if (!tier) return;
+    const plan = SUBSCRIPTION_PLANS.find((p) => p.level === targetLevel);
+    if (!plan) return;
 
-    const hasEnough = fundsBalance >= tier.upgradePriceKobo;
+    const priceKobo = billingCycle === "monthly" ? plan.monthlyPriceKobo : plan.yearlyPriceKobo;
+    const hasEnough = fundsBalance >= priceKobo;
+
     if (!hasEnough) {
-      const needed = tier.upgradePriceKobo - fundsBalance;
+      const needed = priceKobo - fundsBalance;
       showToast({
         type: "warning",
         title: "Insufficient Funds",
-        message: `You need ${formatNaira(needed)} more. Add funds in your Wallet first.`,
+        message: `You need ${formatNaira(needed)} more for the ${billingCycle} plan. Add funds in your Wallet first.`,
         duration: 4000,
       });
       return;
     }
 
     Alert.alert(
-      `Upgrade to ${tier.name}?`,
-      `${formatNaira(tier.upgradePriceKobo)} will be deducted from your cash balance to unlock Level ${targetLevel} (${tier.name}).`,
+      `Upgrade to ${plan.name}?`,
+      `${formatNaira(priceKobo)} will be deducted from your cash balance to unlock ${plan.name} (${billingCycle}).`,
       [
         { text: "Cancel", style: "cancel" },
         {
-          text: `Pay ${formatNaira(tier.upgradePriceKobo)}`,
+          text: `Pay ${formatNaira(priceKobo)}`,
           style: "default",
           onPress: async () => {
             setUpgradingLevel(targetLevel);
@@ -286,7 +191,11 @@ export default function ClubLevelsScreen() {
                   "Content-Type": "application/json",
                   Authorization: `Bearer ${token ?? ""}`,
                 },
-                body: JSON.stringify({ targetLevel }),
+                body: JSON.stringify({ 
+                  targetLevel,
+                  billingCycle, // Pass the cycle to the backend
+                  amountKobo: priceKobo
+                }),
               });
               const data = await res.json() as { ok?: boolean; message?: string; error?: string };
               if (!res.ok) {
@@ -295,10 +204,11 @@ export default function ClubLevelsScreen() {
                 await qc.invalidateQueries({ queryKey: getGetWalletQueryKey() });
                 showToast({
                   type: "success",
-                  title: `🎉 Level ${targetLevel} Unlocked!`,
-                  message: `Welcome to ${tier.name}! You've upgraded your Zero Club rank.`,
+                  title: `🎉 ${plan.name} Unlocked!`,
+                  message: `Welcome to the club! Your ${billingCycle} subscription is now active.`,
                   duration: 5000,
                 });
+                router.back();
               }
             } catch {
               showToast({ type: "error", title: "Network error", message: "Please check your connection." });
@@ -323,9 +233,9 @@ export default function ClubLevelsScreen() {
           <Feather name="arrow-left" size={22} color={colors.foreground} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={[styles.headerTitle, { color: colors.foreground }]}>Zero Club Levels</Text>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>Zero Club Subscription</Text>
           <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>
-            Your journey to the top
+            Level up your digital building journey
           </Text>
         </View>
         <View style={styles.backBtn} />
@@ -335,290 +245,102 @@ export default function ClubLevelsScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 60 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Current level hero */}
-        <View
-          style={[
-            styles.heroCard,
-            { backgroundColor: currentTier.color + "18", borderColor: currentTier.color + "60" },
-          ]}
-        >
-          <Text style={styles.heroEmoji}>{currentTier.emoji}</Text>
-          <Text style={[styles.heroLevelName, { color: currentTier.color }]}>{currentTier.name}</Text>
-          <Text style={[styles.heroSub, { color: colors.mutedForeground }]}>
-            Level {currentTier.number} · Your current rank
-          </Text>
-          {currentTier.isAmbassador && (
-            <View style={[styles.ambassadorBanner, { backgroundColor: currentTier.color }]}>
-              <Feather name="star" size={12} color="#fff" />
-              <Text style={styles.ambassadorBannerText}>{currentTier.ambassadorTitle}</Text>
-              <Text style={styles.ambassadorStipend}>{currentTier.monthlyStipend}/mo</Text>
-            </View>
-          )}
-          {purchasedLevel > organicLevel && purchasedLevel === currentLevel && (
-            <View style={[styles.purchasedBadge, { backgroundColor: "#F59E0B20", borderColor: "#F59E0B50" }]}>
-              <Feather name="credit-card" size={11} color="#F59E0B" />
-              <Text style={[styles.purchasedBadgeText, { color: "#F59E0B" }]}>Unlocked with funds</Text>
-            </View>
-          )}
+        {/* Billing Toggle */}
+        <View style={[styles.toggleContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <TouchableOpacity 
+            onPress={() => setBillingCycle("monthly")}
+            style={[styles.toggleBtn, billingCycle === "monthly" && { backgroundColor: colors.primary }]}
+          >
+            <Text style={[styles.toggleText, { color: billingCycle === "monthly" ? "#fff" : colors.mutedForeground }]}>Monthly</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            onPress={() => setBillingCycle("yearly")}
+            style={[styles.toggleBtn, billingCycle === "yearly" && { backgroundColor: colors.primary }]}
+          >
+            <Text style={[styles.toggleText, { color: billingCycle === "yearly" ? "#fff" : colors.mutedForeground }]}>Yearly</Text>
+          </TouchableOpacity>
         </View>
 
-        {/* Cash balance + how to upgrade */}
-        <View style={[styles.infoCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.infoTitle, { color: colors.foreground }]}>How levels work</Text>
-          <View style={styles.infoRow}>
-            <View style={[styles.infoIcon, { backgroundColor: "#8B5CF620" }]}>
-              <Feather name="users" size={14} color="#8B5CF6" />
-            </View>
-            <Text style={[styles.infoText, { color: colors.mutedForeground }]}>
-              Refer students to Zero Club to unlock higher levels organically
-            </Text>
-          </View>
-          <View style={styles.infoRow}>
-            <View style={[styles.infoIcon, { backgroundColor: "#F59E0B20" }]}>
-              <Feather name="book" size={14} color="#F59E0B" />
-            </View>
-            <Text style={[styles.infoText, { color: colors.mutedForeground }]}>
-              Complete bootcamps to meet level requirements
-            </Text>
-          </View>
-          <View style={styles.infoRow}>
-            <View style={[styles.infoIcon, { backgroundColor: "#10B98120" }]}>
-              <Feather name="credit-card" size={14} color="#10B981" />
-            </View>
-            <Text style={[styles.infoText, { color: colors.mutedForeground }]}>
-              Or pay with your cash balance to skip requirements instantly
-            </Text>
-          </View>
-          <View style={[styles.infoRow, styles.infoRowLast, { backgroundColor: "#F59E0B12", borderColor: "#F59E0B40" }]}>
-            <View style={[styles.infoIcon, { backgroundColor: "#F59E0B25" }]}>
-              <Feather name="refresh-cw" size={14} color="#F59E0B" />
-            </View>
-            <Text style={[styles.infoText, { color: colors.mutedForeground }]}>
-              <Text style={{ color: "#F59E0B", fontWeight: "700" }}>Monthly requirement: </Text>
-              Ambassadors must refer the same number of new students every month to keep collecting their stipend.
-            </Text>
-          </View>
-        </View>
-
-        {/* Cash balance chip */}
-        {!walletLoading && (
-          <View style={[styles.balanceChip, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <View style={[styles.balanceIcon, { backgroundColor: "#10B98120" }]}>
-              <Feather name="dollar-sign" size={14} color="#10B981" />
-            </View>
-            <Text style={[styles.balanceLabel, { color: colors.mutedForeground }]}>Cash balance available for upgrades:</Text>
-            <Text style={[styles.balanceAmount, { color: "#10B981" }]}>{formatNaira(fundsBalance)}</Text>
-          </View>
-        )}
-
-        {/* Level cards */}
-        {CLUB_LEVELS.map((tier) => {
-          const isCurrentLevel = tier.number === currentLevel;
-          const isUnlocked = tier.number <= currentLevel;
-          const isNext = tier.number === currentLevel + 1;
-          const isPurchasedUnlock = tier.number <= purchasedLevel && tier.number > organicLevel;
-          const canAfford = fundsBalance >= tier.upgradePriceKobo;
-          const isUpgrading = upgradingLevel === tier.number;
-
+        {SUBSCRIPTION_PLANS.map((plan) => {
+          const priceKobo = billingCycle === "monthly" ? plan.monthlyPriceKobo : plan.yearlyPriceKobo;
+          const isUpgrading = upgradingLevel === plan.level;
+          const canAfford = fundsBalance >= priceKobo;
+          
           return (
-            <View
-              key={tier.number}
-              style={[
-                styles.tierCard,
-                {
-                  backgroundColor: isUnlocked ? tier.color + "12" : colors.card,
-                  borderColor: isCurrentLevel ? tier.color : isUnlocked ? tier.color + "50" : colors.border,
-                  borderWidth: isCurrentLevel ? 2 : 1,
-                },
-              ]}
+            <View 
+              key={plan.id} 
+              style={[styles.planCard, { backgroundColor: colors.card, borderColor: plan.color + "40" }]}
             >
-              {/* Ambassador header band */}
-              {tier.isAmbassador && (
-                <View style={[styles.ambassadorBand, { backgroundColor: tier.color + "22" }]}>
-                  <View style={styles.ambassadorBandLeft}>
-                    <View style={styles.ambassadorBandTop}>
-                      <Feather name="star" size={11} color={tier.color} />
-                      <Text style={[styles.ambassadorBandText, { color: tier.color }]}>
-                        {tier.ambassadorTitle}
-                      </Text>
-                      <View style={styles.ambassadorBandSpacer} />
-                      <Text style={[styles.ambassadorBandStipend, { color: tier.color }]}>
-                        {tier.monthlyStipend}/month
-                      </Text>
-                    </View>
-                    <View style={styles.ambassadorBandBottom}>
-                      <Feather name="refresh-cw" size={10} color={tier.color + "BB"} />
-                      <Text style={[styles.ambassadorBandNote, { color: tier.color + "BB" }]}>
-                        Refer {tier.referrals} new students/month to keep stipend
-                      </Text>
-                    </View>
-                  </View>
+              <View style={[styles.planHeader, { backgroundColor: plan.color + "15" }]}>
+                <View style={[styles.planIconWrap, { backgroundColor: plan.color }]}>
+                  <Feather name={plan.icon as any} size={20} color="#fff" />
                 </View>
-              )}
-
-              <View style={styles.tierHeader}>
-                <View style={styles.tierLeft}>
-                  <View style={[styles.emojiCircle, { backgroundColor: isUnlocked ? tier.color + "25" : colors.muted }]}>
-                    <Text style={styles.tierEmoji}>{isUnlocked ? tier.emoji : "🔒"}</Text>
-                  </View>
-                  <View>
-                    <View style={styles.tierNameRow}>
-                      <Text style={[styles.tierName, { color: isUnlocked ? tier.color : colors.mutedForeground }]}>
-                        {tier.name}
-                      </Text>
-                      {isCurrentLevel && (
-                        <View style={[styles.currentBadge, { backgroundColor: tier.color }]}>
-                          <Text style={styles.currentBadgeText}>YOU</Text>
-                        </View>
-                      )}
-                      {isNext && (
-                        <View style={[styles.nextBadge, { borderColor: tier.color }]}>
-                          <Text style={[styles.nextBadgeText, { color: tier.color }]}>NEXT</Text>
-                        </View>
-                      )}
-                      {isPurchasedUnlock && (
-                        <View style={[styles.paidBadge]}>
-                          <Feather name="credit-card" size={8} color="#F59E0B" />
-                          <Text style={styles.paidBadgeText}>PAID</Text>
-                        </View>
-                      )}
-                    </View>
-                    <Text style={[styles.tierLevel, { color: colors.mutedForeground }]}>Level {tier.number}</Text>
-                  </View>
-                </View>
-
-                {/* Upgrade price badge (for locked levels) */}
-                {!isUnlocked && tier.upgradePriceKobo > 0 && (
-                  <View style={[styles.priceBadge, { backgroundColor: canAfford ? "#10B98120" : colors.muted, borderColor: canAfford ? "#10B98150" : colors.border }]}>
-                    <Feather name="credit-card" size={11} color={canAfford ? "#10B981" : colors.mutedForeground} />
-                    <Text style={[styles.priceBadgeText, { color: canAfford ? "#10B981" : colors.mutedForeground }]}>
-                      {formatNaira(tier.upgradePriceKobo)}
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.planName, { color: plan.color }]}>{plan.name}</Text>
+                  <Text style={[styles.planPrice, { color: colors.foreground }]}>
+                    {formatNaira(priceKobo)}
+                    <Text style={{ fontSize: 14, fontWeight: "400", color: colors.mutedForeground }}>
+                      /{billingCycle === "monthly" ? "month" : "year"}
                     </Text>
-                  </View>
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.planBody}>
+                <View style={styles.bestForBox}>
+                  <Text style={[styles.bestForLabel, { color: colors.mutedForeground }]}>Best for:</Text>
+                  <Text style={[styles.bestForText, { color: colors.foreground }]}>{plan.bestFor}</Text>
+                </View>
+
+                <View style={styles.perksSection}>
+                  <Text style={[styles.perksTitle, { color: colors.foreground }]}>
+                    {plan.plusPrefix || "What Users Get"}
+                  </Text>
+                  {plan.features.map((feature) => (
+                    <View key={feature} style={styles.perkRow}>
+                      <Feather name="check-circle" size={14} color={plan.color} />
+                      <Text style={[styles.perkText, { color: colors.foreground }]}>{feature}</Text>
+                    </View>
+                  ))}
+                </View>
+
+                <View style={[styles.copyBox, { backgroundColor: plan.color + "08" }]}>
+                  <Text style={[styles.copyText, { color: colors.mutedForeground }]}>{plan.copy}</Text>
+                </View>
+
+                <TouchableOpacity
+                  style={[
+                    styles.upgradeBtn,
+                    { backgroundColor: plan.color, opacity: isUpgrading ? 0.7 : 1 }
+                  ]}
+                  onPress={() => handleUpgrade(plan.level)}
+                  disabled={isUpgrading}
+                >
+                  {isUpgrading ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <>
+                      <Text style={styles.upgradeBtnText}>
+                        Upgrade to {plan.id.toUpperCase()}
+                      </Text>
+                      <Feather name="arrow-right" size={16} color="#fff" />
+                    </>
+                  )}
+                </TouchableOpacity>
+
+                {!canAfford && (
+                  <Text style={[styles.needMoreText, { color: colors.mutedForeground }]}>
+                    Need {formatNaira(priceKobo - fundsBalance)} more in your wallet
+                  </Text>
                 )}
               </View>
-
-              {/* Requirements */}
-              <View style={styles.requirementsRow}>
-                <View style={[styles.requirementPill, { backgroundColor: isUnlocked ? "#8B5CF620" : colors.muted }]}>
-                  <Feather name="users" size={12} color={isUnlocked ? "#8B5CF6" : colors.mutedForeground} />
-                  <Text style={[styles.requirementText, { color: isUnlocked ? "#8B5CF6" : colors.mutedForeground }]}>
-                    {tier.referrals === 0 ? "No referrals" : `${tier.referrals} referrals`}
-                  </Text>
-                </View>
-                <View style={[styles.requirementPill, { backgroundColor: isUnlocked ? "#F59E0B20" : colors.muted }]}>
-                  <Feather name="book" size={12} color={isUnlocked ? "#F59E0B" : colors.mutedForeground} />
-                  <Text style={[styles.requirementText, { color: isUnlocked ? "#F59E0B" : colors.mutedForeground }]}>
-                    {tier.bootcamps === 0 ? "No bootcamps" : `${tier.bootcamps} bootcamps`}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Perks */}
-              <View style={styles.perksSection}>
-                {tier.perks.map((perk) => (
-                  <View key={perk} style={styles.perkRow}>
-                    <Feather
-                      name={isUnlocked ? "check-circle" : "circle"}
-                      size={13}
-                      color={isUnlocked ? tier.color : colors.mutedForeground}
-                    />
-                    <Text style={[styles.perkText, { color: isUnlocked ? colors.foreground : colors.mutedForeground }]}>
-                      {perk}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-
-              {/* CTAs */}
-              {isNext && (
-                <View style={styles.ctaGroup}>
-                  <TouchableOpacity
-                    style={[styles.ctaBtn, { backgroundColor: tier.color }]}
-                    onPress={() => router.push("/referral" as never)}
-                    activeOpacity={0.85}
-                  >
-                    <Feather name="user-plus" size={14} color="#fff" />
-                    <Text style={styles.ctaBtnText}>Refer students to unlock</Text>
-                    <Feather name="arrow-right" size={14} color="#fff" />
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[
-                      styles.ctaBtnOutline,
-                      {
-                        borderColor: canAfford ? "#10B981" : colors.border,
-                        backgroundColor: canAfford ? "#10B98115" : colors.muted,
-                        opacity: isUpgrading ? 0.7 : 1,
-                      },
-                    ]}
-                    onPress={() => handleUpgrade(tier.number)}
-                    disabled={isUpgrading}
-                    activeOpacity={0.85}
-                  >
-                    {isUpgrading ? (
-                      <ActivityIndicator size="small" color="#10B981" />
-                    ) : (
-                      <>
-                        <Feather name="credit-card" size={14} color={canAfford ? "#10B981" : colors.mutedForeground} />
-                        <Text style={[styles.ctaBtnOutlineText, { color: canAfford ? "#10B981" : colors.mutedForeground }]}>
-                          Upgrade with {formatNaira(tier.upgradePriceKobo)}
-                        </Text>
-                        {!canAfford && (
-                          <Text style={[styles.ctaNeedMore, { color: colors.mutedForeground }]}>
-                            (need {formatNaira(tier.upgradePriceKobo - fundsBalance)} more)
-                          </Text>
-                        )}
-                      </>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              )}
-
-              {/* For non-next locked levels — just show upgrade price button */}
-              {!isUnlocked && !isNext && tier.upgradePriceKobo > 0 && (
-                <View style={styles.ctaGroup}>
-                  <TouchableOpacity
-                    style={[
-                      styles.ctaBtnOutline,
-                      {
-                        borderColor: canAfford ? "#10B981" : colors.border,
-                        backgroundColor: canAfford ? "#10B98115" : colors.muted,
-                        opacity: isUpgrading ? 0.7 : 1,
-                      },
-                    ]}
-                    onPress={() => handleUpgrade(tier.number)}
-                    disabled={isUpgrading}
-                    activeOpacity={0.85}
-                  >
-                    {isUpgrading ? (
-                      <ActivityIndicator size="small" color="#10B981" />
-                    ) : (
-                      <>
-                        <Feather name="credit-card" size={14} color={canAfford ? "#10B981" : colors.mutedForeground} />
-                        <Text style={[styles.ctaBtnOutlineText, { color: canAfford ? "#10B981" : colors.mutedForeground }]}>
-                          Jump to Level {tier.number} · {formatNaira(tier.upgradePriceKobo)}
-                        </Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
-                </View>
-              )}
             </View>
           );
         })}
-
-        {/* Bottom motivational note */}
-        <View style={[styles.bottomNote, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={styles.bottomNoteEmoji}>🎯</Text>
-          <Text style={[styles.bottomNoteTitle, { color: colors.foreground }]}>Keep climbing!</Text>
-          <Text style={[styles.bottomNoteSub, { color: colors.mutedForeground }]}>
-            Every referral and bootcamp completion brings you closer to becoming a paid Zero Club Ambassador. Or use your cash balance to skip ahead instantly.
-          </Text>
-        </View>
       </ScrollView>
     </View>
   );
+}
 }
 
 const styles = StyleSheet.create({
@@ -634,136 +356,115 @@ const styles = StyleSheet.create({
   headerCenter: { flex: 1, alignItems: "center" },
   headerTitle: { fontSize: 17, fontWeight: "800", fontFamily: "Inter_700Bold" },
   headerSub: { fontSize: 11, marginTop: 1 },
-  content: { padding: 16, gap: 12 },
+  content: { padding: 16, gap: 16 },
 
-  heroCard: {
-    borderRadius: 20,
-    borderWidth: 2,
-    padding: 24,
-    alignItems: "center",
-    gap: 6,
-  },
-  heroEmoji: { fontSize: 52, marginBottom: 4 },
-  heroLevelName: { fontSize: 28, fontWeight: "900", fontFamily: "Inter_700Bold" },
-  heroSub: { fontSize: 13, marginTop: 2 },
-  ambassadorBanner: {
+  toggleContainer: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    marginTop: 10,
-  },
-  ambassadorBannerText: { color: "#fff", fontSize: 12, fontWeight: "700", flex: 1 },
-  ambassadorStipend: { color: "#ffffffCC", fontSize: 12, fontWeight: "800" },
-  purchasedBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
-    marginTop: 8,
+    padding: 4,
+    marginBottom: 8,
   },
-  purchasedBadgeText: { fontSize: 11, fontWeight: "700" },
-
-  infoCard: { borderRadius: 16, borderWidth: 1, padding: 14, gap: 10 },
-  infoTitle: { fontSize: 14, fontWeight: "700", marginBottom: 2 },
-  infoRow: { flexDirection: "row", alignItems: "flex-start", gap: 10 },
-  infoRowLast: { borderRadius: 10, borderWidth: 1, padding: 10 },
-  infoIcon: { width: 30, height: 30, borderRadius: 8, alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 1 },
-  infoText: { flex: 1, fontSize: 13, lineHeight: 18 },
-
-  balanceChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 14,
+  toggleBtn: {
+    flex: 1,
     paddingVertical: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  balanceIcon: { width: 28, height: 28, borderRadius: 8, alignItems: "center", justifyContent: "center" },
-  balanceLabel: { flex: 1, fontSize: 12, fontWeight: "500" },
-  balanceAmount: { fontSize: 15, fontWeight: "800", fontFamily: "Inter_700Bold" },
-
-  tierCard: { borderRadius: 18, overflow: "hidden" },
-  ambassadorBand: { paddingHorizontal: 14, paddingVertical: 8 },
-  ambassadorBandLeft: { flex: 1, gap: 3 },
-  ambassadorBandTop: { flexDirection: "row", alignItems: "center", gap: 6 },
-  ambassadorBandBottom: { flexDirection: "row", alignItems: "center", gap: 5 },
-  ambassadorBandText: { fontSize: 11, fontWeight: "800", letterSpacing: 0.3 },
-  ambassadorBandSpacer: { flex: 1 },
-  ambassadorBandStipend: { fontSize: 12, fontWeight: "900" },
-  ambassadorBandNote: { fontSize: 10, fontWeight: "500" },
-
-  tierHeader: {
-    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 14,
-    paddingTop: 14,
-    paddingBottom: 4,
-  },
-  tierLeft: { flexDirection: "row", alignItems: "center", gap: 12, flex: 1 },
-  emojiCircle: { width: 48, height: 48, borderRadius: 15, alignItems: "center", justifyContent: "center" },
-  tierEmoji: { fontSize: 24 },
-  tierNameRow: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
-  tierName: { fontSize: 18, fontWeight: "800", fontFamily: "Inter_700Bold" },
-  currentBadge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8 },
-  currentBadgeText: { color: "#fff", fontSize: 8, fontWeight: "900", letterSpacing: 1 },
-  nextBadge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8, borderWidth: 1 },
-  nextBadgeText: { fontSize: 8, fontWeight: "900", letterSpacing: 1 },
-  paidBadge: { flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: "#F59E0B20", paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
-  paidBadgeText: { color: "#F59E0B", fontSize: 8, fontWeight: "900", letterSpacing: 1 },
-  tierLevel: { fontSize: 12, fontWeight: "500", marginTop: 2 },
-
-  priceBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
     borderRadius: 10,
-    borderWidth: 1,
-    flexShrink: 0,
   },
-  priceBadgeText: { fontSize: 12, fontWeight: "700" },
+  toggleText: {
+    fontSize: 14,
+    fontWeight: "700",
+  },
 
-  requirementsRow: { flexDirection: "row", gap: 8, paddingHorizontal: 14, paddingVertical: 10, flexWrap: "wrap" },
-  requirementPill: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 10 },
-  requirementText: { fontSize: 12, fontWeight: "600" },
-
-  perksSection: { paddingHorizontal: 14, paddingBottom: 14, gap: 7 },
-  perkRow: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
-  perkText: { fontSize: 13, flex: 1, lineHeight: 18 },
-
-  ctaGroup: { paddingHorizontal: 14, paddingBottom: 14, gap: 8 },
-  ctaBtn: {
+  planCard: {
+    borderRadius: 24,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+  planHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+    padding: 20,
+  },
+  planIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  planName: {
+    fontSize: 14,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
+  planPrice: {
+    fontSize: 28,
+    fontWeight: "900",
+    fontFamily: "Inter_700Bold",
+  },
+  planBody: {
+    padding: 20,
+    gap: 20,
+  },
+  bestForBox: {
+    gap: 4,
+  },
+  bestForLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    textTransform: "uppercase",
+  },
+  bestForText: {
+    fontSize: 15,
+    fontWeight: "700",
+    lineHeight: 20,
+  },
+  perksSection: {
+    gap: 12,
+  },
+  perksTitle: {
+    fontSize: 14,
+    fontWeight: "800",
+    marginBottom: 4,
+  },
+  perkRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  perkText: {
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  copyBox: {
+    padding: 14,
+    borderRadius: 12,
+  },
+  copyText: {
+    fontSize: 13,
+    fontStyle: "italic",
+    lineHeight: 18,
+    textAlign: "center",
+  },
+  upgradeBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 8,
-    paddingVertical: 12,
-    borderRadius: 12,
+    gap: 10,
+    paddingVertical: 16,
+    borderRadius: 16,
   },
-  ctaBtnText: { color: "#fff", fontWeight: "700", fontSize: 14 },
-  ctaBtnOutline: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 11,
-    borderRadius: 12,
-    borderWidth: 1,
+  upgradeBtnText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "800",
   },
-  ctaBtnOutlineText: { fontWeight: "700", fontSize: 13 },
-  ctaNeedMore: { fontSize: 11, fontWeight: "500" },
-
-  bottomNote: { borderRadius: 16, borderWidth: 1, padding: 20, alignItems: "center", gap: 8 },
-  bottomNoteEmoji: { fontSize: 32 },
-  bottomNoteTitle: { fontSize: 17, fontWeight: "800", fontFamily: "Inter_700Bold" },
-  bottomNoteSub: { fontSize: 13, textAlign: "center", lineHeight: 19 },
+  needMoreText: {
+    fontSize: 12,
+    textAlign: "center",
+    fontWeight: "500",
+  },
 });
