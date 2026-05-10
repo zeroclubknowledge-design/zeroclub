@@ -169,15 +169,6 @@ export default function ReferralScreen() {
           ))}
         </View>
 
-        {/* Reward Rate */}
-        <View style={[styles.rewardSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>REWARD RATE</Text>
-          <View style={styles.rewardItem}>
-            <Text style={[styles.rewardVal, { color: colors.xpGold }]}>+500 XP</Text>
-            <Text style={[styles.rewardSub, { color: colors.mutedForeground }]}>Per Successful Referral</Text>
-          </View>
-        </View>
-
         {loading && (
           <ActivityIndicator color={colors.primary} style={{ marginTop: 20 }} />
         )}

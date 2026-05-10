@@ -108,6 +108,16 @@ function InputField({
   );
 }
 
+function generateReferralCode(username: string): string {
+  const prefix = username.slice(0, 3).toUpperCase().replace(/[^A-Z0-9]/g, "X");
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let suffix = "";
+  for (let i = 0; i < 5; i++) {
+    suffix += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return prefix + suffix;
+}
+
 export default function RegisterScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -121,14 +131,14 @@ export default function RegisterScreen() {
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [school, setSchool] = useState("");
-  const [referralCode, setReferralCode] = useState("");
+  const [usedReferralCode, setUsedReferralCode] = useState("");
   const [track, setTrack] = useState("frontend");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     consumePendingRef().then((ref) => {
-      if (ref) setReferralCode(ref);
+      if (ref) setUsedReferralCode(ref);
     }).catch(() => {});
   }, []);
 
@@ -163,7 +173,7 @@ export default function RegisterScreen() {
             displayName,
             track,
             school: school.trim() || undefined,
-            referralCode: referralCode.trim().toUpperCase() || undefined,
+            referredBy: usedReferralCode.trim().toUpperCase() || undefined,
             isTutor: role === "tutor",
           },
         },
@@ -193,7 +203,8 @@ export default function RegisterScreen() {
             display_name: displayName,
             track,
             school: school.trim() || undefined,
-            referral_code: referralCode.trim().toUpperCase() || undefined,
+            referral_code: generateReferralCode(username),
+            referred_by: usedReferralCode.trim().toUpperCase() || undefined,
           })
           .select()
           .single();
@@ -376,8 +387,8 @@ export default function RegisterScreen() {
             />
           )}
           <InputField
-            icon="gift" placeholder="Referral code (optional)" value={referralCode}
-            onChangeText={(t) => setReferralCode(t.toUpperCase())}
+            icon="gift" placeholder="Referral code (optional)" value={usedReferralCode}
+            onChangeText={(t) => setUsedReferralCode(t.toUpperCase())}
             colors={colors} accent={accent} autoCapitalize="none"
           />
 
