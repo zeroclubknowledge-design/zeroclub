@@ -57,7 +57,7 @@ export default function ReferralScreen() {
   const handleShare = async () => {
     try {
       await Share.share({
-        message: `Join me on Zero Club — the community for students building real skills. Use my code ${referralCode} and get 50 XP free! 🚀\n\n${referralLink}`,
+        message: `Join me on Zero Club — the community for students building real skills. Use my code ${referralCode} and get 500 XP free! 🚀\n\n${referralLink}`,
         url: referralLink,
       });
     } catch {}
@@ -78,7 +78,7 @@ export default function ReferralScreen() {
   const howItWorks = [
     { icon: "send", title: "Share Link", desc: "Send your unique link to friends and classmates." },
     { icon: "user-plus", title: "They Join", desc: "Friends sign up using your link to join the club." },
-    { icon: "zap", title: "Earn XP", desc: "Get up to 400 XP for every successful referral." },
+    { icon: "zap", title: "Earn XP", desc: "Get 500 XP for every successful referral." },
   ];
 
   return (
@@ -169,19 +169,12 @@ export default function ReferralScreen() {
           ))}
         </View>
 
-        {/* Reward Rates */}
+        {/* Reward Rate */}
         <View style={[styles.rewardSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>REWARD RATES</Text>
-          <View style={styles.rewardGrid}>
-            <View style={styles.rewardItem}>
-              <Text style={[styles.rewardVal, { color: colors.xpGold }]}>+250 XP</Text>
-              <Text style={[styles.rewardSub, { color: colors.mutedForeground }]}>Same School</Text>
-            </View>
-            <View style={[styles.rewardSep, { backgroundColor: colors.border }]} />
-            <View style={styles.rewardItem}>
-              <Text style={[styles.rewardVal, { color: colors.xpGold }]}>+400 XP</Text>
-              <Text style={[styles.rewardSub, { color: colors.mutedForeground }]}>Other School</Text>
-            </View>
+          <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>REWARD RATE</Text>
+          <View style={styles.rewardItem}>
+            <Text style={[styles.rewardVal, { color: colors.xpGold }]}>+500 XP</Text>
+            <Text style={[styles.rewardSub, { color: colors.mutedForeground }]}>Per Successful Referral</Text>
           </View>
         </View>
 
