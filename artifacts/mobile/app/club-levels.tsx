@@ -8,6 +8,7 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
+  Dimensions,
 } from "react-native";
 import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
@@ -141,6 +142,9 @@ export default function ClubLevelsScreen() {
   const topPadding = Platform.OS === "web" ? 16 : insets.top;
   const [upgradingLevel, setUpgradingLevel] = useState<number | null>(null);
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
+  const { width: screenWidth } = Dimensions.get("window");
+  const cardWidth = screenWidth * 0.82;
+  const cardGap = 16;
 
   const { data: walletRaw, isLoading: walletLoading } = useQuery(getGetWalletQueryOptions());
   const wallet = walletRaw as (typeof walletRaw & { purchasedLevel?: number }) | undefined;
@@ -242,26 +246,35 @@ export default function ClubLevelsScreen() {
       </View>
 
       <ScrollView
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 60 }]}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
         showsVerticalScrollIndicator={false}
       >
         {/* Billing Toggle */}
-        <View style={[styles.toggleContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <TouchableOpacity 
-            onPress={() => setBillingCycle("monthly")}
-            style={[styles.toggleBtn, billingCycle === "monthly" && { backgroundColor: colors.primary }]}
-          >
-            <Text style={[styles.toggleText, { color: billingCycle === "monthly" ? "#fff" : colors.mutedForeground }]}>Monthly</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            onPress={() => setBillingCycle("yearly")}
-            style={[styles.toggleBtn, billingCycle === "yearly" && { backgroundColor: colors.primary }]}
-          >
-            <Text style={[styles.toggleText, { color: billingCycle === "yearly" ? "#fff" : colors.mutedForeground }]}>Yearly</Text>
-          </TouchableOpacity>
+        <View style={styles.toggleWrapper}>
+          <View style={[styles.toggleContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <TouchableOpacity 
+              onPress={() => setBillingCycle("monthly")}
+              style={[styles.toggleBtn, billingCycle === "monthly" && { backgroundColor: colors.primary }]}
+            >
+              <Text style={[styles.toggleText, { color: billingCycle === "monthly" ? "#fff" : colors.mutedForeground }]}>Monthly</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              onPress={() => setBillingCycle("yearly")}
+              style={[styles.toggleBtn, billingCycle === "yearly" && { backgroundColor: colors.primary }]}
+            >
+              <Text style={[styles.toggleText, { color: billingCycle === "yearly" ? "#fff" : colors.mutedForeground }]}>Yearly</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
-        {SUBSCRIPTION_PLANS.map((plan) => {
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          snapToInterval={cardWidth + cardGap}
+          decelerationRate="fast"
+          contentContainerStyle={{ paddingHorizontal: (screenWidth - cardWidth) / 2, gap: cardGap }}
+        >
+          {SUBSCRIPTION_PLANS.map((plan) => {
           const priceKobo = billingCycle === "monthly" ? plan.monthlyPriceKobo : plan.yearlyPriceKobo;
           const isUpgrading = upgradingLevel === plan.level;
           const canAfford = fundsBalance >= priceKobo;
@@ -269,7 +282,7 @@ export default function ClubLevelsScreen() {
           return (
             <View 
               key={plan.id} 
-              style={[styles.planCard, { backgroundColor: colors.card, borderColor: plan.color + "40" }]}
+              style={[styles.planCard, { backgroundColor: colors.card, borderColor: plan.color + "40", width: cardWidth }]}
             >
               <View style={[styles.planHeader, { backgroundColor: plan.color + "15" }]}>
                 <View style={[styles.planIconWrap, { backgroundColor: plan.color }]}>
@@ -337,6 +350,7 @@ export default function ClubLevelsScreen() {
             </View>
           );
         })}
+        </ScrollView>
       </ScrollView>
     </View>
   );
@@ -356,6 +370,10 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 17, fontWeight: "800", fontFamily: "Inter_700Bold" },
   headerSub: { fontSize: 11, marginTop: 1 },
   content: { padding: 16, gap: 16 },
+  toggleWrapper: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
 
   toggleContainer: {
     flexDirection: "row",
@@ -379,90 +397,91 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 1,
     overflow: "hidden",
+    alignSelf: "flex-start",
   },
   planHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 16,
-    padding: 20,
+    gap: 12,
+    padding: 16,
   },
   planIconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 15,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
   },
   planName: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "800",
     textTransform: "uppercase",
-    letterSpacing: 1,
+    letterSpacing: 0.5,
   },
   planPrice: {
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: "900",
     fontFamily: "Inter_700Bold",
   },
   planBody: {
-    padding: 20,
-    gap: 20,
+    padding: 16,
+    gap: 14,
   },
   bestForBox: {
-    gap: 4,
+    gap: 2,
   },
   bestForLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "600",
     textTransform: "uppercase",
   },
   bestForText: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: "700",
-    lineHeight: 20,
+    lineHeight: 18,
   },
   perksSection: {
-    gap: 12,
+    gap: 8,
   },
   perksTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "800",
-    marginBottom: 4,
+    marginBottom: 2,
   },
   perkRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 8,
   },
   perkText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "500",
   },
   copyBox: {
-    padding: 14,
-    borderRadius: 12,
+    padding: 12,
+    borderRadius: 10,
   },
   copyText: {
-    fontSize: 13,
+    fontSize: 12,
     fontStyle: "italic",
-    lineHeight: 18,
+    lineHeight: 16,
     textAlign: "center",
   },
   upgradeBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 10,
-    paddingVertical: 16,
-    borderRadius: 16,
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 14,
   },
   upgradeBtnText: {
     color: "#fff",
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "800",
   },
   needMoreText: {
-    fontSize: 12,
+    fontSize: 11,
     textAlign: "center",
     fontWeight: "500",
   },
