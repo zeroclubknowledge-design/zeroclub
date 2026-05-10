@@ -36,8 +36,10 @@ export default function ReferralScreen() {
   const [loading, setLoading] = useState(true);
 
   const domain = process.env["EXPO_PUBLIC_DOMAIN"] || "zeroclubapp.com";
-  const referralCode = stats?.referralCode || user?.referralCode || "—";
-  const referralLink = `https://${domain}/register?ref=${referralCode}`;
+  const referralCode = stats?.referralCode || user?.referralCode;
+  const referralLink = referralCode && referralCode !== "—"
+    ? `https://${domain}/register?ref=${referralCode}`
+    : `https://${domain}/register`;
 
   useEffect(() => {
     if (!token) return;

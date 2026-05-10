@@ -8,9 +8,10 @@ import {
 } from "@expo-google-fonts/inter";
 import { DarkTheme, ThemeProvider } from "@react-navigation/native";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Stack, usePathname, useRouter } from "expo-router";
+import { Stack, usePathname, useRouter, useLocalSearchParams } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
+import { storePendingShare } from "@/hooks/useShare";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -49,6 +50,19 @@ let _splashComplete = false;
 
 export function markSplashComplete() {
   _splashComplete = true;
+}
+
+function ReferralTracker() {
+  const params = useLocalSearchParams();
+  const ref = params["ref"] as string | undefined;
+
+  useEffect(() => {
+    if (ref) {
+      void storePendingShare(ref, null);
+    }
+  }, [ref]);
+
+  return null;
 }
 
 function NotificationRegistrar() {
@@ -111,6 +125,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 function RootLayoutNav() {
   return (
     <AuthGate>
+      <ReferralTracker />
       <NotificationRegistrar />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: "#0D0D0D" } }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
