@@ -189,8 +189,16 @@ export default function PostDetailScreen() {
                 });
                 return;
               }
-              qc.resetQueries({ queryKey: ["posts"] });
-              qc.invalidateQueries({ queryKey: ["posts"] });
+
+              // Manually remove from all posts queries (all tracks)
+              qc.setQueriesData({ queryKey: ["posts"] }, (old: any) => {
+                if (Array.isArray(old)) {
+                  return old.filter((p: any) => p.id !== id);
+                }
+                return old;
+              });
+
+              await qc.invalidateQueries({ queryKey: ["posts"] });
               showToast({ type: "success", title: "Post and media deleted" });
               router.back();
             } catch (err: any) {
