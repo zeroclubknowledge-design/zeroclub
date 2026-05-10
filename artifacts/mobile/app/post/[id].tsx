@@ -91,6 +91,14 @@ export default function PostDetailScreen() {
   const topPadding = Platform.OS === "web" ? 16 : insets.top;
   const scrollY = useRef(new Animated.Value(0)).current;
 
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/(tabs)");
+    }
+  };
+
   const initials = (name?: string) => {
     if (!name || typeof name !== "string") return "?";
     return name.slice(0, 1).toUpperCase();
@@ -247,7 +255,7 @@ export default function PostDetailScreen() {
     <View style={[styles.floatingHeader, { top: insets.top + 8 }]}>
       <TouchableOpacity 
         style={[styles.floatingBtn, { backgroundColor: colors.background + "D9", borderColor: colors.border }]} 
-        onPress={() => isEditing ? setIsEditing(false) : router.back()}
+        onPress={() => isEditing ? setIsEditing(false) : handleBack()}
       >
         <Feather name={isEditing ? "x" : "arrow-left"} size={20} color={colors.foreground} />
       </TouchableOpacity>
@@ -323,7 +331,7 @@ export default function PostDetailScreen() {
       <View style={[styles.container, { backgroundColor: colors.background, justifyContent: "center", alignItems: "center" }]}>
         <Feather name="alert-circle" size={48} color={colors.mutedForeground} />
         <Text style={{ color: colors.mutedForeground, marginTop: 16, fontSize: 16 }}>Post not found</Text>
-        <TouchableOpacity style={{ marginTop: 24 }} onPress={() => router.back()}>
+        <TouchableOpacity style={{ marginTop: 24 }} onPress={handleBack}>
           <Text style={{ color: colors.primary, fontWeight: "700" }}>Go Back</Text>
         </TouchableOpacity>
       </View>

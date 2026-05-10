@@ -35,6 +35,14 @@ export default function ReferralScreen() {
   const [stats, setStats] = useState<ReferralStats | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/profile");
+    }
+  };
+
   const domain = process.env["EXPO_PUBLIC_DOMAIN"] || "zeroclubapp.com";
   const referralCode = stats?.referralCode || user?.referralCode;
   const referralLink = referralCode && referralCode !== "—"
@@ -85,7 +93,7 @@ export default function ReferralScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={[styles.header, { paddingTop: topPadding + 8, borderBottomColor: colors.border, backgroundColor: colors.background }]}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.backBtn} onPress={handleBack}>
           <Feather name="arrow-left" size={22} color={colors.foreground} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.foreground }]}>Refer & Earn</Text>

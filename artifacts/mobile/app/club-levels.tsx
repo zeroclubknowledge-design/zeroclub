@@ -135,6 +135,14 @@ export default function ClubLevelsScreen() {
   const cardWidth = screenWidth * 0.82;
   const cardGap = 16;
 
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/profile");
+    }
+  };
+
   const { data: walletRaw, isLoading: walletLoading } = useQuery(getGetWalletQueryOptions());
   const wallet = walletRaw as (typeof walletRaw & { purchasedLevel?: number }) | undefined;
 
@@ -222,7 +230,7 @@ export default function ClubLevelsScreen() {
           { paddingTop: topPadding + 8, borderBottomColor: colors.border, backgroundColor: colors.background },
         ]}
       >
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.backBtn} onPress={handleBack}>
           <Feather name="arrow-left" size={22} color={colors.foreground} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
